@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -15,6 +16,94 @@ HEALTH_FILE = Path("data/health/latest_ingest.json")
 
 TABLE_TOP = 20
 CHART_TOP = 12
+TABLE_LABEL_MAX = 72
+CHART_LABEL_MAX = 34
+
+
+def _collapse_ws(s: str) -> str:
+    return re.sub(r"\s+", " ", s.strip())
+
+
+def _truncate_display(s: str, max_len: int) -> str:
+    if len(s) <= max_len:
+        return s
+    return s[: max_len - 1] + "…"
+
+
+def _dedupe_labels(labels: pd.Series) -> pd.Series:
+    """Ensure unique labels for charts when formatting maps two rows to the same string."""
+    seen: dict[str, int] = {}
+    out: list[str] = []
+    for v in labels.astype(str):
+        if not v:
+            out.append(v)
+            continue
+        seen[v] = seen.get(v, 0) + 1
+        if seen[v] > 1:
+            out.append(f"{v} ({seen[v]})")
+        else:
+            out.append(v)
+    return pd.Series(out, index=labels.index)
+
+
+def format_role_display(raw: object) -> str:
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+        return ""
+    s = _collapse_ws(str(raw))
+    if not s:
+        return ""
+    s = re.sub(r"\s*\((?:m/w/d|f/m/d|w/m/d|m/f/d)\)\s*$", "", s, flags=re.IGNORECASE)
+    s = _collapse_ws(s)
+    s = re.sub(r"\s*[/\\]\s*", " / ", s)
+    s = re.sub(r"\s*-\s*", " - ", s)
+    s = re.sub(r"\s+", " ", s)
+    s = s.title()
+    return s
+
+
+def format_company_display(raw: object) -> str:
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+        return ""
+    s = _collapse_ws(str(raw))
+    if not s:
+        return ""
+    s = s.title()
+    s = re.sub(r"\bGmbh\b", "GmbH", s)
+    s = re.sub(r"\bAg\b", "AG", s)
+    s = re.sub(r"\bSe\b", "SE", s)
+    s = re.sub(r"\bUk\b", "UK", s)
+    s = re.sub(r"\bUsa\b", "USA", s)
+    return s
+
+
+def _company_label_for_chart(display_full: str) -> str:
+    """Chart-only: shorten by dropping common legal suffixes for readability."""
+    s = display_full.strip()
+    s = re.sub(
+        r"\s*,?\s*(GmbH|AG|SE|Ltd\.?|Inc\.?|S\.A\.|S\.p\.A\.|PLC|LLC)\s*$",
+        "",
+        s,
+        flags=re.IGNORECASE,
+    )
+    return _collapse_ws(s)
+
+
+def format_location_display(raw: object) -> str:
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+        return ""
+    s = _collapse_ws(str(raw))
+    if not s:
+        return ""
+    return s.title()
+
+
+def format_skill_display(raw: object) -> str:
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+        return ""
+    s = _collapse_ws(str(raw))
+    if not s:
+        return ""
+    return s.title()
 
 
 def _latest_parquet(root: Path) -> Path | None:
@@ -45,6 +134,8 @@ def _render_ranked_section(
     path: Path | None,
     name_col: str,
     missing_msg: str,
+    *,
+    label_kind: str,
 ) -> None:
     st.markdown(f"#### {title}")
     if path is not None:
@@ -52,17 +143,55 @@ def _render_ranked_section(
     if df is None or df.empty or name_col not in df.columns:
         st.warning(missing_msg)
         return
+
+    fmt_map = {
+        "skill": format_skill_display,
+        "role": format_role_display,
+        "location": format_location_display,
+        "company": format_company_display,
+    }
+    fmt = fmt_map.get(label_kind, lambda x: str(x) if x is not None else "")
+
     sorted_df = df.sort_values("job_count", ascending=False)
-    table_df = sorted_df.head(TABLE_TOP)[[name_col, "job_count"]].copy()
-    chart_df = sorted_df.head(CHART_TOP)
+    table_part = sorted_df.head(TABLE_TOP).copy()
+    chart_part = sorted_df.head(CHART_TOP).copy()
+
+    table_part["_display"] = table_part[name_col].map(fmt)
+    table_part["_display"] = table_part["_display"].fillna("")
+    show_raw_col = label_kind in ("role", "company", "location")
+    table_part["Label"] = table_part["_display"].map(
+        lambda s: _truncate_display(s, TABLE_LABEL_MAX) if s else ""
+    )
+    out_cols = ["Label", "job_count"]
+    if show_raw_col:
+        table_part["As stored"] = table_part[name_col].astype(str)
+        out_cols = ["Label", "As stored", "job_count"]
+
+    chart_part["_chart_base"] = chart_part[name_col].map(fmt)
+    if label_kind == "company":
+        chart_part["_chart_label"] = chart_part["_chart_base"].map(_company_label_for_chart)
+    else:
+        chart_part["_chart_label"] = chart_part["_chart_base"]
+    chart_part["_chart_label"] = chart_part["_chart_label"].map(
+        lambda s: _truncate_display(s, CHART_LABEL_MAX) if s else ""
+    )
+    chart_part["_chart_label"] = _dedupe_labels(chart_part["_chart_label"])
 
     left, right = st.columns([1, 1], gap="large")
     with left:
         st.markdown("**Rankings**")
-        st.dataframe(table_df, use_container_width=True, hide_index=True)
+        st.dataframe(
+            table_part[out_cols],
+            use_container_width=True,
+            hide_index=True,
+        )
+        st.caption("Labels are formatted for display only; counts and rankings use underlying Gold data.")
     with right:
         st.markdown("**Top counts (chart)**")
-        st.bar_chart(chart_df.set_index(name_col)["job_count"], height=320)
+        st.bar_chart(
+            chart_part.set_index("_chart_label")["job_count"],
+            height=320,
+        )
 
 
 st.set_page_config(page_title="JMI Dashboard", layout="wide", initial_sidebar_state="collapsed")
@@ -175,6 +304,7 @@ _render_ranked_section(
     path_skill,
     "skill",
     "No `skill_demand_monthly` data yet.",
+    label_kind="skill",
 )
 st.divider()
 _render_ranked_section(
@@ -183,6 +313,7 @@ _render_ranked_section(
     path_role,
     "role",
     "No `role_demand_monthly` data yet.",
+    label_kind="role",
 )
 st.divider()
 _render_ranked_section(
@@ -191,6 +322,7 @@ _render_ranked_section(
     path_location,
     "location",
     "No `location_demand_monthly` data yet.",
+    label_kind="location",
 )
 st.divider()
 _render_ranked_section(
@@ -199,4 +331,5 @@ _render_ranked_section(
     path_company,
     "company_name",
     "No `company_hiring_monthly` data yet.",
+    label_kind="company",
 )
