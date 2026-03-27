@@ -134,8 +134,8 @@ def polish_role_title(raw: object) -> str:
     s = re.sub(r"\(\s*Senior\s*\)(?=\S)", "Senior ", s, flags=re.IGNORECASE)
 
     # Training prefix: keep core job name
-    s = re.sub(r"^(?i)ausbildung\s+", "", s)
-    s = re.sub(r"(?i)fachinformatiker\*?in", "Fachinformatiker", s)
+    s = re.sub(r"^ausbildung\s+", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"fachinformatiker\*?in", "Fachinformatiker", s, flags=re.IGNORECASE)
 
     # Gender-star forms like Fachinformatiker*in
     s = re.sub(r"(\w)\*([iI]n)\b", r"\1", s)
