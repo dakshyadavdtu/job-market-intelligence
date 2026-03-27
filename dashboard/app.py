@@ -13,6 +13,9 @@ ROOT_COMPANY = Path("data/gold/company_hiring_monthly")
 ROOT_SUMMARY = Path("data/gold/pipeline_run_summary")
 HEALTH_FILE = Path("data/health/latest_ingest.json")
 
+TABLE_TOP = 20
+CHART_TOP = 12
+
 
 def _latest_parquet(root: Path) -> Path | None:
     files = sorted(root.glob("ingest_month=*/run_id=*/part-*.parquet"))
@@ -28,8 +31,44 @@ def _read_parquet(path: Path | None) -> pd.DataFrame | None:
         return None
 
 
-st.set_page_config(page_title="JMI Dashboard", layout="wide")
-st.title("Job Market Intelligence (MVP)")
+def _kv(label: str, value: object) -> None:
+    c1, c2 = st.columns([0.35, 0.65])
+    with c1:
+        st.caption(label)
+    with c2:
+        st.markdown(str(value) if value is not None else "—")
+
+
+def _render_ranked_section(
+    title: str,
+    df: pd.DataFrame | None,
+    path: Path | None,
+    name_col: str,
+    missing_msg: str,
+) -> None:
+    st.markdown(f"#### {title}")
+    if path is not None:
+        st.caption(f"Source: `{path}`")
+    if df is None or df.empty or name_col not in df.columns:
+        st.warning(missing_msg)
+        return
+    sorted_df = df.sort_values("job_count", ascending=False)
+    table_df = sorted_df.head(TABLE_TOP)[[name_col, "job_count"]].copy()
+    chart_df = sorted_df.head(CHART_TOP)
+
+    left, right = st.columns([1, 1], gap="large")
+    with left:
+        st.markdown("**Rankings**")
+        st.dataframe(table_df, use_container_width=True, hide_index=True)
+    with right:
+        st.markdown("**Top counts (chart)**")
+        st.bar_chart(chart_df.set_index(name_col)["job_count"], height=320)
+
+
+st.set_page_config(page_title="JMI Dashboard", layout="wide", initial_sidebar_state="collapsed")
+
+st.markdown("## Job Market Intelligence")
+st.caption("Local Gold analytics — skills, roles, locations, and hiring signals from the latest pipeline run.")
 
 health: dict = {}
 if HEALTH_FILE.exists():
@@ -63,97 +102,101 @@ pipeline_status = "—"
 if df_summary is not None and not df_summary.empty and "status" in df_summary.columns:
     pipeline_status = str(df_summary["status"].iloc[0])
 
-st.subheader("Overview")
-m1, m2, m3, m4, m5 = st.columns(5)
-m1.metric("Skill rows (gold)", skill_rows)
-m2.metric("Role rows (gold)", role_rows)
-m3.metric("Location rows (gold)", location_rows)
-m4.metric("Company rows (gold)", company_rows)
-m5.metric("Pipeline status", pipeline_status)
+st.markdown("### Overview")
+with st.container(border=True):
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("Skill rows", f"{skill_rows:,}")
+    k2.metric("Role rows", f"{role_rows:,}")
+    k3.metric("Location rows", f"{location_rows:,}")
+    k4.metric("Company rows", f"{company_rows:,}")
+    k5.metric("Pipeline", pipeline_status)
 
-st.subheader("Pipeline summary / health")
+st.divider()
+
+st.markdown("### Pipeline summary / health")
 if df_summary is not None and not df_summary.empty:
-    row = df_summary.iloc[0].to_dict()
-    st.caption("Latest `pipeline_run_summary` parquet.")
-    st.write(
-        {
-            "source": row.get("source"),
-            "bronze_ingest_date": row.get("bronze_ingest_date"),
-            "bronze_run_id": row.get("bronze_run_id"),
-            "skill_row_count": row.get("skill_row_count"),
-            "role_row_count": row.get("role_row_count"),
-            "location_row_count": row.get("location_row_count"),
-            "company_row_count": row.get("company_row_count"),
-            "status": row.get("status"),
-        }
-    )
+    row = df_summary.iloc[0]
+    left, right = st.columns([1.1, 0.9], gap="large")
+    with left:
+        with st.container(border=True):
+            st.markdown("**Run details**")
+            _kv("Source", row.get("source"))
+            _kv("Bronze ingest date", row.get("bronze_ingest_date"))
+            _kv("Bronze run id", row.get("bronze_run_id"))
+            st.markdown("**Gold row counts (by table)**")
+            _kv("Skills", row.get("skill_row_count"))
+            _kv("Roles", row.get("role_row_count"))
+            _kv("Locations", row.get("location_row_count"))
+            _kv("Companies", row.get("company_row_count"))
+    with right:
+        st.markdown("**Status**")
+        status_val = str(row.get("status", "—"))
+        if status_val.upper() == "PASS":
+            st.success(status_val)
+        elif status_val != "—":
+            st.error(status_val)
+        else:
+            st.info("—")
+        st.caption("From `pipeline_run_summary` (latest partition).")
 else:
     st.warning("No `pipeline_run_summary` data found. Run the gold transform.")
 
-st.subheader("Freshness and run metadata")
-meta_col1, meta_col2 = st.columns(2)
-with meta_col1:
-    st.caption("Ingest health file (`data/health/latest_ingest.json`).")
-    st.write(
-        {
-            "source": health.get("source"),
-            "last_run_id": health.get("run_id"),
-            "bronze_ingest_date": health.get("bronze_ingest_date"),
-            "batch_created_at": health.get("batch_created_at"),
-            "bronze_record_count": health.get("record_count"),
-        }
-    )
-with meta_col2:
-    ref_df = df_skill if df_skill is not None and not df_skill.empty else df_summary
-    st.caption("Lineage from latest skill gold file (or summary if skills missing).")
-    if ref_df is not None and not ref_df.empty:
-        st.write(
-            {
-                "gold_file": str(path_skill) if path_skill else str(path_summary),
-                "gold_source": str(ref_df["source"].iloc[0]) if "source" in ref_df.columns else None,
-                "gold_bronze_run_id": str(ref_df["bronze_run_id"].iloc[0])
-                if "bronze_run_id" in ref_df.columns
-                else None,
-                "gold_bronze_ingest_date": str(ref_df["bronze_ingest_date"].iloc[0])
-                if "bronze_ingest_date" in ref_df.columns
-                else None,
-            }
-        )
-    else:
-        st.write({"gold_file": None, "note": "No skill or summary parquet for lineage."})
+st.divider()
 
-st.subheader("Top skills")
-if df_skill is not None and not df_skill.empty and "skill" in df_skill.columns:
-    st.caption(f"File: `{path_skill}`")
-    top_skills = df_skill.sort_values("job_count", ascending=False).head(20)
-    st.dataframe(top_skills[["skill", "job_count"]], use_container_width=True)
-    st.bar_chart(top_skills.set_index("skill")["job_count"])
-else:
-    st.warning("No `skill_demand_monthly` data yet.")
+st.markdown("### Freshness & run metadata")
+ing_left, ing_right = st.columns(2, gap="large")
+with ing_left:
+    with st.container(border=True):
+        st.markdown("**Ingest health**")
+        st.caption("`data/health/latest_ingest.json`")
+        _kv("Source", health.get("source"))
+        _kv("Last run id", health.get("run_id"))
+        _kv("Bronze ingest date", health.get("bronze_ingest_date"))
+        _kv("Batch created at", health.get("batch_created_at"))
+        _kv("Bronze record count", health.get("record_count"))
+with ing_right:
+    with st.container(border=True):
+        st.markdown("**Gold lineage**")
+        ref_df = df_skill if df_skill is not None and not df_skill.empty else df_summary
+        ref_path = path_skill if path_skill else path_summary
+        _kv("Gold file (reference)", str(ref_path) if ref_path else "—")
+        if ref_df is not None and not ref_df.empty:
+            _kv("Source", ref_df["source"].iloc[0] if "source" in ref_df.columns else None)
+            _kv("Bronze run id", ref_df["bronze_run_id"].iloc[0] if "bronze_run_id" in ref_df.columns else None)
+            _kv("Bronze ingest date", ref_df["bronze_ingest_date"].iloc[0] if "bronze_ingest_date" in ref_df.columns else None)
+        else:
+            st.caption("No skill or summary parquet for lineage.")
 
-st.subheader("Top roles")
-if df_role is not None and not df_role.empty and "role" in df_role.columns:
-    st.caption(f"File: `{path_role}`")
-    top_roles = df_role.sort_values("job_count", ascending=False).head(20)
-    st.dataframe(top_roles[["role", "job_count"]], use_container_width=True)
-    st.bar_chart(top_roles.set_index("role")["job_count"])
-else:
-    st.warning("No `role_demand_monthly` data yet.")
+st.divider()
 
-st.subheader("Top locations")
-if df_location is not None and not df_location.empty and "location" in df_location.columns:
-    st.caption(f"File: `{path_location}`")
-    top_locs = df_location.sort_values("job_count", ascending=False).head(20)
-    st.dataframe(top_locs[["location", "job_count"]], use_container_width=True)
-    st.bar_chart(top_locs.set_index("location")["job_count"])
-else:
-    st.warning("No `location_demand_monthly` data yet.")
-
-st.subheader("Top companies")
-if df_company is not None and not df_company.empty and "company_name" in df_company.columns:
-    st.caption(f"File: `{path_company}`")
-    top_cos = df_company.sort_values("job_count", ascending=False).head(20)
-    st.dataframe(top_cos[["company_name", "job_count"]], use_container_width=True)
-    st.bar_chart(top_cos.set_index("company_name")["job_count"])
-else:
-    st.warning("No `company_hiring_monthly` data yet.")
+_render_ranked_section(
+    "Top skills",
+    df_skill,
+    path_skill,
+    "skill",
+    "No `skill_demand_monthly` data yet.",
+)
+st.divider()
+_render_ranked_section(
+    "Top roles",
+    df_role,
+    path_role,
+    "role",
+    "No `role_demand_monthly` data yet.",
+)
+st.divider()
+_render_ranked_section(
+    "Top locations",
+    df_location,
+    path_location,
+    "location",
+    "No `location_demand_monthly` data yet.",
+)
+st.divider()
+_render_ranked_section(
+    "Top companies",
+    df_company,
+    path_company,
+    "company_name",
+    "No `company_hiring_monthly` data yet.",
+)
