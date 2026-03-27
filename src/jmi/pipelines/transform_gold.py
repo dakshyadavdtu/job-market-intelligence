@@ -81,6 +81,31 @@ def run(silver_file: str | None = None) -> dict:
     )
     write_parquet(role_out_path, role_agg)
 
+    location_source_series = df["location"] if "location" in df.columns else pd.Series([], dtype="object")
+    location_df = pd.DataFrame({"location": location_source_series.fillna("").astype(str)})
+    location_df["location"] = (
+        location_df["location"].str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
+    )
+    location_df = location_df[location_df["location"] != ""]
+    location_agg = (
+        location_df.groupby("location", as_index=False)
+        .size()
+        .rename(columns={"size": "job_count"})
+        .sort_values("job_count", ascending=False)
+    )
+    location_agg["source"] = source
+    location_agg["bronze_ingest_date"] = bronze_ingest_date
+    location_agg["bronze_run_id"] = bronze_run_id
+
+    location_out_path = (
+        cfg.gold_root
+        / "location_demand_monthly"
+        / f"ingest_month={ingest_month}"
+        / f"run_id={bronze_run_id}"
+        / "part-00001.parquet"
+    )
+    write_parquet(location_out_path, location_agg)
+
     payload = {
         "stage": "gold",
         "ingest_month": ingest_month,
@@ -89,9 +114,11 @@ def run(silver_file: str | None = None) -> dict:
         "source": source,
         "skill_row_count": int(len(skill_agg)),
         "role_row_count": int(len(role_agg)),
+        "location_row_count": int(len(location_agg)),
         "source_silver_file": silver_file_str,
         "skill_output_file": str(skill_out_path),
         "role_output_file": str(role_out_path),
+        "location_output_file": str(location_out_path),
     }
     (cfg.quality_root / f"gold_quality_{ingest_month}_{bronze_run_id}.json").write_text(
         json.dumps(payload, indent=2), encoding="utf-8"
