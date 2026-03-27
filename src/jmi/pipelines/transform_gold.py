@@ -133,21 +133,52 @@ def run(silver_file: str | None = None) -> dict:
     )
     write_parquet(company_out_path, company_agg)
 
+    skill_row_count = int(len(skill_agg))
+    role_row_count = int(len(role_agg))
+    location_row_count = int(len(location_agg))
+    company_row_count = int(len(company_agg))
+    status = "PASS"
+
+    summary_df = pd.DataFrame(
+        [
+            {
+                "source": source,
+                "bronze_ingest_date": bronze_ingest_date,
+                "bronze_run_id": bronze_run_id,
+                "skill_row_count": skill_row_count,
+                "role_row_count": role_row_count,
+                "location_row_count": location_row_count,
+                "company_row_count": company_row_count,
+                "status": status,
+            }
+        ]
+    )
+
+    summary_out_path = (
+        cfg.gold_root
+        / "pipeline_run_summary"
+        / f"ingest_month={ingest_month}"
+        / f"run_id={bronze_run_id}"
+        / "part-00001.parquet"
+    )
+    write_parquet(summary_out_path, summary_df)
+
     payload = {
         "stage": "gold",
         "ingest_month": ingest_month,
         "bronze_ingest_date": bronze_ingest_date,
         "bronze_run_id": bronze_run_id,
         "source": source,
-        "skill_row_count": int(len(skill_agg)),
-        "role_row_count": int(len(role_agg)),
-        "location_row_count": int(len(location_agg)),
-        "company_row_count": int(len(company_agg)),
+        "skill_row_count": skill_row_count,
+        "role_row_count": role_row_count,
+        "location_row_count": location_row_count,
+        "company_row_count": company_row_count,
         "source_silver_file": silver_file_str,
         "skill_output_file": str(skill_out_path),
         "role_output_file": str(role_out_path),
         "location_output_file": str(location_out_path),
         "company_output_file": str(company_out_path),
+        "pipeline_run_summary_output_file": str(summary_out_path),
     }
     (cfg.quality_root / f"gold_quality_{ingest_month}_{bronze_run_id}.json").write_text(
         json.dumps(payload, indent=2), encoding="utf-8"
