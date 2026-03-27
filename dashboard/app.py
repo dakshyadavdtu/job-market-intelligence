@@ -16,8 +16,9 @@ HEALTH_FILE = Path("data/health/latest_ingest.json")
 
 TABLE_TOP = 20
 CHART_TOP = 12
-TABLE_LABEL_MAX = 72
-CHART_LABEL_MAX = 34
+TABLE_LABEL_MAX = 88
+CHART_LABEL_MAX = 38
+ROLE_TABLE_HARD_MAX = 100
 
 
 def _collapse_ws(s: str) -> str:
@@ -28,6 +29,17 @@ def _truncate_display(s: str, max_len: int) -> str:
     if len(s) <= max_len:
         return s
     return s[: max_len - 1] + "…"
+
+
+def _smart_shorten(s: str, max_len: int) -> str:
+    """Truncate at a word boundary when possible (display only)."""
+    s = s.strip()
+    if len(s) <= max_len:
+        return s
+    cut = s[: max_len - 1].rsplit(" ", 1)[0]
+    if len(cut) < max_len // 2:
+        return s[: max_len - 1] + "…"
+    return cut + "…"
 
 
 def _dedupe_labels(labels: pd.Series) -> pd.Series:
@@ -46,28 +58,24 @@ def _dedupe_labels(labels: pd.Series) -> pd.Series:
     return pd.Series(out, index=labels.index)
 
 
-def format_role_display(raw: object) -> str:
-    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
-        return ""
-    s = _collapse_ws(str(raw))
-    if not s:
-        return ""
-    s = re.sub(r"\s*\((?:m/w/d|f/m/d|w/m/d|m/f/d)\)\s*$", "", s, flags=re.IGNORECASE)
+_LEGAL_SUFFIX_RE = re.compile(
+    r"\s*,?\s*(GmbH|AG|SE|Ltd\.?|Inc\.?|S\.A\.|S\.p\.A\.|PLC|LLC|B\.V\.|N\.V\.|KG|UG)\s*$",
+    re.IGNORECASE,
+)
+
+
+def _strip_company_legal_suffix(s: str) -> str:
+    """Remove trailing legal form from company display (identity words stay)."""
     s = _collapse_ws(s)
-    s = re.sub(r"\s*[/\\]\s*", " / ", s)
-    s = re.sub(r"\s*-\s*", " - ", s)
-    s = re.sub(r"\s+", " ", s)
-    s = s.title()
+    prev = None
+    while prev != s:
+        prev = s
+        s = _LEGAL_SUFFIX_RE.sub("", s)
+        s = _collapse_ws(s)
     return s
 
 
-def format_company_display(raw: object) -> str:
-    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
-        return ""
-    s = _collapse_ws(str(raw))
-    if not s:
-        return ""
-    s = s.title()
+def _fix_company_tokens(s: str) -> str:
     s = re.sub(r"\bGmbh\b", "GmbH", s)
     s = re.sub(r"\bAg\b", "AG", s)
     s = re.sub(r"\bSe\b", "SE", s)
@@ -76,16 +84,90 @@ def format_company_display(raw: object) -> str:
     return s
 
 
-def _company_label_for_chart(display_full: str) -> str:
-    """Chart-only: shorten by dropping common legal suffixes for readability."""
-    s = display_full.strip()
-    s = re.sub(
-        r"\s*,?\s*(GmbH|AG|SE|Ltd\.?|Inc\.?|S\.A\.|S\.p\.A\.|PLC|LLC)\s*$",
-        "",
-        s,
-        flags=re.IGNORECASE,
-    )
-    return _collapse_ws(s)
+def format_company_display(raw: object) -> str:
+    """Polished company label for tables: casing + drop legal suffix from visible name."""
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+        return ""
+    s = _collapse_ws(str(raw))
+    if not s:
+        return ""
+    s = s.title()
+    s = _fix_company_tokens(s)
+    s = _strip_company_legal_suffix(s)
+    return s
+
+
+def format_company_chart(raw: object) -> str:
+    """Short chart label: same polish as table, then compact truncate."""
+    s = format_company_display(raw)
+    if not s:
+        return ""
+    return _smart_shorten(s, CHART_LABEL_MAX)
+
+
+_GENDER_PAREN_RE = re.compile(
+    r"\s*\(\s*[mfwd]\s*/\s*[mfwd]\s*/\s*[mfwd]\s*\)",
+    re.IGNORECASE,
+)
+
+
+def polish_role_title(raw: object) -> str:
+    """Human-friendly role line for tables (display only; does not invent categories)."""
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+        return ""
+    s = _collapse_ws(str(raw))
+    if not s:
+        return ""
+
+    # Drop noisy job-board tails (keep left of @)
+    if "@" in s:
+        s = s.split("@", 1)[0].strip()
+
+    # Remove common parenthetical gender / diversity noise
+    s = _GENDER_PAREN_RE.sub("", s)
+    s = re.sub(r"\s*\([^)]*\ball\s+genders\b[^)]*\)", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"\s*\(all\s+genders\)\s*", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"\bihk\b", "", s, flags=re.IGNORECASE)
+
+    # (Senior) Foo / (Senior)Foo -> Senior Foo
+    s = re.sub(r"^\(\s*Senior\s*\)\s*", "Senior ", s, flags=re.IGNORECASE)
+    s = re.sub(r"\(\s*Senior\s*\)(?=\S)", "Senior ", s, flags=re.IGNORECASE)
+
+    # Training prefix: keep core job name
+    s = re.sub(r"^(?i)ausbildung\s+", "", s)
+    s = re.sub(r"(?i)fachinformatiker\*?in", "Fachinformatiker", s)
+
+    # Gender-star forms like Fachinformatiker*in
+    s = re.sub(r"(\w)\*([iI]n)\b", r"\1", s)
+
+    # Schwerpunkt: "Role - Schwerpunkt X" -> "Role - X"
+    s = re.sub(r"\s*-\s*Schwerpunkt\s+", " - ", s, flags=re.IGNORECASE)
+
+    # Normalize slashes and hyphens spacing
+    s = re.sub(r"\s*[/\\]\s*", " / ", s)
+    s = re.sub(r"\s*-\s*", " - ", s)
+    s = _collapse_ws(s)
+
+    # Title case for dashboard readability (German job titles)
+    s = s.title()
+
+    if len(s) > ROLE_TABLE_HARD_MAX:
+        s = _smart_shorten(s, ROLE_TABLE_HARD_MAX)
+
+    return s
+
+
+def polish_role_chart(raw: object) -> str:
+    """Shorter role label for charts (polished title, then compact)."""
+    s = polish_role_title(raw)
+    if not s:
+        return ""
+    return _smart_shorten(s, CHART_LABEL_MAX)
+
+
+def format_role_display(raw: object) -> str:
+    """Backward-compatible name: table polish."""
+    return polish_role_title(raw)
 
 
 def format_location_display(raw: object) -> str:
@@ -128,6 +210,12 @@ def _kv(label: str, value: object) -> None:
         st.markdown(str(value) if value is not None else "—")
 
 
+def _display_differs_from_raw(raw_val: object, display: str) -> bool:
+    r = _collapse_ws(str(raw_val)).lower()
+    d = _collapse_ws(display).lower()
+    return r != d
+
+
 def _render_ranked_section(
     title: str,
     df: pd.DataFrame | None,
@@ -158,23 +246,37 @@ def _render_ranked_section(
 
     table_part["_display"] = table_part[name_col].map(fmt)
     table_part["_display"] = table_part["_display"].fillna("")
-    show_raw_col = label_kind in ("role", "company", "location")
     table_part["Label"] = table_part["_display"].map(
         lambda s: _truncate_display(s, TABLE_LABEL_MAX) if s else ""
     )
-    out_cols = ["Label", "job_count"]
-    if show_raw_col:
-        table_part["As stored"] = table_part[name_col].astype(str)
-        out_cols = ["Label", "As stored", "job_count"]
 
-    chart_part["_chart_base"] = chart_part[name_col].map(fmt)
-    if label_kind == "company":
-        chart_part["_chart_label"] = chart_part["_chart_base"].map(_company_label_for_chart)
+    show_original = False
+    if label_kind in ("role", "company", "location"):
+        table_part["_show_orig"] = table_part.apply(
+            lambda r: _display_differs_from_raw(r[name_col], str(r["_display"])),
+            axis=1,
+        )
+        show_original = bool(table_part["_show_orig"].any())
+        if show_original:
+            table_part["Original"] = table_part.apply(
+                lambda r: r[name_col] if r["_show_orig"] else None,
+                axis=1,
+            )
+
+    out_cols = ["Label", "job_count"]
+    if show_original:
+        out_cols = ["Label", "Original", "job_count"]
+
+    if label_kind == "role":
+        chart_part["_chart_label"] = chart_part[name_col].map(polish_role_chart)
+    elif label_kind == "company":
+        chart_part["_chart_label"] = chart_part[name_col].map(format_company_chart)
     else:
-        chart_part["_chart_label"] = chart_part["_chart_base"]
-    chart_part["_chart_label"] = chart_part["_chart_label"].map(
-        lambda s: _truncate_display(s, CHART_LABEL_MAX) if s else ""
-    )
+        chart_part["_chart_label"] = chart_part[name_col].map(fmt)
+        chart_part["_chart_label"] = chart_part["_chart_label"].map(
+            lambda s: _truncate_display(s, CHART_LABEL_MAX) if s else ""
+        )
+    chart_part["_chart_label"] = chart_part["_chart_label"].fillna("")
     chart_part["_chart_label"] = _dedupe_labels(chart_part["_chart_label"])
 
     left, right = st.columns([1, 1], gap="large")
