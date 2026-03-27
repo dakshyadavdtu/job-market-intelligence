@@ -11,10 +11,12 @@ mkdir -p "$BUILD_DIR" "$DIST_DIR"
 
 # Build Linux-compatible package for Lambda using Docker.
 docker run --rm \
+  --platform linux/amd64 \
   -v "$ROOT_DIR":/var/task \
   -w /var/task \
+  --entrypoint /bin/sh \
   public.ecr.aws/lambda/python:3.11 \
-  /bin/sh -c "pip install -r infra/aws/lambda/requirements-lambda.txt -t infra/aws/lambda/build"
+  -c "pip install --only-binary=:all: -r infra/aws/lambda/requirements-lambda.txt -t infra/aws/lambda/build"
 
 cp -R "$ROOT_DIR/src" "$BUILD_DIR/src"
 cp -R "$ROOT_DIR/infra/aws/lambda/handlers" "$BUILD_DIR/handlers"
