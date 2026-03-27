@@ -1,0 +1,15 @@
+{
+  "Name": "jmi-ingest-10min",
+  "GroupName": "default",
+  "ScheduleExpression": "rate(10 minutes)",
+  "FlexibleTimeWindow": {
+    "Mode": "OFF"
+  },
+  "Target": {
+    "Arn": "arn:aws:lambda:ap-south-1:470441577506:function:jmi-ingest-live",
+    "RoleArn": "arn:aws:iam::470441577506:role/jmi-eventbridge-invoke-lambda-role",
+    "Input": "{\"trigger\":\"eventbridge\",\"source\":\"schedule\"}"
+  },
+  "State": "DISABLED",
+  "Description": "JMI ingest scheduler (disabled until manual validation)"
+}

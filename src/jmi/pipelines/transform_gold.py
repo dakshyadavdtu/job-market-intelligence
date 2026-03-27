@@ -10,16 +10,19 @@ from src.jmi.utils.io import write_parquet
 
 
 def _latest_silver_file(cfg: AppConfig) -> Path:
-    files = sorted(cfg.silver_root.glob("jobs/ingest_date=*/part-*.parquet"), key=lambda p: p.stat().st_mtime)
+    files = sorted(
+        cfg.silver_root.as_path().glob("jobs/ingest_date=*/run_id=*/part-*.parquet"),
+        key=lambda p: p.stat().st_mtime,
+    )
     if not files:
         raise FileNotFoundError("No silver files found. Run silver transform first.")
     return files[-1]
 
 
-def run() -> dict:
+def run(silver_file: str | None = None) -> dict:
     cfg = AppConfig()
-    silver_file = _latest_silver_file(cfg)
-    df = pd.read_parquet(silver_file)
+    silver_file_str = silver_file or str(_latest_silver_file(cfg))
+    df = pd.read_parquet(silver_file_str)
     if df.empty:
         raise RuntimeError("Silver dataset is empty.")
     required_cols = {"bronze_ingest_date", "bronze_run_id", "source"}
@@ -62,7 +65,7 @@ def run() -> dict:
         "bronze_run_id": bronze_run_id,
         "source": source,
         "row_count": int(len(skill_agg)),
-        "source_silver_file": str(silver_file),
+        "source_silver_file": silver_file_str,
         "output_file": str(out_path),
     }
     (cfg.quality_root / f"gold_quality_{ingest_month}_{bronze_run_id}.json").write_text(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 
 import pandas as pd
 
@@ -13,7 +14,7 @@ from src.jmi.utils.quality import run_silver_checks
 
 def _latest_bronze_file(cfg: AppConfig) -> Path:
     files = sorted(
-        cfg.bronze_root.glob(f"source={cfg.source_name}/ingest_date=*/run_id=*/raw.jsonl.gz"),
+        cfg.bronze_root.as_path().glob(f"source={cfg.source_name}/ingest_date=*/run_id=*/raw.jsonl.gz"),
         key=lambda p: p.stat().st_mtime,
     )
     if not files:
@@ -21,11 +22,15 @@ def _latest_bronze_file(cfg: AppConfig) -> Path:
     return files[-1]
 
 
-def _extract_lineage_from_bronze_path(path: Path) -> tuple[str, str]:
-    run_part = next((p for p in path.parts if p.startswith("run_id=")), "")
-    date_part = next((p for p in path.parts if p.startswith("ingest_date=")), "")
-    run_id = run_part.split("=", 1)[1] if "=" in run_part else ""
-    bronze_ingest_date = date_part.split("=", 1)[1] if "=" in date_part else ""
+_RUN_RE = re.compile(r"(?:^|/)run_id=([^/]+)(?:/|$)")
+_DATE_RE = re.compile(r"(?:^|/)ingest_date=([^/]+)(?:/|$)")
+
+
+def _extract_lineage_from_bronze_path(path: str) -> tuple[str, str]:
+    run_match = _RUN_RE.search(path)
+    date_match = _DATE_RE.search(path)
+    run_id = run_match.group(1) if run_match else ""
+    bronze_ingest_date = date_match.group(1) if date_match else ""
     if not run_id or not bronze_ingest_date:
         raise RuntimeError(f"Cannot extract lineage from path: {path}")
     return run_id, bronze_ingest_date
@@ -35,11 +40,11 @@ def _clean_text(value: object) -> str:
     return str(value or "").strip()
 
 
-def run() -> dict:
+def run(bronze_file: str | None = None) -> dict:
     cfg = AppConfig()
-    bronze_file = _latest_bronze_file(cfg)
-    bronze_run_id, bronze_ingest_date = _extract_lineage_from_bronze_path(bronze_file)
-    bronze_rows = read_jsonl_gz(bronze_file)
+    bronze_file_str = bronze_file or str(_latest_bronze_file(cfg))
+    bronze_run_id, bronze_ingest_date = _extract_lineage_from_bronze_path(bronze_file_str)
+    bronze_rows = read_jsonl_gz(bronze_file_str)
     if not bronze_rows:
         raise RuntimeError("Bronze file is empty.")
 
@@ -74,7 +79,7 @@ def run() -> dict:
                 "ingested_at": row.get("ingested_at"),
                 "bronze_run_id": row.get("run_id", bronze_run_id),
                 "bronze_ingest_date": row.get("bronze_ingest_date", bronze_ingest_date),
-                "bronze_data_file": str(bronze_file),
+                "bronze_data_file": bronze_file_str,
             }
         )
 
@@ -120,11 +125,10 @@ def run() -> dict:
         "missing_company": report.missing_company,
         "duplicate_job_id": report.duplicate_job_id,
         "duplicate_source_key": report.duplicate_source_key,
-        "source_bronze_file": str(bronze_file),
+        "source_bronze_file": bronze_file_str,
         "output_file": str(out_path),
     }
     quality_file = cfg.quality_root / f"silver_quality_{bronze_ingest_date}_{bronze_run_id}.json"
-    quality_file.parent.mkdir(parents=True, exist_ok=True)
     quality_file.write_text(json.dumps(quality_payload, indent=2), encoding="utf-8")
     return quality_payload
 
