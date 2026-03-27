@@ -49,14 +49,37 @@ def run(silver_file: str | None = None) -> dict:
     skill_agg["bronze_ingest_date"] = bronze_ingest_date
     skill_agg["bronze_run_id"] = bronze_run_id
 
-    out_path = (
+    skill_out_path = (
         cfg.gold_root
         / "skill_demand_monthly"
         / f"ingest_month={ingest_month}"
         / f"run_id={bronze_run_id}"
         / "part-00001.parquet"
     )
-    write_parquet(out_path, skill_agg)
+    write_parquet(skill_out_path, skill_agg)
+
+    role_source_series = df["title_clean"] if "title_clean" in df.columns else df["title"]
+    role_df = pd.DataFrame({"role": role_source_series.fillna("").astype(str)})
+    role_df["role"] = role_df["role"].str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
+    role_df = role_df[role_df["role"] != ""]
+    role_agg = (
+        role_df.groupby("role", as_index=False)
+        .size()
+        .rename(columns={"size": "job_count"})
+        .sort_values("job_count", ascending=False)
+    )
+    role_agg["source"] = source
+    role_agg["bronze_ingest_date"] = bronze_ingest_date
+    role_agg["bronze_run_id"] = bronze_run_id
+
+    role_out_path = (
+        cfg.gold_root
+        / "role_demand_monthly"
+        / f"ingest_month={ingest_month}"
+        / f"run_id={bronze_run_id}"
+        / "part-00001.parquet"
+    )
+    write_parquet(role_out_path, role_agg)
 
     payload = {
         "stage": "gold",
@@ -64,9 +87,11 @@ def run(silver_file: str | None = None) -> dict:
         "bronze_ingest_date": bronze_ingest_date,
         "bronze_run_id": bronze_run_id,
         "source": source,
-        "row_count": int(len(skill_agg)),
+        "skill_row_count": int(len(skill_agg)),
+        "role_row_count": int(len(role_agg)),
         "source_silver_file": silver_file_str,
-        "output_file": str(out_path),
+        "skill_output_file": str(skill_out_path),
+        "role_output_file": str(role_out_path),
     }
     (cfg.quality_root / f"gold_quality_{ingest_month}_{bronze_run_id}.json").write_text(
         json.dumps(payload, indent=2), encoding="utf-8"
