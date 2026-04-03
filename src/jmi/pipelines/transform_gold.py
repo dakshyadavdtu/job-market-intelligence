@@ -1,12 +1,40 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
 
 from src.jmi.config import AppConfig
 from src.jmi.utils.io import write_parquet
+
+# Conservative cleanup for location group-by keys (whitespace, commas, obvious duplicates).
+_WS_RUN = re.compile(r"\s+")
+_COMMA_RUN = re.compile(r",+")
+
+
+def _normalize_location_label(value: object) -> str:
+    """Return a canonical label for aggregation. Does not infer or correct geography."""
+    text = str(value or "").strip().lower()
+    if not text:
+        return ""
+    text = _WS_RUN.sub(" ", text)
+    text = _COMMA_RUN.sub(",", text)
+    parts: list[str] = []
+    for raw_seg in text.split(","):
+        seg = _WS_RUN.sub(" ", raw_seg.strip())
+        if seg:
+            parts.append(seg)
+    if not parts:
+        return ""
+    deduped: list[str] = [parts[0]]
+    for seg in parts[1:]:
+        if seg != deduped[-1]:
+            deduped.append(seg)
+    if len(deduped) == 1:
+        return deduped[0]
+    return ", ".join(deduped)
 
 
 def _latest_silver_file(cfg: AppConfig) -> Path:
@@ -83,9 +111,7 @@ def run(silver_file: str | None = None) -> dict:
 
     location_source_series = df["location"] if "location" in df.columns else pd.Series([], dtype="object")
     location_df = pd.DataFrame({"location": location_source_series.fillna("").astype(str)})
-    location_df["location"] = (
-        location_df["location"].str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
-    )
+    location_df["location"] = location_df["location"].map(_normalize_location_label)
     location_df = location_df[location_df["location"] != ""]
     location_agg = (
         location_df.groupby("location", as_index=False)
