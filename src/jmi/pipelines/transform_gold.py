@@ -12,6 +12,18 @@ from src.jmi.utils.io import write_parquet
 # Conservative cleanup for location group-by keys (whitespace, commas, obvious duplicates).
 _WS_RUN = re.compile(r"\s+")
 _COMMA_RUN = re.compile(r",+")
+# Strip stray punctuation from the ends of comma-separated fragments (not inner apostrophes).
+_SEGMENT_EDGE_PUNCT = re.compile(r"^[\s.,;:|/\\-]+|[\s.,;:|/\\-]+$")
+
+# Whole-label aliases: only exact matches after other cleanup (dataset-specific, conservative).
+_CANONICAL_LOCATION_ALIASES: dict[str, str] = {
+    "frankfurt": "frankfurt am main",
+}
+
+
+def _clean_location_segment(raw: str) -> str:
+    seg = _SEGMENT_EDGE_PUNCT.sub("", _WS_RUN.sub(" ", raw.strip()))
+    return seg
 
 
 def _normalize_location_label(value: object) -> str:
@@ -23,18 +35,26 @@ def _normalize_location_label(value: object) -> str:
     text = _COMMA_RUN.sub(",", text)
     parts: list[str] = []
     for raw_seg in text.split(","):
-        seg = _WS_RUN.sub(" ", raw_seg.strip())
+        seg = _clean_location_segment(raw_seg)
         if seg:
             parts.append(seg)
     if not parts:
         return ""
+    # Repeated city then region/country tail, e.g. "berlin, berlin, germany" -> "berlin".
+    if len(parts) >= 3 and parts[0] == parts[1]:
+        parts = [parts[0]]
     deduped: list[str] = [parts[0]]
     for seg in parts[1:]:
         if seg != deduped[-1]:
             deduped.append(seg)
     if len(deduped) == 1:
-        return deduped[0]
-    return ", ".join(deduped)
+        out = deduped[0]
+    elif len(deduped) == 2 and deduped[0] == "berlin" and deduped[1] == "germany":
+        # Obvious duplicate vs "berlin" alone; do not generalize to other city, country pairs.
+        out = "berlin"
+    else:
+        out = ", ".join(deduped)
+    return _CANONICAL_LOCATION_ALIASES.get(out, out)
 
 
 def _latest_silver_file(cfg: AppConfig) -> Path:
