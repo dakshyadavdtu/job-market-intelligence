@@ -69,7 +69,7 @@ All new views are defined in:
 
 | View | Purpose |
 |------|---------|
-| `jmi_analytics.role_title_classified` | Audit: `role` (raw), `cleaned_role_title`, `normalized_role_group`, `job_count` |
+| `jmi_analytics.role_title_classified` | Audit: `raw_role` (gold title), `cleaned_role_title`, `normalized_role_group`, `job_count` |
 | `jmi_analytics.role_group_demand_monthly` | One row per `(ingest_month, run_id, role_group)` with summed postings |
 | `jmi_analytics.role_group_top20` | Top 20 **families** by `job_count` |
 | `jmi_analytics.role_group_pareto` | Pareto over **families** (same columns as `role_pareto` but `role_group` instead of `role`) |
