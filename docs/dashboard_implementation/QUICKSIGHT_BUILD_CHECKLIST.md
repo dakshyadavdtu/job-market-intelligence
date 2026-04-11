@@ -9,11 +9,11 @@ Step-by-step implementation manual for the frozen two-sheet dashboard. Follow or
 ### A1 — Athena
 
 1. Open **Athena** (same workgroup/region as S3/Glue).
-2. Apply **`infra/aws/athena/ddl_gold_*.sql`** (or `ALTER TABLE` the same `TBLPROPERTIES`) so fact tables use **partition projection**; keep **`pipeline_run_summary`** without projection (see comment in `ddl_gold_pipeline_run_summary.sql`).
+2. Apply **`infra/aws/athena/ddl_gold_*.sql`** (or `ALTER TABLE` the same `TBLPROPERTIES`) so **all** Gold tables (`ddl_gold_latest_run_metadata.sql` through `ddl_gold_*_monthly.sql`) use the repo definitions: **partition projection** on partitioned tables, and **`latest_run_metadata`** (non-partitioned, single Parquet path).
 3. Run **`ATHENA_VIEWS.sql`** end-to-end, then optional **`ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql`**.
 4. Script uses `CREATE DATABASE IF NOT EXISTS jmi_analytics;` — if it fails, create the database manually in Athena, then re-run view statements.
-5. After each Gold run that writes **new** `ingest_month` / `run_id` prefixes under `gold/pipeline_run_summary/`, register partitions for **that table only** (e.g. `MSCK REPAIR TABLE jmi_gold.pipeline_run_summary;` or a Glue Crawler on that prefix). Fact tables (`role_*`, `location_*`, `company_*`, `skill_*`) use partition projection and do **not** need MSCK for new runs, as long as `ingest_month` stays within the configured projection range.
-6. Validate SQL (latest run is chosen automatically via `jmi_analytics.latest_pipeline_run`):
+5. Run the **Gold** transform at least once so `gold/latest_run_metadata/part-00001.parquet` exists (written by `transform_gold.py`). No **MSCK** is required for latest-run detection or for new Gold partitions **within** the configured projection month range.
+6. Validate SQL (latest run is chosen automatically via `jmi_analytics.latest_pipeline_run` → `jmi_gold.latest_run_metadata`):
    - `SELECT run_id FROM jmi_analytics.latest_pipeline_run;` → newest `run_id` string.
    - `SELECT * FROM jmi_analytics.sheet1_kpis;` → one row per `ingest_month` in the **latest** pipeline run only.
    - `SELECT MAX(cumulative_job_pct) FROM jmi_analytics.role_pareto;` → **100.0** (within float tolerance).
@@ -46,7 +46,7 @@ For each dataset:
 
 ### A4 — Dashboard parameters (optional)
 
-`jmi_analytics` views already restrict data to **MAX(run_id)** from `jmi_gold.pipeline_run_summary` (see `latest_pipeline_run`). Parameters are **optional**: use **`p_ingest_month`** (and rarely **`p_run_id`**) only if you need to override or narrow a multi-month latest run in a visual.
+`jmi_analytics` views already restrict data to **`run_id`** from **`jmi_gold.latest_run_metadata`** (see `latest_pipeline_run`). Parameters are **optional**: use **`p_ingest_month`** (and rarely **`p_run_id`**) only if you need to override or narrow a multi-month latest run in a visual.
 
 ---
 
@@ -233,7 +233,7 @@ If unreadable → **`VISUAL_FALLBACK_RULES.md`** Section Companies.
 
 | Symptom | Action |
 |---------|--------|
-| Empty KPIs | `latest_pipeline_run` NULL (repair **`pipeline_run_summary`** partitions); projection range; optional month filter |
+| Empty KPIs | Missing `gold/latest_run_metadata/` Parquet (run Gold); projection range; optional month filter |
 | Pareto line wrong | Re-run Athena `role_pareto` query; check `total_jobs` |
 | Percent wrong scale | Format KPI as percent vs decimal |
 | Treemap illegible | Apply `VISUAL_FALLBACK_RULES.md` |

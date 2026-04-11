@@ -4,18 +4,17 @@
 -- Prerequisites:
 --   - Database `jmi_gold` exists with external tables:
 --       role_demand_monthly, location_demand_monthly, company_hiring_monthly,
---       skill_demand_monthly, pipeline_run_summary
+--       skill_demand_monthly, pipeline_run_summary, latest_run_metadata
 --   - Partition columns: ingest_month, run_id (Hive-style partitions on S3)
---   - Fact tables (not pipeline_run_summary) should use partition projection in DDL
---     under infra/aws/athena/ddl_gold_*.sql so new run partitions resolve without MSCK.
+--   - Gold DDL under infra/aws/athena/ddl_gold_*.sql uses partition projection
+--     (including pipeline_run_summary) so new S3 prefixes resolve without MSCK.
 --   - Column names match repo DDL (bronze_ingest_date, bronze_run_id in body rows)
 --
 -- Analytics database for views (keeps gold tables in `jmi_gold` unchanged).
 -- Use CREATE DATABASE — Athena/Glue use this; CREATE SCHEMA may fail in some workgroups.
 --
--- Latest run: views below filter to MAX(run_id) from pipeline_run_summary (lexicographic
--- max matches newest run for ids from new_run_id() in src/jmi/config.py). Register new
--- partitions for pipeline_run_summary after each Gold run (see checklist).
+-- Latest run: jmi_gold.latest_run_metadata holds one row (run_id), overwritten each Gold
+-- run by transform_gold.py. Views filter fact/summary data to that run_id.
 -- =============================================================================
 
 CREATE DATABASE IF NOT EXISTS jmi_analytics;
@@ -25,7 +24,7 @@ CREATE DATABASE IF NOT EXISTS jmi_analytics;
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.latest_pipeline_run AS
-SELECT MAX(run_id) AS run_id FROM jmi_gold.pipeline_run_summary;
+SELECT MAX(run_id) AS run_id FROM jmi_gold.latest_run_metadata;
 
 -- -----------------------------------------------------------------------------
 -- 0b) Raw-grain helpers — Same columns as jmi_gold tables, latest run_id only
@@ -363,11 +362,10 @@ WHERE pareto_rank <= 20;
 -- NOTES (schema assumptions)
 -- =============================================================================
 -- 1) If your Glue/Athena table names differ, replace `jmi_gold` prefix only.
--- 2) Fact tables (role/location/company/skill monthly) use partition projection in
---    repo DDL; new S3 partitions under the configured month/run_id template are visible
---    without MSCK REPAIR on those tables.
--- 3) pipeline_run_summary must register new partitions (MSCK REPAIR TABLE for that
---    table only, or a Glue Crawler on that prefix) so MAX(run_id) reflects new runs.
+-- 2) Gold tables use partition projection in repo DDL; new S3 prefixes under the
+--    configured month/run_id template are visible without MSCK REPAIR.
+-- 3) latest_run_metadata is a single overwritten Parquet file; no MSCK. Run the Gold
+--    transform so the file exists before relying on latest_pipeline_run.
 -- 4) `location_hhi` / `company_hhi`: when located_postings = 0 or
 --    company_postings_sum = 0, the INNER JOIN in loc_hhi_calc / comp_hhi_calc
 --    yields no row; sheet1_kpis LEFT JOINs those CTEs so KPI columns are NULL.

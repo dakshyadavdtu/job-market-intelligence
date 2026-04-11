@@ -428,4 +428,4 @@ This document is the **single master reference** for the QuickSight dashboard. T
 | DS_COMPANY_TOP12 | `jmi_analytics.company_top12_other` |
 | DS_PIPELINE_SUMMARY | `jmi_analytics.pipeline_run_summary_latest` |
 
-Analytics views default to the latest pipeline run (`MAX(run_id)` from `jmi_gold.pipeline_run_summary`). Optional **`ingest_month`** filters apply when the latest run spans multiple months.
+Analytics views default to the latest pipeline run (`run_id` from `jmi_gold.latest_run_metadata`, written each Gold run). Optional **`ingest_month`** filters apply when the latest run spans multiple months.

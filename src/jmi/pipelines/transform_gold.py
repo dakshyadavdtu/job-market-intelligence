@@ -316,6 +316,9 @@ def run(
             }
         )
 
+    latest_meta_path = cfg.gold_root / "latest_run_metadata" / "part-00001.parquet"
+    write_parquet(latest_meta_path, pd.DataFrame([{"run_id": prid}]))
+
     payload = {
         "stage": "gold",
         "pipeline_run_id": prid,
@@ -328,6 +331,7 @@ def run(
         "location_output_files": location_outputs,
         "company_output_files": company_outputs,
         "pipeline_run_summary_output_files": summary_outputs,
+        "latest_run_metadata_file": str(latest_meta_path),
     }
     (cfg.quality_root / f"gold_quality_{prid}.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return payload

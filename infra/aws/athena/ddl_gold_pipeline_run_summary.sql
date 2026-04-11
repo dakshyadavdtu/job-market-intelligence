@@ -1,8 +1,6 @@
--- Partition projection is NOT enabled here on purpose: analytics views resolve the latest
--- pipeline run via SELECT MAX(run_id) FROM this table. That pattern requires Glue-registered
--- partitions (not injected projection on run_id). After each Gold run that writes new
--- ingest_month/run_id prefixes, register partitions (MSCK REPAIR or Glue Crawler) for
--- this table only — see docs/dashboard_implementation/QUICKSIGHT_BUILD_CHECKLIST.md.
+-- Partition projection matches other Gold monthly tables so new S3 prefixes resolve
+-- without MSCK. Latest run_id for dashboards comes from jmi_gold.latest_run_metadata
+-- (written each run); views filter this table by that run_id.
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold.pipeline_run_summary (
   source string,
   bronze_ingest_date string,
@@ -18,4 +16,14 @@ PARTITIONED BY (
   run_id string
 )
 STORED AS PARQUET
-LOCATION 's3://jmi-dakshyadav-job-market-intelligence/gold/pipeline_run_summary/';
+LOCATION 's3://jmi-dakshyadav-job-market-intelligence/gold/pipeline_run_summary/'
+TBLPROPERTIES (
+  'projection.enabled' = 'true',
+  'projection.ingest_month.type' = 'date',
+  'projection.ingest_month.format' = 'yyyy-MM',
+  'projection.ingest_month.interval' = '1',
+  'projection.ingest_month.interval.unit' = 'MONTHS',
+  'projection.ingest_month.range' = '2018-01,2035-12',
+  'projection.run_id.type' = 'injected',
+  'storage.location.template' = 's3://jmi-dakshyadav-job-market-intelligence/gold/pipeline_run_summary/ingest_month=${ingest_month}/run_id=${run_id}/'
+);
