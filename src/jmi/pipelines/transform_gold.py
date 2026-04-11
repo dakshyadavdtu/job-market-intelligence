@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath
-from src.jmi.pipelines.silver_schema import normalize_location_raw
+from src.jmi.pipelines.silver_schema import normalize_location_raw, skills_json_to_list
 from src.jmi.utils.io import write_parquet
 
 
@@ -59,7 +59,9 @@ def _resolve_silver_dataframe(
 
 
 def _build_monthly_skill(sub: pd.DataFrame, source: str, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
-    skill_df = sub[["job_id", "skills"]].explode("skills").dropna(subset=["skills"])
+    skills_col = sub["skills"].map(skills_json_to_list)
+    skill_df = pd.DataFrame({"job_id": sub["job_id"], "skills": skills_col}).explode("skills").dropna(subset=["skills"])
+    skill_df = skill_df[skill_df["skills"].astype(str).str.strip() != ""]
     skill_agg = (
         skill_df.groupby("skills", as_index=False)["job_id"]
         .nunique()

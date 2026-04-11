@@ -135,28 +135,65 @@ CANONICAL_SILVER_COLUMN_ORDER: list[str] = [
 ]
 
 
-def _coerce_skills_cells(df: pd.DataFrame) -> pd.DataFrame:
-    """Ensure skills is always a list[str] per row (never NA/NaN) so Parquet list columns round-trip."""
-    if "skills" not in df.columns or len(df) == 0:
-        return df
-
-    def cell(x: object) -> list[str]:
-        if x is None:
-            return []
-        if isinstance(x, float) and pd.isna(x):
-            return []
-        if isinstance(x, (list, tuple)):
-            return [str(t).strip() for t in x if t is not None and str(t).strip()]
-        if hasattr(x, "tolist") and not isinstance(x, (list, tuple, str, bytes)):
+def _skills_to_json_str(x: object) -> str:
+    """Normalize any skills value to a JSON array string for flat Parquet storage."""
+    import json as _json
+    if x is None:
+        return "[]"
+    if isinstance(x, float) and pd.isna(x):
+        return "[]"
+    if isinstance(x, str):
+        s = x.strip()
+        if not s:
+            return "[]"
+        if s.startswith("["):
             try:
-                return cell(x.tolist())
-            except Exception:
-                return []
-        return []
+                parsed = _json.loads(s)
+                if isinstance(parsed, list):
+                    return _json.dumps([str(t).strip() for t in parsed if t is not None and str(t).strip()])
+            except (ValueError, TypeError):
+                pass
+        return _json.dumps([s])
+    items: list = []
+    if isinstance(x, (list, tuple)):
+        items = list(x)
+    elif hasattr(x, "tolist"):
+        try:
+            items = x.tolist()
+        except Exception:
+            return "[]"
+    else:
+        return "[]"
+    cleaned = [str(t).strip() for t in items if t is not None and str(t).strip()]
+    return _json.dumps(cleaned)
 
-    out = df.copy()
-    out["skills"] = out["skills"].map(cell)
-    return out
+
+def skills_json_to_list(x: object) -> list[str]:
+    """Deserialize skills JSON string back to a Python list (for Gold consumption)."""
+    import json as _json
+    if x is None:
+        return []
+    if isinstance(x, float) and pd.isna(x):
+        return []
+    if isinstance(x, str):
+        s = x.strip()
+        if not s or s == "[]":
+            return []
+        try:
+            parsed = _json.loads(s)
+            if isinstance(parsed, list):
+                return [str(t).strip() for t in parsed if t is not None and str(t).strip()]
+        except (ValueError, TypeError):
+            pass
+        return [s] if s else []
+    if isinstance(x, (list, tuple)):
+        return [str(t).strip() for t in x if t is not None and str(t).strip()]
+    if hasattr(x, "tolist"):
+        try:
+            return [str(t).strip() for t in x.tolist() if t is not None and str(t).strip()]
+        except Exception:
+            return []
+    return []
 
 
 def project_silver_to_contract(df: pd.DataFrame) -> pd.DataFrame:
@@ -166,10 +203,11 @@ def project_silver_to_contract(df: pd.DataFrame) -> pd.DataFrame:
         if c in df.columns:
             out[c] = df[c]
         elif c == "skills":
-            out[c] = [[] for _ in range(len(df))]
+            out[c] = "[]"
         else:
             out[c] = pd.NA
-    return _coerce_skills_cells(out)
+    out["skills"] = out["skills"].map(_skills_to_json_str)
+    return out
 
 
 def _legacy_source_job_id_from_key(key: object) -> str | None:
