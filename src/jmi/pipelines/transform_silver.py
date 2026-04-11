@@ -9,9 +9,9 @@ import pandas as pd
 from src.jmi.config import AppConfig, DataPath, split_s3_uri
 from src.jmi.connectors.skill_extract import extract_silver_skills
 from src.jmi.pipelines.silver_schema import (
-    CANONICAL_SILVER_COLUMN_ORDER,
     align_silver_dataframe_to_canonical,
     normalize_company_norm,
+    normalize_location_raw,
     normalize_title_norm,
     posted_at_iso_utc,
     project_silver_to_contract,
@@ -139,7 +139,7 @@ def run(bronze_file: str | None = None) -> dict:
                 "source_job_id": _source_job_id_from_arbeitnow(slug),
                 "title_norm": normalize_title_norm(title),
                 "company_norm": normalize_company_norm(company),
-                "location_raw": location,
+                "location_raw": normalize_location_raw(location),
                 "remote_type": remote_type_from_arbeitnow_payload(payload),
                 "skills": skills,
                 "posted_at": posted_at_iso_utc(payload),

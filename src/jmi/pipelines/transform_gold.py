@@ -2,55 +2,13 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from pathlib import Path
 
 import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath
+from src.jmi.pipelines.silver_schema import normalize_location_raw
 from src.jmi.utils.io import write_parquet
-
-# Conservative cleanup for location group-by keys (whitespace, commas, obvious duplicates).
-_WS_RUN = re.compile(r"\s+")
-_COMMA_RUN = re.compile(r",+")
-_SEGMENT_EDGE_PUNCT = re.compile(r"^[\s.,;:|/\\-]+|[\s.,;:|/\\-]+$")
-
-_CANONICAL_LOCATION_ALIASES: dict[str, str] = {
-    "frankfurt": "frankfurt am main",
-}
-
-
-def _clean_location_segment(raw: str) -> str:
-    seg = _SEGMENT_EDGE_PUNCT.sub("", _WS_RUN.sub(" ", raw.strip()))
-    return seg
-
-
-def _normalize_location_label(value: object) -> str:
-    text = str(value or "").strip().lower()
-    if not text:
-        return ""
-    text = _WS_RUN.sub(" ", text)
-    text = _COMMA_RUN.sub(",", text)
-    parts: list[str] = []
-    for raw_seg in text.split(","):
-        seg = _clean_location_segment(raw_seg)
-        if seg:
-            parts.append(seg)
-    if not parts:
-        return ""
-    if len(parts) >= 3 and parts[0] == parts[1]:
-        parts = [parts[0]]
-    deduped: list[str] = [parts[0]]
-    for seg in parts[1:]:
-        if seg != deduped[-1]:
-            deduped.append(seg)
-    if len(deduped) == 1:
-        out = deduped[0]
-    elif len(deduped) == 2 and deduped[0] == "berlin" and deduped[1] == "germany":
-        out = "berlin"
-    else:
-        out = ", ".join(deduped)
-    return _CANONICAL_LOCATION_ALIASES.get(out, out)
 
 
 def _merged_silver_path(cfg: AppConfig) -> DataPath:
@@ -160,7 +118,7 @@ def _build_monthly_role(sub: pd.DataFrame, source: str, rep_date: str, bronze_ru
 def _build_monthly_location(sub: pd.DataFrame, source: str, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
     location_source_series = _location_series(sub)
     location_df = pd.DataFrame({"location": location_source_series.fillna("").astype(str)})
-    location_df["location"] = location_df["location"].map(_normalize_location_label)
+    location_df["location"] = location_df["location"].map(normalize_location_raw)
     location_df = location_df[location_df["location"] != ""]
     location_agg = (
         location_df.groupby("location", as_index=False)

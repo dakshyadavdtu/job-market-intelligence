@@ -265,7 +265,7 @@ On AWS, the **same sequence** runs in three Lambdas, with **S3 URIs** provided v
 ## 14. Athena + Glue workflow
 
 1. **Create** (or use) an S3 bucket and the **same key layout** the pipelines write.  
-2. **Register tables** in the **Glue Data Catalog** pointing at Bronze/Silver/Gold prefixes. DDL examples live in `infra/aws/athena/` and `sql/athena/`.  
+2. **Register tables** in the **Glue Data Catalog** pointing at Bronze/Silver/Gold prefixes. DDL examples live in `infra/aws/athena/`.  
 3. **Run Athena** in a workgroup whose results go to an **S3 scratch prefix** (e.g. `s3://.../athena-results/`).  
 4. Build **views** that encapsulate “latest run” or “selected month” logic (patterns appear under `docs/dashboard_implementation/`).  
 
@@ -288,7 +288,7 @@ On AWS, the **same sequence** runs in three Lambdas, with **S3 URIs** provided v
 - **Single live source:** Arbeitnow.  
 - **Local pipelines:** ingest → Silver → Gold → Streamlit dashboard.  
 - **Quality artifacts:** Silver and Gold JSON reports under `data/quality/`.  
-- **AWS mapping:** Lambda handlers, packaging/deploy scripts, IAM policy samples, EventBridge JSON, Athena DDL under `infra/aws/` (and some DDL under `sql/athena/`).
+- **AWS mapping:** Lambda handlers, packaging/deploy scripts, IAM policy samples, EventBridge JSON, Athena DDL under `infra/aws/`.
 
 **In progress / later phase:**
 
@@ -319,7 +319,6 @@ job-market-intelligence-main/
 │   └── utils/
 │       ├── io.py             # JSONL.gz + Parquet (local / S3)
 │       └── quality.py        # Silver quality checks
-├── sql/athena/               # Example Athena DDL (repo root copy)
 ├── infra/aws/                # Lambda, IAM, EventBridge, Athena DDL, scripts
 │   ├── lambda/handlers/      # ingest → silver → gold invoke chain
 │   ├── eventbridge/

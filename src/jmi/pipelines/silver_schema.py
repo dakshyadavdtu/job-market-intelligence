@@ -10,16 +10,28 @@ from typing import Any
 import pandas as pd
 
 _WS = re.compile(r"\s+")
+_COMMA_RUN_LOC = re.compile(r",+")
+_SEGMENT_EDGE_PUNCT_LOC = re.compile(r"^[\s.,;:|/\\-]+|[\s.,;:|/\\-]+$")
+_TITLE_GENDER_PAREN = re.compile(
+    r"\s*\(\s*[mfwd]\s*/\s*[mfwd]\s*/\s*[mfwd]\s*\)",
+    re.IGNORECASE,
+)
+_TITLE_EDGE_TRIM = re.compile(r"^[\s.,;:|/\\-]+|[\s.,;:|/\\-]+$")
 _HTML_TAG = re.compile(r"<[^>]+>")
 _HTML_SCRIPT = re.compile(r"(?is)<script[^>]*>.*?</script>")
 _HTML_STYLE = re.compile(r"(?is)<style[^>]*>.*?</style>")
 
 
 def normalize_title_norm(title: str) -> str:
+    """Lowercase analytic title: collapse whitespace, drop common DE gender suffixes, trim edge punctuation."""
     t = (title or "").strip()
     if not t:
         return ""
-    return _WS.sub(" ", t).lower()
+    t = _WS.sub(" ", t)
+    t = _TITLE_GENDER_PAREN.sub(" ", t)
+    t = _WS.sub(" ", t).strip()
+    t = _TITLE_EDGE_TRIM.sub("", t)
+    return t.lower().strip()
 
 
 def normalize_company_norm(company: str) -> str:
@@ -27,6 +39,45 @@ def normalize_company_norm(company: str) -> str:
     if not c:
         return ""
     return _WS.sub(" ", c).lower()
+
+
+_CANONICAL_LOCATION_ALIASES: dict[str, str] = {
+    "frankfurt": "frankfurt am main",
+}
+
+
+def _clean_location_segment(raw: str) -> str:
+    seg = _SEGMENT_EDGE_PUNCT_LOC.sub("", _WS.sub(" ", raw.strip()))
+    return seg
+
+
+def normalize_location_raw(value: object) -> str:
+    """Shared Silver + Gold: clean comma-separated locations (dedupe segments, trim noise)."""
+    text = str(value or "").strip().lower()
+    if not text:
+        return ""
+    text = _WS.sub(" ", text)
+    text = _COMMA_RUN_LOC.sub(",", text)
+    parts: list[str] = []
+    for raw_seg in text.split(","):
+        seg = _clean_location_segment(raw_seg)
+        if seg:
+            parts.append(seg)
+    if not parts:
+        return ""
+    if len(parts) >= 3 and parts[0] == parts[1]:
+        parts = [parts[0]]
+    deduped: list[str] = [parts[0]]
+    for seg in parts[1:]:
+        if seg != deduped[-1]:
+            deduped.append(seg)
+    if len(deduped) == 1:
+        out = deduped[0]
+    elif len(deduped) == 2 and deduped[0] == "berlin" and deduped[1] == "germany":
+        out = "berlin"
+    else:
+        out = ", ".join(deduped)
+    return _CANONICAL_LOCATION_ALIASES.get(out, out)
 
 
 def strip_html_description(raw: str) -> str:
@@ -118,6 +169,9 @@ def align_silver_dataframe_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
             else:
                 out[col] = pd.NA
 
+    out["title_norm"] = out["title_norm"].fillna("").astype(str).map(normalize_title_norm)
+    out["location_raw"] = out["location_raw"].fillna("").astype(str).map(normalize_location_raw)
+
     return project_silver_to_contract(out)
 
 
@@ -128,7 +182,7 @@ def _map_legacy_silver_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
     out["job_id_strategy"] = df.get("job_id_strategy", "")
 
     if "title_norm" in df.columns:
-        out["title_norm"] = df["title_norm"].fillna("").astype(str)
+        out["title_norm"] = df["title_norm"].fillna("").astype(str).map(normalize_title_norm)
     elif "title_raw" in df.columns:
         out["title_norm"] = df["title_raw"].fillna("").astype(str).map(normalize_title_norm)
     else:
@@ -148,9 +202,9 @@ def _map_legacy_silver_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
         out["company_norm"] = cname.str.lower().str.strip().str.replace(_WS, " ", regex=True)
 
     if "location_raw" in df.columns:
-        out["location_raw"] = df["location_raw"].fillna("").astype(str)
+        out["location_raw"] = df["location_raw"].fillna("").astype(str).map(normalize_location_raw)
     elif "location" in df.columns:
-        out["location_raw"] = df["location"].fillna("").astype(str)
+        out["location_raw"] = df["location"].fillna("").astype(str).map(normalize_location_raw)
     else:
         out["location_raw"] = ""
 
