@@ -459,6 +459,31 @@ def _source_tag_fallback_skills(tag_list: list[str]) -> list[str]:
     return sorted(out)
 
 
+def _normalize_tags_input(tags: object) -> list[str]:
+    """Turn API `tags` into a list of strings. Strings must not be iterated char-by-char."""
+    if tags is None:
+        return []
+    if isinstance(tags, str):
+        s = tags.strip()
+        return [s] if s else []
+    if isinstance(tags, dict):
+        out: list[str] = []
+        for k, v in tags.items():
+            if isinstance(v, str) and v.strip():
+                out.append(v.strip())
+            elif isinstance(k, str) and k.strip():
+                out.append(k.strip())
+        return out
+    out = []
+    for t in tags:
+        if t is None:
+            continue
+        s = str(t).strip()
+        if s:
+            out.append(s)
+    return out
+
+
 def extract_silver_skills(
     tags: Iterable[str] | None,
     title_raw: str,
@@ -466,7 +491,7 @@ def extract_silver_skills(
 ) -> list[str]:
     """Return sorted unique canonical skills derived from tags, title, and description."""
     found: set[str] = set()
-    tag_list = [str(t or "").strip() for t in (tags or []) if str(t or "").strip()]
+    tag_list = _normalize_tags_input(tags)
 
     for tag in tag_list:
         tl = tag.lower()

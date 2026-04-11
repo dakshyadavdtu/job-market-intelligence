@@ -135,6 +135,30 @@ CANONICAL_SILVER_COLUMN_ORDER: list[str] = [
 ]
 
 
+def _coerce_skills_cells(df: pd.DataFrame) -> pd.DataFrame:
+    """Ensure skills is always a list[str] per row (never NA/NaN) so Parquet list columns round-trip."""
+    if "skills" not in df.columns or len(df) == 0:
+        return df
+
+    def cell(x: object) -> list[str]:
+        if x is None:
+            return []
+        if isinstance(x, float) and pd.isna(x):
+            return []
+        if isinstance(x, (list, tuple)):
+            return [str(t).strip() for t in x if t is not None and str(t).strip()]
+        if hasattr(x, "tolist") and not isinstance(x, (list, tuple, str, bytes)):
+            try:
+                return cell(x.tolist())
+            except Exception:
+                return []
+        return []
+
+    out = df.copy()
+    out["skills"] = out["skills"].map(cell)
+    return out
+
+
 def project_silver_to_contract(df: pd.DataFrame) -> pd.DataFrame:
     """Enforce exact Silver contract: only CANONICAL columns, fixed order (strips legacy/extra parquet fields)."""
     out = pd.DataFrame(index=df.index)
@@ -145,7 +169,7 @@ def project_silver_to_contract(df: pd.DataFrame) -> pd.DataFrame:
             out[c] = [[] for _ in range(len(df))]
         else:
             out[c] = pd.NA
-    return out
+    return _coerce_skills_cells(out)
 
 
 def _legacy_source_job_id_from_key(key: object) -> str | None:
