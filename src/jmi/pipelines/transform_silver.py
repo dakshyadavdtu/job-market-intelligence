@@ -8,6 +8,18 @@ import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath, split_s3_uri
 from src.jmi.connectors.arbeitnow import normalize_skill_tokens
+from src.jmi.pipelines.silver_schema import (
+    CANONICAL_SILVER_COLUMN_ORDER,
+    align_silver_dataframe_to_canonical,
+    category_from_arbeitnow_tags,
+    employment_type_from_arbeitnow_payload,
+    normalize_company_norm,
+    normalize_title_norm,
+    posted_at_iso_utc,
+    remote_type_from_arbeitnow_payload,
+    split_location_city_country,
+    strip_html_description,
+)
 from src.jmi.utils.io import read_jsonl_gz, write_parquet
 from src.jmi.utils.quality import run_silver_checks
 
@@ -46,6 +58,10 @@ def _clean_text(value: object) -> str:
     return str(value or "").strip()
 
 
+def _source_job_id_from_arbeitnow(slug: str) -> str | None:
+    return slug if slug else None
+
+
 def _prior_partition_silver_frames(cfg: AppConfig) -> pd.DataFrame | None:
     """When merged/latest.parquet is missing, rebuild prior state from historical per-run partitions."""
     jobs_root = cfg.silver_root / "jobs"
@@ -68,7 +84,7 @@ def _prior_partition_silver_frames(cfg: AppConfig) -> pd.DataFrame | None:
         paths = sorted(str(p) for p in base.glob("ingest_date=*/run_id=*/part-*.parquet"))
     if not paths:
         return None
-    frames = [pd.read_parquet(p) for p in paths]
+    frames = [align_silver_dataframe_to_canonical(pd.read_parquet(p)) for p in paths]
     combined = pd.concat(frames, ignore_index=True)
     combined["_sd"] = combined["bronze_ingest_date"].astype(str)
     combined["_sr"] = combined["bronze_run_id"].astype(str)
@@ -82,7 +98,7 @@ def _merge_with_prior_silver(cfg: AppConfig, df_batch: pd.DataFrame) -> pd.DataF
     merged_path = _merged_silver_path(cfg)
     path_str = str(merged_path)
     try:
-        df_old = pd.read_parquet(path_str)
+        df_old = align_silver_dataframe_to_canonical(pd.read_parquet(path_str))
     except Exception:
         df_old = _prior_partition_silver_frames(cfg)
     if df_old is None or df_old.empty:
@@ -110,12 +126,13 @@ def run(bronze_file: str | None = None) -> dict:
         title = _clean_text(payload.get("title"))
         company = _clean_text(payload.get("company_name"))
         location = _clean_text(payload.get("location"))
-        remote = bool(payload.get("remote", False))
+        slug = _clean_text(row.get("source_slug") or payload.get("slug"))
         url = _clean_text(payload.get("url"))
-        created = str(payload.get("created_at", "") or "")
+        city, country = split_location_city_country(location)
+
         skills = normalize_skill_tokens(payload.get("tags"))
-        source_slug = _clean_text(row.get("source_slug") or payload.get("slug"))
-        source_record_key = source_slug or url or _clean_text(row.get("job_id"))
+        source_record_key = slug or url or _clean_text(row.get("job_id"))
+        rid = row.get("run_id", bronze_run_id)
 
         flattened.append(
             {
@@ -124,16 +141,27 @@ def run(bronze_file: str | None = None) -> dict:
                 "source_record_key": source_record_key,
                 "source": row.get("source"),
                 "schema_version": row.get("schema_version"),
-                "title": title.lower(),
-                "title_clean": title,
-                "company_name": company,
-                "location": location,
-                "is_remote": remote,
-                "published_at_raw": created,
+                "source_job_id": _source_job_id_from_arbeitnow(slug),
+                "title_raw": title,
+                "title_norm": normalize_title_norm(title),
+                "company_raw": company,
+                "company_norm": normalize_company_norm(company),
+                "location_raw": location,
+                "location_city": city,
+                "location_country": country,
+                "remote_type": remote_type_from_arbeitnow_payload(payload),
+                "employment_type": employment_type_from_arbeitnow_payload(payload),
+                "category": category_from_arbeitnow_tags(payload.get("tags")),
+                "description_text": strip_html_description(_clean_text(payload.get("description"))),
                 "skills": skills,
-                "posting_url": url,
+                "salary_min": None,
+                "salary_max": None,
+                "salary_currency": None,
+                "posted_at": posted_at_iso_utc(payload),
                 "ingested_at": row.get("ingested_at"),
-                "bronze_run_id": row.get("run_id", bronze_run_id),
+                "record_status": "active",
+                "raw_url": url,
+                "bronze_run_id": rid,
                 "bronze_ingest_date": row.get("bronze_ingest_date", bronze_ingest_date),
                 "bronze_data_file": bronze_file_str,
             }
@@ -143,10 +171,13 @@ def run(bronze_file: str | None = None) -> dict:
     if raw_df.empty:
         raise RuntimeError("No rows could be flattened from bronze data.")
 
+    raw_df = align_silver_dataframe_to_canonical(raw_df)
     pre_dedup_count = int(len(raw_df))
     df_batch = raw_df.drop_duplicates(subset=["job_id"], keep="first").copy()
     post_dedup_count = int(len(df_batch))
     dedup_removed = pre_dedup_count - post_dedup_count
+
+    df_batch = df_batch[[c for c in CANONICAL_SILVER_COLUMN_ORDER if c in df_batch.columns]]
 
     report = run_silver_checks(df_batch, bronze_row_count=len(bronze_rows))
     if report.status != "PASS":
@@ -157,6 +188,7 @@ def run(bronze_file: str | None = None) -> dict:
         )
 
     df_merged = _merge_with_prior_silver(cfg, df_batch)
+    df_merged = df_merged[[c for c in CANONICAL_SILVER_COLUMN_ORDER if c in df_merged.columns]]
 
     out_path = (
         cfg.silver_root

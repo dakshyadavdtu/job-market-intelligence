@@ -26,8 +26,12 @@ def _missing_text_count(df: pd.DataFrame, column: str) -> int:
 
 def run_silver_checks(df: pd.DataFrame, bronze_row_count: int) -> QualityReport:
     row_count = int(len(df))
-    missing_title = _missing_text_count(df, "title_clean")
-    missing_company = _missing_text_count(df, "company_name")
+    missing_title = _missing_text_count(df, "title_raw")
+    if missing_title == 0 and "title_clean" in df.columns:
+        missing_title = _missing_text_count(df, "title_clean")
+    missing_company = _missing_text_count(df, "company_raw")
+    if missing_company == 0 and "company_name" in df.columns:
+        missing_company = _missing_text_count(df, "company_name")
     duplicate_job_id = int(df["job_id"].duplicated().sum()) if "job_id" in df else 0
     duplicate_source_key = (
         int(df[["source", "source_record_key"]].duplicated().sum())

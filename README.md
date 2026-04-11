@@ -146,7 +146,7 @@ JMI therefore separates concerns:
 
 **Purpose:** Turn semi-structured JSON into **typed, analytics-friendly rows** with **quality gates**.
 
-**What happens:** Read Bronze JSONL.gz; map fields into columns such as `title_clean`, `company_name`, `location`, `skills` (rule-based normalization), URLs, remote flag, etc.; **drop duplicate `job_id`** within the batch; run **`run_silver_checks`** (non-empty rows, required text fields, no duplicate keys); write **Parquet**.
+**What happens:** Read Bronze JSONL.gz; map `raw_payload` into the **canonical Silver columns** (raw vs normalized title/company/location, `remote_type`, `employment_type`, `category`, stripped `description_text`, `skills` allowlist normalization, `posted_at`, URLs, plus `bronze_run_id` / `bronze_ingest_date` / `bronze_data_file`); **drop duplicate `job_id`** within the batch; run **`run_silver_checks`**; write **Parquet**. See `docs/data_dictionary.md` for the full list.
 
 **Outputs:**
 
@@ -221,9 +221,9 @@ On AWS, the **same sequence** runs in three Lambdas, with **S3 URIs** provided v
 
 **Silver (Parquet row)** — highlights:
 
-- Identity: **`job_id`**, **`source`**, **`source_record_key`**
-- Job attributes: **`title`**, **`title_clean`**, **`company_name`**, **`location`**, **`is_remote`**, **`skills`** (array), **`posting_url`**, **`published_at_raw`**
-- Lineage: **`bronze_run_id`**, **`bronze_ingest_date`**, **`bronze_data_file`**
+- Identity: **`job_id`**, **`source`**, **`source_job_id`**, **`source_record_key`**
+- Job attributes: **`title_raw`**, **`title_norm`**, **`company_raw`**, **`company_norm`**, **`location_raw`**, **`location_city`**, **`location_country`**, **`remote_type`**, **`employment_type`**, **`category`**, **`description_text`**, **`skills`**, **`salary_*`**, **`posted_at`**, **`record_status`**, **`raw_url`**
+- Lineage: **`bronze_run_id`** (batch id; same value as S3 path `run_id=`), **`bronze_ingest_date`**, **`bronze_data_file`**, **`ingested_at`**
 
 **Gold (Parquet)** — typical columns:
 

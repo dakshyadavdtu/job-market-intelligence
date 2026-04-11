@@ -114,8 +114,34 @@ def _build_monthly_skill(sub: pd.DataFrame, source: str, rep_date: str, bronze_r
     return skill_agg
 
 
+def _role_series(sub: pd.DataFrame) -> pd.Series:
+    if "title_norm" in sub.columns:
+        return sub["title_norm"]
+    if "title_clean" in sub.columns:
+        return sub["title_clean"]
+    if "title" in sub.columns:
+        return sub["title"]
+    return pd.Series([""] * len(sub), index=sub.index)
+
+
+def _location_series(sub: pd.DataFrame) -> pd.Series:
+    if "location_raw" in sub.columns:
+        return sub["location_raw"]
+    if "location" in sub.columns:
+        return sub["location"]
+    return pd.Series([""] * len(sub), index=sub.index)
+
+
+def _company_series(sub: pd.DataFrame) -> pd.Series:
+    if "company_norm" in sub.columns:
+        return sub["company_norm"]
+    if "company_name" in sub.columns:
+        return sub["company_name"]
+    return pd.Series([""] * len(sub), index=sub.index)
+
+
 def _build_monthly_role(sub: pd.DataFrame, source: str, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
-    role_source_series = sub["title_clean"] if "title_clean" in sub.columns else sub["title"]
+    role_source_series = _role_series(sub)
     role_df = pd.DataFrame({"role": role_source_series.fillna("").astype(str)})
     role_df["role"] = role_df["role"].str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
     role_df = role_df[role_df["role"] != ""]
@@ -132,7 +158,7 @@ def _build_monthly_role(sub: pd.DataFrame, source: str, rep_date: str, bronze_ru
 
 
 def _build_monthly_location(sub: pd.DataFrame, source: str, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
-    location_source_series = sub["location"] if "location" in sub.columns else pd.Series([], dtype="object")
+    location_source_series = _location_series(sub)
     location_df = pd.DataFrame({"location": location_source_series.fillna("").astype(str)})
     location_df["location"] = location_df["location"].map(_normalize_location_label)
     location_df = location_df[location_df["location"] != ""]
@@ -149,9 +175,7 @@ def _build_monthly_location(sub: pd.DataFrame, source: str, rep_date: str, bronz
 
 
 def _build_monthly_company(sub: pd.DataFrame, source: str, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
-    company_source_series = (
-        sub["company_name"] if "company_name" in sub.columns else pd.Series([], dtype="object")
-    )
+    company_source_series = _company_series(sub)
     company_df = pd.DataFrame({"company_name": company_source_series.fillna("").astype(str)})
     company_df["company_name"] = (
         company_df["company_name"].str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
