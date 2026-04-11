@@ -83,7 +83,8 @@ def _resolve_silver_dataframe(
     candidates.append(str(_merged_silver_path(cfg)))
     if silver_file:
         candidates.append(silver_file)
-    candidates.append(str(_latest_silver_file(cfg)))
+    if not cfg.silver_root.is_s3:
+        candidates.append(str(_latest_silver_file(cfg)))
 
     seen: set[str] = set()
     for c in candidates:
