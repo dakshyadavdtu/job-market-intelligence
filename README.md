@@ -146,7 +146,7 @@ JMI therefore separates concerns:
 
 **Purpose:** Turn semi-structured JSON into **typed, analytics-friendly rows** with **quality gates**.
 
-**What happens:** Read Bronze JSONL.gz; map `raw_payload` into the **canonical Silver columns** (raw vs normalized title/company/location, `remote_type`, `employment_type`, stripped `description_text`, rule-based **`skills`** from tags + title + description, `posted_at`, URLs, plus `bronze_run_id` / `bronze_ingest_date` / `bronze_data_file`); **drop duplicate `job_id`** within the batch; run **`run_silver_checks`**; write **Parquet**. See `docs/data_dictionary.md` for the full list.
+**What happens:** Read Bronze JSONL.gz; map `raw_payload` into a **minimal Silver row** (normalized title/company, `location_raw`, `remote_type`, `employment_type`, **`skills`** from allowlist/aliases/title/description with **Arbeitnow tag fallback** when needed, `posted_at`, plus `bronze_run_id` / `bronze_ingest_date` / `bronze_data_file` / `job_id_strategy`); **drop duplicate `job_id`**; run **`run_silver_checks`**; write **Parquet**. Display text, URL, and long description stay on **Bronze** (`raw_payload`). See `docs/data_dictionary.md`.
 
 **Outputs:**
 
@@ -222,8 +222,9 @@ On AWS, the **same sequence** runs in three Lambdas, with **S3 URIs** provided v
 **Silver (Parquet row)** — highlights:
 
 - Identity: **`job_id`**, **`source`**, **`source_job_id`**
-- Job attributes: **`title_raw`**, **`title_norm`**, **`company_raw`**, **`company_norm`**, **`location_raw`**, **`remote_type`**, **`employment_type`**, **`description_text`**, **`skills`**, **`posted_at`**, **`raw_url`**
-- Lineage: **`bronze_run_id`** (batch id; same value as S3 path `run_id=`), **`bronze_ingest_date`**, **`bronze_data_file`**, **`ingested_at`**
+- Gold-oriented fields: **`title_norm`**, **`company_norm`**, **`location_raw`**, **`skills`**
+- Other job facts: **`remote_type`**, **`employment_type`**, **`posted_at`**, **`ingested_at`**
+- Lineage / audit: **`bronze_run_id`**, **`bronze_ingest_date`**, **`bronze_data_file`**, **`job_id_strategy`**
 
 **Gold (Parquet)** — typical columns:
 

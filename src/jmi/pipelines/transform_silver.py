@@ -125,9 +125,8 @@ def run(bronze_file: str | None = None) -> dict:
         company = _clean_text(payload.get("company_name"))
         location = _clean_text(payload.get("location"))
         slug = _clean_text(row.get("source_slug") or payload.get("slug"))
-        url = _clean_text(payload.get("url"))
-        description_text = strip_html_description(_clean_text(payload.get("description")))
-        skills = extract_silver_skills(payload.get("tags"), title, description_text)
+        desc_stripped = strip_html_description(_clean_text(payload.get("description")))
+        skills = extract_silver_skills(payload.get("tags"), title, desc_stripped)
         rid = row.get("run_id", bronze_run_id)
 
         flattened.append(
@@ -135,20 +134,15 @@ def run(bronze_file: str | None = None) -> dict:
                 "job_id": row.get("job_id"),
                 "job_id_strategy": row.get("job_id_strategy", ""),
                 "source": row.get("source"),
-                "schema_version": row.get("schema_version"),
                 "source_job_id": _source_job_id_from_arbeitnow(slug),
-                "title_raw": title,
                 "title_norm": normalize_title_norm(title),
-                "company_raw": company,
                 "company_norm": normalize_company_norm(company),
                 "location_raw": location,
                 "remote_type": remote_type_from_arbeitnow_payload(payload),
                 "employment_type": employment_type_from_arbeitnow_payload(payload),
-                "description_text": description_text,
                 "skills": skills,
                 "posted_at": posted_at_iso_utc(payload),
                 "ingested_at": row.get("ingested_at"),
-                "raw_url": url,
                 "bronze_run_id": rid,
                 "bronze_ingest_date": row.get("bronze_ingest_date", bronze_ingest_date),
                 "bronze_data_file": bronze_file_str,

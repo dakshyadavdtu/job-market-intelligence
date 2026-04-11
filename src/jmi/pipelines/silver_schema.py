@@ -73,24 +73,20 @@ def posted_at_iso_utc(payload: dict[str, Any]) -> str | None:
         return None
 
 
+# Minimal Silver: only columns Gold needs + essential lineage + canonical job facts not duplicated from Bronze lightly.
 CANONICAL_SILVER_COLUMN_ORDER: list[str] = [
     "job_id",
     "source",
     "source_job_id",
-    "title_raw",
     "title_norm",
-    "company_raw",
     "company_norm",
     "location_raw",
     "remote_type",
     "employment_type",
-    "description_text",
     "skills",
     "posted_at",
     "ingested_at",
-    "raw_url",
     "job_id_strategy",
-    "schema_version",
     "bronze_run_id",
     "bronze_ingest_date",
     "bronze_data_file",
@@ -106,7 +102,7 @@ def _legacy_source_job_id_from_key(key: object) -> str | None:
 
 def align_silver_dataframe_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
     """If df uses pre-canonical column names, map to canonical; else ensure column set/order."""
-    if "title_raw" not in df.columns:
+    if "title_norm" not in df.columns:
         out = _map_legacy_silver_to_canonical(df)
     else:
         out = df.copy()
@@ -115,8 +111,6 @@ def align_silver_dataframe_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
         if col not in out.columns:
             if col == "skills":
                 out[col] = [[] for _ in range(len(out))]
-            elif col == "description_text":
-                out[col] = ""
             else:
                 out[col] = pd.NA
 
@@ -130,19 +124,26 @@ def _map_legacy_silver_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
     out["job_id"] = df["job_id"] if "job_id" in df.columns else pd.NA
     out["source"] = df["source"] if "source" in df.columns else pd.NA
     out["job_id_strategy"] = df.get("job_id_strategy", "")
-    out["schema_version"] = df.get("schema_version", "")
 
-    title_clean = df["title_clean"].fillna("").astype(str) if "title_clean" in df.columns else pd.Series("", index=df.index)
-    title_lower = df["title"].fillna("").astype(str) if "title" in df.columns else pd.Series("", index=df.index)
-    out["title_raw"] = title_clean
-    out["title_norm"] = title_lower.where(
-        title_lower.str.len() > 0,
-        title_clean.map(normalize_title_norm),
-    )
+    if "title_norm" in df.columns:
+        out["title_norm"] = df["title_norm"].fillna("").astype(str)
+    elif "title_raw" in df.columns:
+        out["title_norm"] = df["title_raw"].fillna("").astype(str).map(normalize_title_norm)
+    else:
+        title_clean = df["title_clean"].fillna("").astype(str) if "title_clean" in df.columns else pd.Series("", index=df.index)
+        title_lower = df["title"].fillna("").astype(str) if "title" in df.columns else pd.Series("", index=df.index)
+        out["title_norm"] = title_lower.where(
+            title_lower.str.len() > 0,
+            title_clean.map(normalize_title_norm),
+        )
 
-    cname = df["company_name"].fillna("").astype(str) if "company_name" in df.columns else pd.Series("", index=df.index)
-    out["company_raw"] = cname
-    out["company_norm"] = cname.str.lower().str.strip().str.replace(_WS, " ", regex=True)
+    if "company_norm" in df.columns:
+        out["company_norm"] = df["company_norm"].fillna("").astype(str)
+    elif "company_raw" in df.columns:
+        out["company_norm"] = df["company_raw"].fillna("").astype(str).map(normalize_company_norm)
+    else:
+        cname = df["company_name"].fillna("").astype(str) if "company_name" in df.columns else pd.Series("", index=df.index)
+        out["company_norm"] = cname.str.lower().str.strip().str.replace(_WS, " ", regex=True)
 
     if "location_raw" in df.columns:
         out["location_raw"] = df["location_raw"].fillna("").astype(str)
@@ -161,12 +162,6 @@ def _map_legacy_silver_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
         out["remote_type"] = "unknown"
 
     out["employment_type"] = df["employment_type"] if "employment_type" in df.columns else pd.NA
-
-    if "description_text" in df.columns:
-        out["description_text"] = df["description_text"].fillna("").astype(str)
-    else:
-        out["description_text"] = ""
-
     out["skills"] = df["skills"] if "skills" in df.columns else [[] for _ in range(len(df))]
 
     if "posted_at" in df.columns:
@@ -177,13 +172,6 @@ def _map_legacy_silver_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
         out["posted_at"] = pd.NA
 
     out["ingested_at"] = df["ingested_at"] if "ingested_at" in df.columns else pd.NA
-
-    if "raw_url" in df.columns:
-        out["raw_url"] = df["raw_url"].fillna("").astype(str)
-    elif "posting_url" in df.columns:
-        out["raw_url"] = df["posting_url"].fillna("").astype(str)
-    else:
-        out["raw_url"] = ""
 
     if "source_job_id" in df.columns:
         out["source_job_id"] = df["source_job_id"]

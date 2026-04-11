@@ -27,10 +27,14 @@ def _missing_text_count(df: pd.DataFrame, column: str) -> int:
 
 def run_silver_checks(df: pd.DataFrame, bronze_row_count: int) -> QualityReport:
     row_count = int(len(df))
-    missing_title = _missing_text_count(df, "title_raw")
+    missing_title = _missing_text_count(df, "title_norm")
+    if missing_title == 0 and "title_raw" in df.columns:
+        missing_title = _missing_text_count(df, "title_raw")
     if missing_title == 0 and "title_clean" in df.columns:
         missing_title = _missing_text_count(df, "title_clean")
-    missing_company = _missing_text_count(df, "company_raw")
+    missing_company = _missing_text_count(df, "company_norm")
+    if missing_company == 0 and "company_raw" in df.columns:
+        missing_company = _missing_text_count(df, "company_raw")
     if missing_company == 0 and "company_name" in df.columns:
         missing_company = _missing_text_count(df, "company_name")
     duplicate_job_id = int(df["job_id"].duplicated().sum()) if "job_id" in df else 0
@@ -41,12 +45,8 @@ def run_silver_checks(df: pd.DataFrame, bronze_row_count: int) -> QualityReport:
             sj = df["source_job_id"].fillna("").astype(str).str.strip()
         else:
             sj = pd.Series([""] * n, index=df.index)
-        if "raw_url" in df.columns:
-            ru = df["raw_url"].fillna("").astype(str).str.strip()
-        else:
-            ru = pd.Series([""] * n, index=df.index)
         jid = df["job_id"].fillna("").astype(str)
-        key = np.where(sj.to_numpy() != "", sj.to_numpy(), np.where(ru.to_numpy() != "", ru.to_numpy(), jid.to_numpy()))
+        key = np.where(sj.to_numpy() != "", sj.to_numpy(), jid.to_numpy())
         duplicate_source_key = int(pd.DataFrame({"source": df["source"].astype(str), "_k": key}).duplicated().sum())
     elif {"source", "source_record_key"}.issubset(df.columns):
         duplicate_source_key = int(df[["source", "source_record_key"]].duplicated().sum())

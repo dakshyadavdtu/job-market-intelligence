@@ -110,6 +110,14 @@ SKILL_ALLOWLIST: frozenset[str] = frozenset(
         "sem",
         "recruiting",
         "digital marketing",
+        "social media",
+        "customer service",
+        "warehouse",
+        "healthcare",
+        "hospitality",
+        "retail",
+        "education",
+        "construction",
         "network administration",
         "systems administration",
         "information systems",
@@ -171,6 +179,12 @@ SKILL_ALIAS_MAP: dict[str, tuple[str, ...]] = {
     "buchhalterin": ("accounting",),
     "lager": ("logistics",),
     "logistik": ("logistics",),
+    "pflege": ("healthcare",),
+    "krankenpflege": ("healthcare",),
+    "gastronomie": ("hospitality",),
+    "einzelhandel": ("retail",),
+    "lagerist": ("warehouse",),
+    "call center": ("customer service",),
 }
 
 # Tokens / phrases never promoted to skills (too generic or noisy).
@@ -426,6 +440,21 @@ def _add_from_alias_key(key: str, found: set[str]) -> None:
         found.add(k)
 
 
+def _source_tag_fallback_skills(tag_list: list[str]) -> list[str]:
+    """When allowlist extraction finds nothing, use cleaned Arbeitnow tags (source-native, not invented)."""
+    out: set[str] = set()
+    for tag in tag_list:
+        t = _WS.sub(" ", str(tag or "").strip().lower())
+        if len(t) < 2 or t in SKILL_STOPLIST:
+            continue
+        if len(t) > 120:
+            t = t[:120].rsplit(" ", 1)[0].strip()
+            if len(t) < 2:
+                continue
+        out.add(t)
+    return sorted(out)
+
+
 def extract_silver_skills(
     tags: Iterable[str] | None,
     title_raw: str,
@@ -440,7 +469,6 @@ def extract_silver_skills(
         _add_from_alias_key(tl, found)
         if tl in SKILL_ALLOWLIST and tl not in SKILL_STOPLIST:
             found.add(tl)
-        # Tag as free text: scan for embedded allowlist phrases
         tag_blob = _normalize_blob(tag)
         for phrase in _ALLOWLIST_BY_LEN:
             if phrase in SKILL_STOPLIST:
@@ -449,22 +477,22 @@ def extract_silver_skills(
                 found.add(phrase)
 
     blob = _normalize_blob(title_raw, description_text, " ".join(tag_list))
-    if not blob:
+    if blob:
+        for phrase in _ALLOWLIST_BY_LEN:
+            if _phrase_in_blob(phrase, blob):
+                found.add(phrase)
+
+        for tok in _TOKEN_SPLIT.split(blob):
+            tok = tok.strip(".#_/-")
+            if len(tok) < 2:
+                continue
+            tl = tok.lower()
+            if tl in SKILL_STOPLIST:
+                continue
+            _add_from_alias_key(tl, found)
+            if tl in SKILL_ALLOWLIST:
+                found.add(tl)
+
+    if found:
         return sorted(found)
-
-    for phrase in _ALLOWLIST_BY_LEN:
-        if _phrase_in_blob(phrase, blob):
-            found.add(phrase)
-
-    for tok in _TOKEN_SPLIT.split(blob):
-        tok = tok.strip(".#_/-")
-        if len(tok) < 2:
-            continue
-        tl = tok.lower()
-        if tl in SKILL_STOPLIST:
-            continue
-        _add_from_alias_key(tl, found)
-        if tl in SKILL_ALLOWLIST:
-            found.add(tl)
-
-    return sorted(found)
+    return _source_tag_fallback_skills(tag_list)
