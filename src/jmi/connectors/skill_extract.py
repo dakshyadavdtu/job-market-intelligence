@@ -441,11 +441,15 @@ def _add_from_alias_key(key: str, found: set[str]) -> None:
 
 
 def _source_tag_fallback_skills(tag_list: list[str]) -> list[str]:
-    """When allowlist extraction finds nothing, use cleaned Arbeitnow tags (source-native, not invented)."""
+    """When allowlist extraction finds nothing, use cleaned Arbeitnow tags (source-native, not invented).
+
+    Do not apply SKILL_STOPLIST here: stoplist is for title/description token noise; API tags like
+    \"Consulting\" or \"IT\" are authoritative source labels even when generic as tokens.
+    """
     out: set[str] = set()
     for tag in tag_list:
         t = _WS.sub(" ", str(tag or "").strip().lower())
-        if len(t) < 2 or t in SKILL_STOPLIST:
+        if len(t) < 2:
             continue
         if len(t) > 120:
             t = t[:120].rsplit(" ", 1)[0].strip()
