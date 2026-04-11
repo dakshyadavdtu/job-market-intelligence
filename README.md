@@ -146,7 +146,7 @@ JMI therefore separates concerns:
 
 **Purpose:** Turn semi-structured JSON into **typed, analytics-friendly rows** with **quality gates**.
 
-**What happens:** Read Bronze JSONL.gz; map `raw_payload` into a **minimal Silver row** (normalized title/company, `location_raw`, `remote_type`, `employment_type`, **`skills`** from allowlist/aliases/title/description with **Arbeitnow tag fallback** when needed, `posted_at`, plus `bronze_run_id` / `bronze_ingest_date` / `bronze_data_file` / `job_id_strategy`); **drop duplicate `job_id`**; run **`run_silver_checks`**; write **Parquet**. Display text, URL, and long description stay on **Bronze** (`raw_payload`). See `docs/data_dictionary.md`.
+**What happens:** Read Bronze JSONL.gz; map `raw_payload` into a **minimal Silver row** (normalized title/company, `location_raw`, `remote_type`, **`skills`** from allowlist/aliases/title/description with **Arbeitnow tag fallback** when needed, `posted_at`, plus `bronze_run_id` / `bronze_ingest_date` / `bronze_data_file` / `job_id_strategy`); **drop duplicate `job_id`**; **`project_silver_to_contract`** strips any legacy columns so Parquet matches the contract; run **`run_silver_checks`**; write **Parquet**. Display text, URL, long description, and `job_types` stay on **Bronze** (`raw_payload`). See `docs/data_dictionary.md`.
 
 **Outputs:**
 
@@ -223,7 +223,7 @@ On AWS, the **same sequence** runs in three Lambdas, with **S3 URIs** provided v
 
 - Identity: **`job_id`**, **`source`**, **`source_job_id`**
 - Gold-oriented fields: **`title_norm`**, **`company_norm`**, **`location_raw`**, **`skills`**
-- Other job facts: **`remote_type`**, **`employment_type`**, **`posted_at`**, **`ingested_at`**
+- Other job facts: **`remote_type`**, **`posted_at`**, **`ingested_at`**
 - Lineage / audit: **`bronze_run_id`**, **`bronze_ingest_date`**, **`bronze_data_file`**, **`job_id_strategy`**
 
 **Gold (Parquet)** — typical columns:

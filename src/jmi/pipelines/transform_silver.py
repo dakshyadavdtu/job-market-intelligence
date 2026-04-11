@@ -11,10 +11,10 @@ from src.jmi.connectors.skill_extract import extract_silver_skills
 from src.jmi.pipelines.silver_schema import (
     CANONICAL_SILVER_COLUMN_ORDER,
     align_silver_dataframe_to_canonical,
-    employment_type_from_arbeitnow_payload,
     normalize_company_norm,
     normalize_title_norm,
     posted_at_iso_utc,
+    project_silver_to_contract,
     remote_type_from_arbeitnow_payload,
     strip_html_description,
 )
@@ -89,7 +89,8 @@ def _prior_partition_silver_frames(cfg: AppConfig) -> pd.DataFrame | None:
     combined["_si"] = combined["ingested_at"].astype(str)
     combined = combined.sort_values(by=["_sd", "_sr", "_si"])
     combined = combined.drop_duplicates(subset=["job_id"], keep="last")
-    return combined.drop(columns=["_sd", "_sr", "_si"])
+    combined = combined.drop(columns=["_sd", "_sr", "_si"])
+    return project_silver_to_contract(combined)
 
 
 def _merge_with_prior_silver(cfg: AppConfig, df_batch: pd.DataFrame) -> pd.DataFrame:
@@ -107,7 +108,8 @@ def _merge_with_prior_silver(cfg: AppConfig, df_batch: pd.DataFrame) -> pd.DataF
     combined["_si"] = combined["ingested_at"].astype(str)
     combined = combined.sort_values(by=["_sd", "_sr", "_si"])
     combined = combined.drop_duplicates(subset=["job_id"], keep="last")
-    return combined.drop(columns=["_sd", "_sr", "_si"])
+    combined = combined.drop(columns=["_sd", "_sr", "_si"])
+    return project_silver_to_contract(combined)
 
 
 def run(bronze_file: str | None = None) -> dict:
@@ -139,7 +141,6 @@ def run(bronze_file: str | None = None) -> dict:
                 "company_norm": normalize_company_norm(company),
                 "location_raw": location,
                 "remote_type": remote_type_from_arbeitnow_payload(payload),
-                "employment_type": employment_type_from_arbeitnow_payload(payload),
                 "skills": skills,
                 "posted_at": posted_at_iso_utc(payload),
                 "ingested_at": row.get("ingested_at"),
@@ -159,7 +160,7 @@ def run(bronze_file: str | None = None) -> dict:
     post_dedup_count = int(len(df_batch))
     dedup_removed = pre_dedup_count - post_dedup_count
 
-    df_batch = df_batch[[c for c in CANONICAL_SILVER_COLUMN_ORDER if c in df_batch.columns]]
+    df_batch = project_silver_to_contract(df_batch)
 
     report = run_silver_checks(df_batch, bronze_row_count=len(bronze_rows))
     if report.status != "PASS":
@@ -169,8 +170,7 @@ def run(bronze_file: str | None = None) -> dict:
             f"duplicate_source_key={report.duplicate_source_key}"
         )
 
-    df_merged = _merge_with_prior_silver(cfg, df_batch)
-    df_merged = df_merged[[c for c in CANONICAL_SILVER_COLUMN_ORDER if c in df_merged.columns]]
+    df_merged = project_silver_to_contract(_merge_with_prior_silver(cfg, df_batch))
 
     out_path = (
         cfg.silver_root

@@ -48,14 +48,6 @@ def remote_type_from_arbeitnow_payload(payload: dict[str, Any]) -> str:
     return "unknown"
 
 
-def employment_type_from_arbeitnow_payload(payload: dict[str, Any]) -> str | None:
-    jt = payload.get("job_types")
-    if isinstance(jt, list) and jt:
-        parts = [str(x).strip() for x in jt if str(x).strip()]
-        return "; ".join(parts) if parts else None
-    return None
-
-
 def posted_at_iso_utc(payload: dict[str, Any]) -> str | None:
     ts = payload.get("created_at")
     if ts is None:
@@ -73,7 +65,7 @@ def posted_at_iso_utc(payload: dict[str, Any]) -> str | None:
         return None
 
 
-# Minimal Silver: only columns Gold needs + essential lineage + canonical job facts not duplicated from Bronze lightly.
+# Minimal Silver: only columns Gold needs + essential lineage + canonical job facts (strict parquet contract).
 CANONICAL_SILVER_COLUMN_ORDER: list[str] = [
     "job_id",
     "source",
@@ -82,7 +74,6 @@ CANONICAL_SILVER_COLUMN_ORDER: list[str] = [
     "company_norm",
     "location_raw",
     "remote_type",
-    "employment_type",
     "skills",
     "posted_at",
     "ingested_at",
@@ -91,6 +82,19 @@ CANONICAL_SILVER_COLUMN_ORDER: list[str] = [
     "bronze_ingest_date",
     "bronze_data_file",
 ]
+
+
+def project_silver_to_contract(df: pd.DataFrame) -> pd.DataFrame:
+    """Enforce exact Silver contract: only CANONICAL columns, fixed order (strips legacy/extra parquet fields)."""
+    out = pd.DataFrame(index=df.index)
+    for c in CANONICAL_SILVER_COLUMN_ORDER:
+        if c in df.columns:
+            out[c] = df[c]
+        elif c == "skills":
+            out[c] = [[] for _ in range(len(df))]
+        else:
+            out[c] = pd.NA
+    return out
 
 
 def _legacy_source_job_id_from_key(key: object) -> str | None:
@@ -114,9 +118,7 @@ def align_silver_dataframe_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
             else:
                 out[col] = pd.NA
 
-    ordered = [c for c in CANONICAL_SILVER_COLUMN_ORDER if c in out.columns]
-    extra = [c for c in out.columns if c not in ordered]
-    return out[ordered + extra].copy()
+    return project_silver_to_contract(out)
 
 
 def _map_legacy_silver_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
@@ -161,7 +163,6 @@ def _map_legacy_silver_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
     else:
         out["remote_type"] = "unknown"
 
-    out["employment_type"] = df["employment_type"] if "employment_type" in df.columns else pd.NA
     out["skills"] = df["skills"] if "skills" in df.columns else [[] for _ in range(len(df))]
 
     if "posted_at" in df.columns:

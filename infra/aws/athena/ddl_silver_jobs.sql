@@ -9,7 +9,6 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_silver.jobs (
   company_norm string,
   location_raw string,
   remote_type string,
-  employment_type string,
   skills array<string>,
   posted_at string,
   ingested_at string,
