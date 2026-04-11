@@ -7,17 +7,15 @@ from pathlib import Path
 import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath, split_s3_uri
-from src.jmi.connectors.arbeitnow import normalize_skill_tokens
+from src.jmi.connectors.skill_extract import extract_silver_skills
 from src.jmi.pipelines.silver_schema import (
     CANONICAL_SILVER_COLUMN_ORDER,
     align_silver_dataframe_to_canonical,
-    category_from_arbeitnow_tags,
     employment_type_from_arbeitnow_payload,
     normalize_company_norm,
     normalize_title_norm,
     posted_at_iso_utc,
     remote_type_from_arbeitnow_payload,
-    split_location_city_country,
     strip_html_description,
 )
 from src.jmi.utils.io import read_jsonl_gz, write_parquet
@@ -128,17 +126,14 @@ def run(bronze_file: str | None = None) -> dict:
         location = _clean_text(payload.get("location"))
         slug = _clean_text(row.get("source_slug") or payload.get("slug"))
         url = _clean_text(payload.get("url"))
-        city, country = split_location_city_country(location)
-
-        skills = normalize_skill_tokens(payload.get("tags"))
-        source_record_key = slug or url or _clean_text(row.get("job_id"))
+        description_text = strip_html_description(_clean_text(payload.get("description")))
+        skills = extract_silver_skills(payload.get("tags"), title, description_text)
         rid = row.get("run_id", bronze_run_id)
 
         flattened.append(
             {
                 "job_id": row.get("job_id"),
                 "job_id_strategy": row.get("job_id_strategy", ""),
-                "source_record_key": source_record_key,
                 "source": row.get("source"),
                 "schema_version": row.get("schema_version"),
                 "source_job_id": _source_job_id_from_arbeitnow(slug),
@@ -147,19 +142,12 @@ def run(bronze_file: str | None = None) -> dict:
                 "company_raw": company,
                 "company_norm": normalize_company_norm(company),
                 "location_raw": location,
-                "location_city": city,
-                "location_country": country,
                 "remote_type": remote_type_from_arbeitnow_payload(payload),
                 "employment_type": employment_type_from_arbeitnow_payload(payload),
-                "category": category_from_arbeitnow_tags(payload.get("tags")),
-                "description_text": strip_html_description(_clean_text(payload.get("description"))),
+                "description_text": description_text,
                 "skills": skills,
-                "salary_min": None,
-                "salary_max": None,
-                "salary_currency": None,
                 "posted_at": posted_at_iso_utc(payload),
                 "ingested_at": row.get("ingested_at"),
-                "record_status": "active",
                 "raw_url": url,
                 "bronze_run_id": rid,
                 "bronze_ingest_date": row.get("bronze_ingest_date", bronze_ingest_date),

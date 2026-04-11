@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 
@@ -33,11 +34,22 @@ def run_silver_checks(df: pd.DataFrame, bronze_row_count: int) -> QualityReport:
     if missing_company == 0 and "company_name" in df.columns:
         missing_company = _missing_text_count(df, "company_name")
     duplicate_job_id = int(df["job_id"].duplicated().sum()) if "job_id" in df else 0
-    duplicate_source_key = (
-        int(df[["source", "source_record_key"]].duplicated().sum())
-        if {"source", "source_record_key"}.issubset(df.columns)
-        else 0
-    )
+    duplicate_source_key = 0
+    if "source" in df.columns and "job_id" in df.columns:
+        n = len(df)
+        if "source_job_id" in df.columns:
+            sj = df["source_job_id"].fillna("").astype(str).str.strip()
+        else:
+            sj = pd.Series([""] * n, index=df.index)
+        if "raw_url" in df.columns:
+            ru = df["raw_url"].fillna("").astype(str).str.strip()
+        else:
+            ru = pd.Series([""] * n, index=df.index)
+        jid = df["job_id"].fillna("").astype(str)
+        key = np.where(sj.to_numpy() != "", sj.to_numpy(), np.where(ru.to_numpy() != "", ru.to_numpy(), jid.to_numpy()))
+        duplicate_source_key = int(pd.DataFrame({"source": df["source"].astype(str), "_k": key}).duplicated().sum())
+    elif {"source", "source_record_key"}.issubset(df.columns):
+        duplicate_source_key = int(df[["source", "source_record_key"]].duplicated().sum())
 
     failed = 0
     failed += int(row_count == 0)

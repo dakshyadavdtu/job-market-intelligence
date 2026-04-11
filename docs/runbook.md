@@ -16,7 +16,7 @@ Order of operations:
 3. S3 bucket and Bronze/Silver/Gold prefixes
 4. IAM least-privilege roles for Lambda and Athena
 5. Lambda functions (ingest/transform)
-6. EventBridge schedule (10-minute cadence)
+6. EventBridge schedule (4-hour cadence)
 7. Glue Data Catalog + Athena DDL
 8. Manual validation batch
 9. Dashboard verification

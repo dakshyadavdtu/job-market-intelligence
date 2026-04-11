@@ -39,20 +39,6 @@ def strip_html_description(raw: str) -> str:
     return _WS.sub(" ", t).strip()
 
 
-def split_location_city_country(location_raw: str) -> tuple[str | None, str | None]:
-    loc = (location_raw or "").strip()
-    if not loc:
-        return None, None
-    if "," not in loc:
-        return loc, None
-    parts = [p.strip() for p in loc.split(",") if p.strip()]
-    if not parts:
-        return None, None
-    if len(parts) == 1:
-        return parts[0], None
-    return parts[0], parts[-1]
-
-
 def remote_type_from_arbeitnow_payload(payload: dict[str, Any]) -> str:
     r = payload.get("remote")
     if r is True:
@@ -66,17 +52,7 @@ def employment_type_from_arbeitnow_payload(payload: dict[str, Any]) -> str | Non
     jt = payload.get("job_types")
     if isinstance(jt, list) and jt:
         parts = [str(x).strip() for x in jt if str(x).strip()]
-        return ", ".join(parts) if parts else None
-    return None
-
-
-def category_from_arbeitnow_tags(tags: list[str] | None) -> str | None:
-    if not tags or not isinstance(tags, list):
-        return None
-    for t in tags:
-        s = str(t).strip()
-        if s:
-            return s
+        return "; ".join(parts) if parts else None
     return None
 
 
@@ -106,23 +82,15 @@ CANONICAL_SILVER_COLUMN_ORDER: list[str] = [
     "company_raw",
     "company_norm",
     "location_raw",
-    "location_city",
-    "location_country",
     "remote_type",
     "employment_type",
-    "category",
     "description_text",
     "skills",
-    "salary_min",
-    "salary_max",
-    "salary_currency",
     "posted_at",
     "ingested_at",
-    "record_status",
     "raw_url",
     "job_id_strategy",
     "schema_version",
-    "source_record_key",
     "bronze_run_id",
     "bronze_ingest_date",
     "bronze_data_file",
@@ -145,12 +113,8 @@ def align_silver_dataframe_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
 
     for col in CANONICAL_SILVER_COLUMN_ORDER:
         if col not in out.columns:
-            if col in ("salary_min", "salary_max"):
-                out[col] = pd.Series(pd.NA, index=out.index, dtype="Float64")
-            elif col == "skills":
+            if col == "skills":
                 out[col] = [[] for _ in range(len(out))]
-            elif col == "record_status":
-                out[col] = "active"
             elif col == "description_text":
                 out[col] = ""
             else:
@@ -167,7 +131,6 @@ def _map_legacy_silver_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
     out["source"] = df["source"] if "source" in df.columns else pd.NA
     out["job_id_strategy"] = df.get("job_id_strategy", "")
     out["schema_version"] = df.get("schema_version", "")
-    out["source_record_key"] = df.get("source_record_key", "")
 
     title_clean = df["title_clean"].fillna("").astype(str) if "title_clean" in df.columns else pd.Series("", index=df.index)
     title_lower = df["title"].fillna("").astype(str) if "title" in df.columns else pd.Series("", index=df.index)
@@ -181,38 +144,55 @@ def _map_legacy_silver_to_canonical(df: pd.DataFrame) -> pd.DataFrame:
     out["company_raw"] = cname
     out["company_norm"] = cname.str.lower().str.strip().str.replace(_WS, " ", regex=True)
 
-    loc = df["location"].fillna("").astype(str) if "location" in df.columns else pd.Series("", index=df.index)
-    out["location_raw"] = loc
+    if "location_raw" in df.columns:
+        out["location_raw"] = df["location_raw"].fillna("").astype(str)
+    elif "location" in df.columns:
+        out["location_raw"] = df["location"].fillna("").astype(str)
+    else:
+        out["location_raw"] = ""
 
-    def _city_country(cell: str) -> tuple[str | None, str | None]:
-        return split_location_city_country(cell) if cell else (None, None)
-
-    cc = loc.map(_city_country)
-    out["location_city"] = cc.map(lambda x: x[0])
-    out["location_country"] = cc.map(lambda x: x[1])
-
-    if "is_remote" in df.columns:
+    if "remote_type" in df.columns:
+        out["remote_type"] = df["remote_type"]
+    elif "is_remote" in df.columns:
         out["remote_type"] = df["is_remote"].map(
             lambda x: "remote" if x is True else ("onsite" if x is False else "unknown")
         )
     else:
         out["remote_type"] = "unknown"
 
-    out["employment_type"] = pd.NA
-    out["category"] = pd.NA
-    out["description_text"] = ""
+    out["employment_type"] = df["employment_type"] if "employment_type" in df.columns else pd.NA
+
+    if "description_text" in df.columns:
+        out["description_text"] = df["description_text"].fillna("").astype(str)
+    else:
+        out["description_text"] = ""
+
     out["skills"] = df["skills"] if "skills" in df.columns else [[] for _ in range(len(df))]
-    out["salary_min"] = pd.Series([pd.NA] * len(df), dtype="Float64")
-    out["salary_max"] = pd.Series([pd.NA] * len(df), dtype="Float64")
-    out["salary_currency"] = pd.NA
 
-    out["posted_at"] = df["published_at_raw"] if "published_at_raw" in df.columns else pd.NA
+    if "posted_at" in df.columns:
+        out["posted_at"] = df["posted_at"]
+    elif "published_at_raw" in df.columns:
+        out["posted_at"] = df["published_at_raw"]
+    else:
+        out["posted_at"] = pd.NA
+
     out["ingested_at"] = df["ingested_at"] if "ingested_at" in df.columns else pd.NA
-    out["record_status"] = "active"
-    out["raw_url"] = df["posting_url"].fillna("").astype(str) if "posting_url" in df.columns else ""
 
-    src_key = df["source_record_key"].fillna("").astype(str) if "source_record_key" in df.columns else pd.Series("", index=df.index)
-    out["source_job_id"] = src_key.map(_legacy_source_job_id_from_key)
+    if "raw_url" in df.columns:
+        out["raw_url"] = df["raw_url"].fillna("").astype(str)
+    elif "posting_url" in df.columns:
+        out["raw_url"] = df["posting_url"].fillna("").astype(str)
+    else:
+        out["raw_url"] = ""
+
+    if "source_job_id" in df.columns:
+        out["source_job_id"] = df["source_job_id"]
+    elif "source_record_key" in df.columns:
+        src_key = df["source_record_key"].fillna("").astype(str)
+        out["source_job_id"] = src_key.map(_legacy_source_job_id_from_key)
+    else:
+        out["source_job_id"] = pd.NA
+
     out["bronze_run_id"] = df["bronze_run_id"] if "bronze_run_id" in df.columns else pd.NA
     out["bronze_ingest_date"] = df["bronze_ingest_date"] if "bronze_ingest_date" in df.columns else pd.NA
     out["bronze_data_file"] = df["bronze_data_file"] if "bronze_data_file" in df.columns else pd.NA

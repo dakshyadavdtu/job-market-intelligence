@@ -7,63 +7,15 @@ from typing import Any
 
 import requests
 
+from src.jmi.connectors.skill_extract import extract_silver_skills
+
 ARBEITNOW_URL = "https://www.arbeitnow.com/api/job-board-api"
 ARBEITNOW_MAX_PAGES = 2000
 
 
-# Keep MVP skill output practical with a small rule-based vocabulary.
-SKILL_ALIAS_MAP: dict[str, list[str]] = {
-    "sap/erp consulting": ["sap", "erp"],
-    "system and network administration": ["network administration", "systems administration"],
-    "online marketing": ["digital marketing"],
-    "recruitment and selection": ["recruiting"],
-    "data engineer": ["data engineering"],
-    "automation engineering": ["automation"],
-}
-
-SKILL_ALLOWLIST: set[str] = {
-    "automation",
-    "compliance",
-    "data engineering",
-    "data processing",
-    "digital marketing",
-    "erp",
-    "information systems",
-    "network administration",
-    "recruiting",
-    "sap",
-    "security",
-    "systems administration",
-}
-
-SKILL_STOPLIST: set[str] = {
-    "accounts receivable",
-    "administration",
-    "asset",
-    "building",
-    "chief executives",
-    "consulting",
-    "controlling",
-    "development",
-    "directors",
-    "engineering",
-    "finance",
-    "fonds management",
-    "hr",
-    "it",
-    "management",
-    "marketing and communication",
-    "marketing manager",
-    "private banking",
-    "process management",
-    "product management",
-    "project management",
-    "remote",
-    "safety services engineering",
-    "software development",
-    "supply",
-    "team leader",
-}
+def normalize_skill_tokens(raw_tags: list[str] | None) -> list[str]:
+    """Backward-compatible: tags-only extraction (title/description empty). Prefer extract_silver_skills in Silver."""
+    return extract_silver_skills(raw_tags, "", "")
 
 
 def job_created_at_ts(raw: dict[str, Any]) -> int:
@@ -133,21 +85,6 @@ def fetch_all_jobs(
             break
         page += 1
     return all_rows, {"meta": meta_last, "pages_fetched": page}
-
-
-def normalize_skill_tokens(raw_tags: list[str] | None) -> list[str]:
-    if not raw_tags:
-        return []
-    skills: set[str] = set()
-    for tag in raw_tags:
-        token = str(tag or "").strip().lower()
-        if not token or token in SKILL_STOPLIST:
-            continue
-        expanded = SKILL_ALIAS_MAP.get(token, [token])
-        for candidate in expanded:
-            if candidate in SKILL_ALLOWLIST:
-                skills.add(candidate)
-    return sorted(skills)
 
 
 def _hash_id(parts: list[str]) -> str:

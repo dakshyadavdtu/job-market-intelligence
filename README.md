@@ -58,7 +58,7 @@ JMI therefore separates concerns:
                               ▼                              ▼
                      ┌──────────────┐              ┌─────────────────────┐
                      │ EventBridge  │              │ Glue Data Catalog   │
-                     │ (10 min rate)│              │ (tables/partitions) │
+                     │ (4 hour rate)│              │ (tables/partitions) │
                      └──────────────┘              └──────────┬──────────┘
                                                               │
                                                               ▼
@@ -146,7 +146,7 @@ JMI therefore separates concerns:
 
 **Purpose:** Turn semi-structured JSON into **typed, analytics-friendly rows** with **quality gates**.
 
-**What happens:** Read Bronze JSONL.gz; map `raw_payload` into the **canonical Silver columns** (raw vs normalized title/company/location, `remote_type`, `employment_type`, `category`, stripped `description_text`, `skills` allowlist normalization, `posted_at`, URLs, plus `bronze_run_id` / `bronze_ingest_date` / `bronze_data_file`); **drop duplicate `job_id`** within the batch; run **`run_silver_checks`**; write **Parquet**. See `docs/data_dictionary.md` for the full list.
+**What happens:** Read Bronze JSONL.gz; map `raw_payload` into the **canonical Silver columns** (raw vs normalized title/company/location, `remote_type`, `employment_type`, stripped `description_text`, rule-based **`skills`** from tags + title + description, `posted_at`, URLs, plus `bronze_run_id` / `bronze_ingest_date` / `bronze_data_file`); **drop duplicate `job_id`** within the batch; run **`run_silver_checks`**; write **Parquet**. See `docs/data_dictionary.md` for the full list.
 
 **Outputs:**
 
@@ -186,7 +186,7 @@ JMI therefore separates concerns:
 |---------|-------------|
 | **Amazon S3** | **System of record** for Bronze, Silver, Gold, quality JSON, health files, and (typically) Athena query results. |
 | **AWS Lambda** | Runs **ingest**, **Silver transform**, and **Gold transform** without servers; same Python modules as local. |
-| **Amazon EventBridge** | **Scheduler** (e.g. `rate(10 minutes)` in `infra/aws/eventbridge/jmi-ingest-schedule.json`) to trigger ingest; should stay **disabled** until validated. |
+| **Amazon EventBridge** | **Scheduler** (e.g. `rate(4 hours)` in `infra/aws/eventbridge/jmi-ingest-schedule.json`) to trigger ingest; should stay **disabled** until validated. |
 | **AWS Glue Data Catalog** | **Metadata** (databases, tables, columns, partitions) so Athena knows **where** data lives in S3. |
 | **Amazon Athena** | **SQL** over S3 via Glue; use **partition filters** and prefer **Gold** tables for routine reporting. |
 | **Amazon QuickSight** (later) | **Shared dashboards** over Athena datasets / SPICE; enterprise consumption path. |
@@ -221,8 +221,8 @@ On AWS, the **same sequence** runs in three Lambdas, with **S3 URIs** provided v
 
 **Silver (Parquet row)** — highlights:
 
-- Identity: **`job_id`**, **`source`**, **`source_job_id`**, **`source_record_key`**
-- Job attributes: **`title_raw`**, **`title_norm`**, **`company_raw`**, **`company_norm`**, **`location_raw`**, **`location_city`**, **`location_country`**, **`remote_type`**, **`employment_type`**, **`category`**, **`description_text`**, **`skills`**, **`salary_*`**, **`posted_at`**, **`record_status`**, **`raw_url`**
+- Identity: **`job_id`**, **`source`**, **`source_job_id`**
+- Job attributes: **`title_raw`**, **`title_norm`**, **`company_raw`**, **`company_norm`**, **`location_raw`**, **`remote_type`**, **`employment_type`**, **`description_text`**, **`skills`**, **`posted_at`**, **`raw_url`**
 - Lineage: **`bronze_run_id`** (batch id; same value as S3 path `run_id=`), **`bronze_ingest_date`**, **`bronze_data_file`**, **`ingested_at`**
 
 **Gold (Parquet)** — typical columns:

@@ -1,7 +1,7 @@
 {
   "Name": "jmi-ingest-10min",
   "GroupName": "default",
-  "ScheduleExpression": "rate(10 minutes)",
+  "ScheduleExpression": "rate(4 hours)",
   "FlexibleTimeWindow": {
     "Mode": "OFF"
   },
@@ -11,5 +11,5 @@
     "Input": "{\"trigger\":\"eventbridge\",\"source\":\"schedule\"}"
   },
   "State": "DISABLED",
-  "Description": "JMI ingest scheduler (disabled until manual validation)"
+  "Description": "JMI ingest scheduler every 4 hours (disabled until manual validation)"
 }

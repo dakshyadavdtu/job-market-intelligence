@@ -6,4 +6,4 @@
 -> Glue Catalog metadata + Athena SQL
 -> Streamlit dashboard`
 
-Processing mode: micro-batch (target every 10 minutes in AWS deployment).
+Processing mode: micro-batch (target every 4 hours in AWS deployment).
