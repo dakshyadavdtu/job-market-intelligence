@@ -6,3 +6,5 @@ __MACOSX/
 venv/
 data/
 Archive.zip
+infra/aws/lambda/build/
+infra/aws/lambda/dist/
