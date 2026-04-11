@@ -1,7 +1,7 @@
 -- =============================================================================
 -- ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql
 -- Additive views for Sheet 1 readability (does NOT replace existing jmi_analytics views).
--- Run in same region/account as jmi_gold after base ATHENA_VIEWS.sql.
+-- Run in same region/account as jmi_gold after base ATHENA_VIEWS.sql (needs latest_pipeline_run).
 -- Engine: Athena engine 3 (Trino SQL).
 -- =============================================================================
 
@@ -10,7 +10,10 @@
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.role_title_classified AS
-WITH base AS (
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+),
+base AS (
     SELECT
         r.ingest_month,
         r.run_id,
@@ -48,6 +51,7 @@ WITH base AS (
             )
         ) AS c0
     FROM jmi_gold.role_demand_monthly r
+    INNER JOIN lr ON r.run_id = lr.run_id
 ),
 stripped AS (
     SELECT
@@ -199,7 +203,10 @@ INNER JOIN totals t
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.company_top15_other_clean AS
-WITH cleaned AS (
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+),
+cleaned AS (
     SELECT
         c.ingest_month,
         c.run_id,
@@ -224,6 +231,7 @@ WITH cleaned AS (
             )
         ) AS company_key
     FROM jmi_gold.company_hiring_monthly c
+    INNER JOIN lr ON c.run_id = lr.run_id
 ),
 normalized AS (
     SELECT

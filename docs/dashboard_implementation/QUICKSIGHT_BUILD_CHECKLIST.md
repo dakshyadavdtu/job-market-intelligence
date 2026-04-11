@@ -9,16 +9,14 @@ Step-by-step implementation manual for the frozen two-sheet dashboard. Follow or
 ### A1 — Athena
 
 1. Open **Athena** (same workgroup/region as S3/Glue).
-2. Run **`ATHENA_VIEWS.sql`** end-to-end.
-3. Script uses `CREATE DATABASE IF NOT EXISTS jmi_analytics;` — if it fails, create the database manually in Athena, then re-run view statements.
-4. If views return **zero rows**, run:  
-   `MSCK REPAIR TABLE jmi_gold.role_demand_monthly;`  
-   (repeat for `location_demand_monthly`, `company_hiring_monthly`, `skill_demand_monthly`, `pipeline_run_summary`)  
-   or add partitions for `ingest_month=2026-03` / `run_id=...`.
-5. Validate SQL:
-   - `SELECT * FROM jmi_analytics.sheet1_kpis WHERE ingest_month = '2026-03' AND run_id = '20260327T154416Z-fec115ef';` → **one row**.
-   - `SELECT COUNT(*) FROM jmi_analytics.role_pareto WHERE ...` → equals `role_row_count` for that run (e.g. 99).
-   - `SELECT MAX(cumulative_job_pct) FROM jmi_analytics.role_pareto WHERE ...` → **100.0** (within float tolerance).
+2. Apply **`infra/aws/athena/ddl_gold_*.sql`** (or `ALTER TABLE` the same `TBLPROPERTIES`) so fact tables use **partition projection**; keep **`pipeline_run_summary`** without projection (see comment in `ddl_gold_pipeline_run_summary.sql`).
+3. Run **`ATHENA_VIEWS.sql`** end-to-end, then optional **`ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql`**.
+4. Script uses `CREATE DATABASE IF NOT EXISTS jmi_analytics;` — if it fails, create the database manually in Athena, then re-run view statements.
+5. After each Gold run that writes **new** `ingest_month` / `run_id` prefixes under `gold/pipeline_run_summary/`, register partitions for **that table only** (e.g. `MSCK REPAIR TABLE jmi_gold.pipeline_run_summary;` or a Glue Crawler on that prefix). Fact tables (`role_*`, `location_*`, `company_*`, `skill_*`) use partition projection and do **not** need MSCK for new runs, as long as `ingest_month` stays within the configured projection range.
+6. Validate SQL (latest run is chosen automatically via `jmi_analytics.latest_pipeline_run`):
+   - `SELECT run_id FROM jmi_analytics.latest_pipeline_run;` → newest `run_id` string.
+   - `SELECT * FROM jmi_analytics.sheet1_kpis;` → one row per `ingest_month` in the **latest** pipeline run only.
+   - `SELECT MAX(cumulative_job_pct) FROM jmi_analytics.role_pareto;` → **100.0** (within float tolerance).
 
 ### A2 — QuickSight account
 
@@ -32,12 +30,12 @@ Create **seven** datasets (names suggested; match `DASHBOARD_SPEC.md`):
 | # | Dataset name | Athena table/view |
 |---|----------------|-------------------|
 | 1 | `DS_SHEET1_KPIS` | `jmi_analytics.sheet1_kpis` |
-| 2 | `DS_SKILLS` | `jmi_gold.skill_demand_monthly` |
+| 2 | `DS_SKILLS` | `jmi_analytics.skill_demand_monthly_latest` |
 | 3 | `DS_LOC_TOP15` | `jmi_analytics.location_top15_other` |
 | 4 | `DS_ROLE_PARETO` | `jmi_analytics.role_pareto` |
 | 5 | `DS_ROLE_TOP20` | `jmi_analytics.role_top20` |
 | 6 | `DS_COMPANY_TOP12` | `jmi_analytics.company_top12_other` |
-| 7 | `DS_PIPELINE_SUMMARY` | `jmi_gold.pipeline_run_summary` |
+| 7 | `DS_PIPELINE_SUMMARY` | `jmi_analytics.pipeline_run_summary_latest` |
 
 For each dataset:
 
@@ -46,11 +44,9 @@ For each dataset:
 - **Import mode:** Direct Query **or** SPICE (if SPICE, schedule refresh after pipeline runs).
 - Finish **without** analysis yet (or save default analysis — you will add visuals in dashboard).
 
-### A4 — Dashboard parameters (recommended)
+### A4 — Dashboard parameters (optional)
 
-1. Create analysis-level or dashboard-level parameters: **`p_ingest_month`**, **`p_run_id`** (string).
-2. Optionally set **default** to validated: `2026-03`, `20260327T154416Z-fec115ef`.
-3. Link parameters to **filters** on all datasets that expose `ingest_month`, `run_id`.
+`jmi_analytics` views already restrict data to **MAX(run_id)** from `jmi_gold.pipeline_run_summary` (see `latest_pipeline_run`). Parameters are **optional**: use **`p_ingest_month`** (and rarely **`p_run_id`**) only if you need to override or narrow a multi-month latest run in a visual.
 
 ---
 
@@ -98,8 +94,8 @@ For each dataset:
 1. Add visual → **Table**.
 2. Dataset: **`DS_PIPELINE_SUMMARY`**.
 3. **Fields:** drag `source`, `bronze_ingest_date`, `bronze_run_id`, `skill_row_count`, `role_row_count`, `location_row_count`, `company_row_count`, `status`, `ingest_month`, `run_id`.
-4. **Filters:** `ingest_month` = parameter; `run_id` = parameter (or fixed for demo).
-5. **Sort:** `run_id` descending (or any — usually one row).
+4. **Filters:** Optional `ingest_month` if multiple months exist for the latest run; dataset is already limited to the latest pipeline run.
+5. **Sort:** `ingest_month` ascending or `bronze_ingest_date` as needed.
 6. **Formatting:** Wrap text off for numeric columns; align numbers right.
 7. **Check:** `status` shows **PASS** for validated run; row counts match expectations.
 
@@ -122,12 +118,12 @@ For each dataset:
 
 1. Add sheet → rename **Market intelligence & structural evaluation**.
 
-### D2 — Apply filters to Sheet 1 datasets
+### D2 — Optional filters on Sheet 1 datasets
 
-1. On Sheet 1, add **filter** for **`ingest_month`** and **`run_id`** to **every** Sheet 1 dataset (KPIs, skills, loc, pareto, top20, company).
-2. **Link** to same parameters as Sheet 2 **or** use Sheet-1-only filters — **do not** filter Sheet 2 datasets with Sheet 1-only logic that hides pipeline table.
+1. `jmi_analytics` datasets are **latest-run** by default. Add **`ingest_month`** filters only if a visual must show a **single** month while the latest run contains several months.
+2. **Do not** filter Sheet 2 datasets with Sheet 1-only logic that hides the pipeline table.
 
-**Common issue:** SPICE dataset shows stale data → **Refresh** dataset before QA.
+**Common issue:** SPICE dataset shows stale data → **Refresh** dataset after pipeline runs (SPICE does not auto-pick up new Athena results).
 
 ### D3 — S1-HDR, S1-METRIC-DEF, S1-GUARDRAILS
 
@@ -149,7 +145,7 @@ For each dataset:
 5. **Titles/subtitles:** copy from `DASHBOARD_SPEC.md` / `SHEET1_COPY_BLOCKS.md` per KPI.
 6. **Check after each:** Values non-null for validated run; K2 ≤ K1.
 
-**Critical (SPICE):** `DS_SHEET1_KPIS` has **one row per** `(ingest_month, run_id)`. If the dataset contains **multiple** rows (no filter / full import), QuickSight may **Sum** measures — **wrong**. Always apply **`ingest_month` + `run_id`** filters **or** parameter defaults **before** trusting KPI values.
+**Critical (SPICE):** `DS_SHEET1_KPIS` has **one row per** `(ingest_month, run_id)` **within the latest pipeline run** only. If the latest run rebuilt **multiple** months, you still get **multiple** rows — use **`ingest_month`** filter on KPI visuals **or** aggregate in an analysis calculated field so QuickSight does not **Sum** KPI fields across months incorrectly.
 
 **Common issue:** Percent shows 4200% → field is already 0–100; switch to decimal or divide in QS — **prefer** fix Athena view to output 0–1 for share fields only (current SQL: K3/K6 are 0–1).
 
@@ -159,7 +155,7 @@ For each dataset:
 2. Dataset: **`DS_SKILLS`**.
 3. **Angle:** `job_count`. **Color:** `skill`.
 4. **Sort:** `job_count` descending.
-5. **Filter:** `ingest_month`, `run_id`.
+5. **Filter:** Optional **`ingest_month`** if you need one month only (same latest `run_id` across rows).
 6. **Data labels:** ON (percent or value per preference — prefer **value** + legend).
 7. **Title/subtitle:** from spec.
 8. **Check:** Exactly **7** slices (for current data); sum of labels ≠ total postings (do not display misleading “100% jobs”).
@@ -169,7 +165,7 @@ For each dataset:
 1. Add **Treemap**.
 2. Dataset: **`DS_LOC_TOP15`**.
 3. **Group by:** `location_label`. **Size:** `job_count`.
-4. **Filter:** parameters.
+4. **Filter:** Optional **`ingest_month`** (see D2).
 5. **Tooltip:** `location_label`, `job_count`.
 6. **Check:** One **Other** tile if long tail exists.
 
@@ -237,7 +233,7 @@ If unreadable → **`VISUAL_FALLBACK_RULES.md`** Section Companies.
 
 | Symptom | Action |
 |---------|--------|
-| Empty KPIs | Partitions / MSCK / filter values |
+| Empty KPIs | `latest_pipeline_run` NULL (repair **`pipeline_run_summary`** partitions); projection range; optional month filter |
 | Pareto line wrong | Re-run Athena `role_pareto` query; check `total_jobs` |
 | Percent wrong scale | Format KPI as percent vs decimal |
 | Treemap illegible | Apply `VISUAL_FALLBACK_RULES.md` |

@@ -6,36 +6,93 @@
 --       role_demand_monthly, location_demand_monthly, company_hiring_monthly,
 --       skill_demand_monthly, pipeline_run_summary
 --   - Partition columns: ingest_month, run_id (Hive-style partitions on S3)
+--   - Fact tables (not pipeline_run_summary) should use partition projection in DDL
+--     under infra/aws/athena/ddl_gold_*.sql so new run partitions resolve without MSCK.
 --   - Column names match repo DDL (bronze_ingest_date, bronze_run_id in body rows)
 --
 -- Analytics database for views (keeps gold tables in `jmi_gold` unchanged).
 -- Use CREATE DATABASE — Athena/Glue use this; CREATE SCHEMA may fail in some workgroups.
+--
+-- Latest run: views below filter to MAX(run_id) from pipeline_run_summary (lexicographic
+-- max matches newest run for ids from new_run_id() in src/jmi/config.py). Register new
+-- partitions for pipeline_run_summary after each Gold run (see checklist).
 -- =============================================================================
 
 CREATE DATABASE IF NOT EXISTS jmi_analytics;
 
 -- -----------------------------------------------------------------------------
+-- 0) latest_pipeline_run — Single-row helper (newest Gold pipeline run_id)
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW jmi_analytics.latest_pipeline_run AS
+SELECT MAX(run_id) AS run_id FROM jmi_gold.pipeline_run_summary;
+
+-- -----------------------------------------------------------------------------
+-- 0b) Raw-grain helpers — Same columns as jmi_gold tables, latest run_id only
+--      (use for QuickSight datasets that previously pointed at jmi_gold.* directly.)
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW jmi_analytics.skill_demand_monthly_latest AS
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+)
+SELECT
+    s.skill,
+    s.job_count,
+    s.source,
+    s.bronze_ingest_date,
+    s.bronze_run_id,
+    s.ingest_month,
+    s.run_id
+FROM jmi_gold.skill_demand_monthly s
+INNER JOIN lr ON s.run_id = lr.run_id;
+
+CREATE OR REPLACE VIEW jmi_analytics.pipeline_run_summary_latest AS
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+)
+SELECT
+    p.source,
+    p.bronze_ingest_date,
+    p.bronze_run_id,
+    p.skill_row_count,
+    p.role_row_count,
+    p.location_row_count,
+    p.company_row_count,
+    p.status,
+    p.ingest_month,
+    p.run_id
+FROM jmi_gold.pipeline_run_summary p
+INNER JOIN lr ON p.run_id = lr.run_id;
+
+-- -----------------------------------------------------------------------------
 -- 1) sheet1_kpis — One row per (ingest_month, run_id) with all six KPI fields
+--     (restricted to latest pipeline run only)
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.sheet1_kpis AS
 WITH
+lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+),
 role_totals AS (
     SELECT
-        ingest_month,
-        run_id,
-        SUM(job_count) AS total_postings,
-        MAX(job_count) AS max_role_job_count
-    FROM jmi_gold.role_demand_monthly
-    GROUP BY ingest_month, run_id
+        r.ingest_month,
+        r.run_id,
+        SUM(r.job_count) AS total_postings,
+        MAX(r.job_count) AS max_role_job_count
+    FROM jmi_gold.role_demand_monthly r
+    INNER JOIN lr ON r.run_id = lr.run_id
+    GROUP BY r.ingest_month, r.run_id
 ),
 loc_totals AS (
     SELECT
-        ingest_month,
-        run_id,
-        SUM(job_count) AS located_postings
-    FROM jmi_gold.location_demand_monthly
-    GROUP BY ingest_month, run_id
+        l.ingest_month,
+        l.run_id,
+        SUM(l.job_count) AS located_postings
+    FROM jmi_gold.location_demand_monthly l
+    INNER JOIN lr ON l.run_id = lr.run_id
+    GROUP BY l.ingest_month, l.run_id
 ),
 loc_top3 AS (
     SELECT
@@ -44,14 +101,15 @@ loc_top3 AS (
         SUM(job_count) AS top3_location_job_sum
     FROM (
         SELECT
-            ingest_month,
-            run_id,
-            job_count,
+            l.ingest_month,
+            l.run_id,
+            l.job_count,
             ROW_NUMBER() OVER (
-                PARTITION BY ingest_month, run_id
-                ORDER BY job_count DESC, location ASC
+                PARTITION BY l.ingest_month, l.run_id
+                ORDER BY l.job_count DESC, l.location ASC
             ) AS rn
-        FROM jmi_gold.location_demand_monthly
+        FROM jmi_gold.location_demand_monthly l
+        INNER JOIN lr ON l.run_id = lr.run_id
     ) x
     WHERE rn <= 3
     GROUP BY ingest_month, run_id
@@ -67,6 +125,7 @@ loc_hhi_calc AS (
             )
         ) AS location_hhi
     FROM jmi_gold.location_demand_monthly l
+    INNER JOIN lr ON l.run_id = lr.run_id
     INNER JOIN loc_totals lt
         ON l.ingest_month = lt.ingest_month
         AND l.run_id = lt.run_id
@@ -75,11 +134,12 @@ loc_hhi_calc AS (
 ),
 comp_totals AS (
     SELECT
-        ingest_month,
-        run_id,
-        SUM(job_count) AS company_postings_sum
-    FROM jmi_gold.company_hiring_monthly
-    GROUP BY ingest_month, run_id
+        c.ingest_month,
+        c.run_id,
+        SUM(c.job_count) AS company_postings_sum
+    FROM jmi_gold.company_hiring_monthly c
+    INNER JOIN lr ON c.run_id = lr.run_id
+    GROUP BY c.ingest_month, c.run_id
 ),
 comp_hhi_calc AS (
     SELECT
@@ -92,6 +152,7 @@ comp_hhi_calc AS (
             )
         ) AS company_hhi
     FROM jmi_gold.company_hiring_monthly c
+    INNER JOIN lr ON c.run_id = lr.run_id
     INNER JOIN comp_totals ct
         ON c.ingest_month = ct.ingest_month
         AND c.run_id = ct.run_id
@@ -133,17 +194,21 @@ LEFT JOIN comp_hhi_calc ch
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.location_top15_other AS
-WITH ranked AS (
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+),
+ranked AS (
     SELECT
-        ingest_month,
-        run_id,
-        location,
-        job_count,
+        l.ingest_month,
+        l.run_id,
+        l.location,
+        l.job_count,
         ROW_NUMBER() OVER (
-            PARTITION BY ingest_month, run_id
-            ORDER BY job_count DESC, location ASC
+            PARTITION BY l.ingest_month, l.run_id
+            ORDER BY l.job_count DESC, l.location ASC
         ) AS rn
-    FROM jmi_gold.location_demand_monthly
+    FROM jmi_gold.location_demand_monthly l
+    INNER JOIN lr ON l.run_id = lr.run_id
 ),
 rolled AS (
     SELECT
@@ -176,17 +241,21 @@ WHERE job_count > 0;
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.company_top12_other AS
-WITH ranked AS (
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+),
+ranked AS (
     SELECT
-        ingest_month,
-        run_id,
-        company_name,
-        job_count,
+        c.ingest_month,
+        c.run_id,
+        c.company_name,
+        c.job_count,
         ROW_NUMBER() OVER (
-            PARTITION BY ingest_month, run_id
-            ORDER BY job_count DESC, company_name ASC
+            PARTITION BY c.ingest_month, c.run_id
+            ORDER BY c.job_count DESC, c.company_name ASC
         ) AS rn
-    FROM jmi_gold.company_hiring_monthly
+    FROM jmi_gold.company_hiring_monthly c
+    INNER JOIN lr ON c.run_id = lr.run_id
 ),
 rolled AS (
     SELECT
@@ -219,13 +288,17 @@ WHERE job_count > 0;
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.role_pareto AS
-WITH totals AS (
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+),
+totals AS (
     SELECT
-        ingest_month,
-        run_id,
-        SUM(job_count) AS total_jobs
-    FROM jmi_gold.role_demand_monthly
-    GROUP BY ingest_month, run_id
+        r.ingest_month,
+        r.run_id,
+        SUM(r.job_count) AS total_jobs
+    FROM jmi_gold.role_demand_monthly r
+    INNER JOIN lr ON r.run_id = lr.run_id
+    GROUP BY r.ingest_month, r.run_id
 )
 SELECT
     r.ingest_month,
@@ -251,6 +324,7 @@ SELECT
         ELSE NULL
     END AS cumulative_job_pct
 FROM jmi_gold.role_demand_monthly r
+INNER JOIN lr ON r.run_id = lr.run_id
 INNER JOIN totals t
     ON r.ingest_month = t.ingest_month
     AND r.run_id = t.run_id;
@@ -260,17 +334,21 @@ INNER JOIN totals t
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.role_top20 AS
-WITH ranked AS (
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+),
+ranked AS (
     SELECT
-        ingest_month,
-        run_id,
-        role,
-        job_count,
+        r.ingest_month,
+        r.run_id,
+        r.role,
+        r.job_count,
         ROW_NUMBER() OVER (
-            PARTITION BY ingest_month, run_id
-            ORDER BY job_count DESC, role ASC
+            PARTITION BY r.ingest_month, r.run_id
+            ORDER BY r.job_count DESC, r.role ASC
         ) AS pareto_rank
-    FROM jmi_gold.role_demand_monthly
+    FROM jmi_gold.role_demand_monthly r
+    INNER JOIN lr ON r.run_id = lr.run_id
 )
 SELECT
     ingest_month,
@@ -285,14 +363,17 @@ WHERE pareto_rank <= 20;
 -- NOTES (schema assumptions)
 -- =============================================================================
 -- 1) If your Glue/Athena table names differ, replace `jmi_gold` prefix only.
--- 2) If partitions are not registered, run MSCK REPAIR TABLE for each gold
---    table or add partitions manually before views return rows.
--- 3) `location_hhi` / `company_hhi`: when located_postings = 0 or
+-- 2) Fact tables (role/location/company/skill monthly) use partition projection in
+--    repo DDL; new S3 partitions under the configured month/run_id template are visible
+--    without MSCK REPAIR on those tables.
+-- 3) pipeline_run_summary must register new partitions (MSCK REPAIR TABLE for that
+--    table only, or a Glue Crawler on that prefix) so MAX(run_id) reflects new runs.
+-- 4) `location_hhi` / `company_hhi`: when located_postings = 0 or
 --    company_postings_sum = 0, the INNER JOIN in loc_hhi_calc / comp_hhi_calc
 --    yields no row; sheet1_kpis LEFT JOINs those CTEs so KPI columns are NULL.
 --    Single-location slice still yields HHI = 1.0 from the HHI formula.
--- 4) QuickSight: import views from `jmi_analytics` with Direct Query or SPICE;
+-- 5) QuickSight: import views from `jmi_analytics` with Direct Query or SPICE;
 --    refresh SPICE after new runs.
--- 5) Optional Sheet 1 quality views (role families, cleaner companies):
+-- 6) Optional Sheet 1 quality views (role families, cleaner companies):
 --    see docs/dashboard_implementation/ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql
 -- =============================================================================

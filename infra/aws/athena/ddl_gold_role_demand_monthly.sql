@@ -10,4 +10,14 @@ PARTITIONED BY (
   run_id string
 )
 STORED AS PARQUET
-LOCATION 's3://jmi-dakshyadav-job-market-intelligence/gold/role_demand_monthly/';
+LOCATION 's3://jmi-dakshyadav-job-market-intelligence/gold/role_demand_monthly/'
+TBLPROPERTIES (
+  'projection.enabled' = 'true',
+  'projection.ingest_month.type' = 'date',
+  'projection.ingest_month.format' = 'yyyy-MM',
+  'projection.ingest_month.interval' = '1',
+  'projection.ingest_month.interval.unit' = 'MONTHS',
+  'projection.ingest_month.range' = '2018-01,2035-12',
+  'projection.run_id.type' = 'injected',
+  'storage.location.template' = 's3://jmi-dakshyadav-job-market-intelligence/gold/role_demand_monthly/ingest_month=${ingest_month}/run_id=${run_id}/'
+);

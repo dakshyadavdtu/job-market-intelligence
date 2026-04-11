@@ -12,7 +12,7 @@ Frozen fallbacks when QuickSight rendering is poor. **Do not** default everythin
 |------|------|
 | **Trigger** | Labels overlap; seven slices too thin; legend unreadable at dashboard size. |
 | **Fallback visual** | **Horizontal bar chart** — **Y:** `skill`, **X:** `job_count`, **sort:** `job_count` desc. |
-| **Stays same** | Dataset `jmi_gold.skill_demand_monthly`; filters; subtitle about non-additive tags. |
+| **Stays same** | Dataset `jmi_analytics.skill_demand_monthly_latest`; optional month filter; subtitle about non-additive tags. |
 | **Must change** | Title to “Skill tag ranking (bar)”; remove donut-specific phrasing in subtitle. |
 | **Story change?** | **Presentation only** — still composition/rank of tags. |
 

@@ -169,11 +169,11 @@ This document is the **single master reference** for the QuickSight dashboard. T
 |-----------|--------|
 | **Purpose** | Part-to-whole view of skill-tag demand (not additive to job count). |
 | **Sheet** | 1 |
-| **Dataset / view** | `jmi_gold.skill_demand_monthly` |
+| **Dataset / view** | `jmi_analytics.skill_demand_monthly_latest` |
 | **Visual type** | Donut chart |
 | **Fields used** | **Angle / Size:** `job_count`; **Color:** `skill` |
 | **Sorting** | By `job_count` descending (or alphabetically by skill — prefer **job_count desc**). |
-| **Filters** | `ingest_month`, `run_id` |
+| **Filters** | Optional `ingest_month` (latest `run_id` via `jmi_analytics` views) |
 | **Tooltip fields** | `skill`, `job_count`; optional: `% of skill tag total` = `job_count / SUM(job_count)` within filtered slice (**not** % of jobs). |
 | **Title** | Skill tag composition |
 | **Subtitle** | Share of tag counts; jobs can carry multiple tags — do not sum to total postings. |
@@ -192,7 +192,7 @@ This document is the **single master reference** for the QuickSight dashboard. T
 | **Visual type** | Treemap |
 | **Fields used** | **Group by:** `location_label` (or column name emitted by view — use `location_label`); **Size:** `job_count` |
 | **Sorting** | By `job_count` desc (treemap often auto-sizes). |
-| **Filters** | `ingest_month`, `run_id` |
+| **Filters** | Optional `ingest_month` (latest `run_id` via `jmi_analytics` views) |
 | **Tooltip** | `location_label`, `job_count`, optional share of located mass. |
 | **Title** | Geographic mass (Top 15 + Other) |
 | **Subtitle** | Area ∝ located postings in each bucket. |
@@ -210,7 +210,7 @@ This document is the **single master reference** for the QuickSight dashboard. T
 | **Visual type** | Table (Highlight table / conditional formatting if available) |
 | **Fields used** | Columns: `location_label`, `job_count`; optional `ingest_month`, `run_id` hidden or in tooltip only. |
 | **Sorting** | `job_count` descending |
-| **Filters** | `ingest_month`, `run_id` |
+| **Filters** | Optional `ingest_month` (latest `run_id` via `jmi_analytics` views) |
 | **Tooltip** | Same row fields. |
 | **Title** | Location buckets (detail) |
 | **Subtitle** | Same data as treemap; sortable list. |
@@ -228,7 +228,7 @@ This document is the **single master reference** for the QuickSight dashboard. T
 | **Visual type** | Combo chart (bar + line) |
 | **Fields used** | **X-axis:** `pareto_rank` (integer 1…R); **Bar:** `job_count`; **Line:** `cumulative_job_pct` |
 | **Sorting** | `pareto_rank` ascending |
-| **Filters** | `ingest_month`, `run_id` |
+| **Filters** | Optional `ingest_month` (latest `run_id` via `jmi_analytics` views) |
 | **Tooltip** | **`role`**, `pareto_rank`, `job_count`, `cumulative_job_pct`, `share_of_total` |
 | **Title** | Role titles — Pareto coverage |
 | **Subtitle** | Bars = postings per title; line = cumulative % of total postings. |
@@ -246,7 +246,7 @@ This document is the **single master reference** for the QuickSight dashboard. T
 | **Visual type** | Table |
 | **Fields used** | `role`, `job_count`, `pareto_rank`; hide `ingest_month`/`run_id` or use as filter only. |
 | **Sorting** | `pareto_rank` ascending |
-| **Filters** | `ingest_month`, `run_id` |
+| **Filters** | Optional `ingest_month` (latest `run_id` via `jmi_analytics` views) |
 | **Tooltip** | N/A (table) |
 | **Title** | Top 20 role titles (by postings) |
 | **Subtitle** | Full title text; ties broken by view logic. |
@@ -264,7 +264,7 @@ This document is the **single master reference** for the QuickSight dashboard. T
 | **Visual type** | Treemap |
 | **Fields used** | **Group:** `company_label`; **Size:** `job_count` |
 | **Sorting** | N/A (size-driven) |
-| **Filters** | `ingest_month`, `run_id` |
+| **Filters** | Optional `ingest_month` (latest `run_id` via `jmi_analytics` views) |
 | **Tooltip** | `company_label`, `job_count` |
 | **Title** | Employer mass (Top 12 + Other) |
 | **Subtitle** | Area ∝ postings per employer bucket. |
@@ -339,11 +339,11 @@ This document is the **single master reference** for the QuickSight dashboard. T
 |-----------|--------|
 | **Purpose** | Validation artifact: PASS, counts, lineage keys. |
 | **Sheet** | 2 |
-| **Dataset** | `jmi_gold.pipeline_run_summary` |
+| **Dataset** | `jmi_analytics.pipeline_run_summary_latest` |
 | **Visual type** | Table (pivot not required) |
 | **Fields used** | `source`, `bronze_ingest_date`, `bronze_run_id`, `skill_row_count`, `role_row_count`, `location_row_count`, `company_row_count`, `status`, `ingest_month`, `run_id` |
-| **Sorting** | `run_id` desc or single row — typically one row per filter. |
-| **Filters** | Optional: `ingest_month`, `run_id` to select validated run |
+| **Sorting** | `ingest_month` or `bronze_ingest_date` as needed |
+| **Filters** | Optional: `ingest_month` if multiple months in the latest run |
 | **Title** | Pipeline run summary (validation) |
 | **Subtitle** | Gold-stage quality snapshot for this run. |
 | **What NOT to show** | Interpretation of skill_row_count as jobs. |
@@ -421,11 +421,11 @@ This document is the **single master reference** for the QuickSight dashboard. T
 | Logical name | Athena source |
 |----------------|---------------|
 | DS_SHEET1_KPIS | `jmi_analytics.sheet1_kpis` |
-| DS_SKILLS | `jmi_gold.skill_demand_monthly` |
+| DS_SKILLS | `jmi_analytics.skill_demand_monthly_latest` |
 | DS_LOC_TOP15 | `jmi_analytics.location_top15_other` |
 | DS_ROLE_PARETO | `jmi_analytics.role_pareto` |
 | DS_ROLE_TOP20 | `jmi_analytics.role_top20` |
 | DS_COMPANY_TOP12 | `jmi_analytics.company_top12_other` |
-| DS_PIPELINE_SUMMARY | `jmi_gold.pipeline_run_summary` |
+| DS_PIPELINE_SUMMARY | `jmi_analytics.pipeline_run_summary_latest` |
 
-Apply **dashboard-level filters** on `ingest_month` and `run_id` where the underlying table exposes partition columns.
+Analytics views default to the latest pipeline run (`MAX(run_id)` from `jmi_gold.pipeline_run_summary`). Optional **`ingest_month`** filters apply when the latest run spans multiple months.
