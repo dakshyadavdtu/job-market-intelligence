@@ -16,6 +16,16 @@ Use this when **S3 Gold has data** but **Athena base tables or `jmi_analytics` l
 
 ---
 
+## `run_id`: use `enum`, not `injected` (for latest-run views)
+
+With **`projection.run_id.type` = `injected`**, Athena engine 3 can return **`CONSTRAINT_VIOLATION`** for `jmi_analytics.*` views that filter `run_id` via **`INNER JOIN latest_pipeline_run`** (or any non-literal predicate). **Literal** `WHERE run_id = '…'` works; **JOIN**-based “latest run” does not.
+
+**Durable fix:** set **`projection.run_id.type` = `enum`** and **`projection.run_id.values`** = comma-separated list of **every** `run_id` directory that exists under the table `LOCATION` (append each new Gold `run_id` after each run via **Glue** `update-table` or console). Repo DDL uses **`enum`** with example values—extend the list in Glue when new runs land.
+
+**Ongoing:** after each successful Gold run, append the new `run_id` to **`projection.run_id.values`** on **all five** partitioned Gold tables (same list on each). Automate with a small Glue/API step in the pipeline if you want zero manual edits.
+
+---
+
 ## Why fix in Glue first (preferred)
 
 - **Same** database and table names → **`jmi_analytics` views** keep working without `DROP`/`CREATE` of views.
@@ -49,7 +59,7 @@ In database **`jmi_gold`**, these **five** partitioned external tables must **no
 
 **Action:** **Delete** this property entirely for each of the five tables, then **Save**.
 
-**Optional alignment:** Confirm the remaining projection keys match the repo (e.g. `projection.enabled`, `projection.ingest_month.*`, `projection.run_id.type` = `injected`). Edit in Glue if an old table drifted.
+**Optional alignment:** Confirm the remaining projection keys match the repo (e.g. `projection.enabled`, `projection.ingest_month.*`, `projection.run_id.type` = `enum` with up-to-date `projection.run_id.values`). Edit in Glue if an old table drifted.
 
 **`LOCATION`:** Must point at your **actual** Gold prefix for that dataset (same bucket/prefix the pipeline writes). If the repo DDL uses a placeholder bucket, your live table may already override `LOCATION`—do **not** change bucket names casually; only fix if you know live data lives elsewhere.
 

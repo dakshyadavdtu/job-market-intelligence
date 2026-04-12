@@ -8,8 +8,8 @@
 --   - Partition columns: ingest_month, run_id (Hive-style partitions on S3)
 --   - Gold DDL under infra/aws/athena/ddl_gold_*.sql uses partition projection
 --     (including pipeline_run_summary) so new S3 prefixes resolve without MSCK.
---   - Partition projection requires BOTH partition keys in predicates: `run_id` (injected)
---     AND `ingest_month` (date projection). Every view below includes
+--   - Partition projection requires BOTH partition keys in predicates: `run_id` (enum in
+--     ddl_gold_*.sql; append new run_ids in Glue) AND `ingest_month` (date projection). Every view below includes
 --     `ingest_month BETWEEN '2018-01' AND '2035-12'` — MUST match
 --     `projection.ingest_month.range` in those DDL files (alter both if you widen range).
 --   - Column names match repo DDL (bronze_ingest_date, bronze_run_id in body rows)
