@@ -2,6 +2,8 @@
 
 Step-by-step implementation manual for the frozen two-sheet dashboard. Follow order exactly unless a step fails (then use `VISUAL_FALLBACK_RULES.md`).
 
+**Athena object audit / cleanup policy:** `ATHENA_JMI_ANALYTICS_INVENTORY.md` (which views are production vs helper vs optional; why we do not drop legacy `company_top12_other` from Glue without doc updates).
+
 ---
 
 ## A. Prep
