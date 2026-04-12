@@ -1,6 +1,7 @@
 -- Partition projection matches other Gold monthly tables so new S3 prefixes resolve
 -- without MSCK. Latest run_id for dashboards comes from jmi_gold.latest_run_metadata
--- (written each run); views filter this table by that run_id.
+-- (written each run); views filter by that run_id and constrain ingest_month within
+-- projection.ingest_month.range (see docs/dashboard_implementation/ATHENA_VIEWS.sql).
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold.pipeline_run_summary (
   source string,
   bronze_ingest_date string,

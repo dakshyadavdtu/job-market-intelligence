@@ -3,6 +3,8 @@
 -- Additive views for Sheet 1 readability (does NOT replace existing jmi_analytics views).
 -- Run in same region/account as jmi_gold after base ATHENA_VIEWS.sql (needs latest_pipeline_run).
 -- Engine: Athena engine 3 (Trino SQL).
+-- Gold partition projection: every scan on projected tables must filter `ingest_month`
+-- within `projection.ingest_month.range` (see infra/aws/athena/ddl_gold_*.sql), same as ATHENA_VIEWS.sql.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -52,6 +54,7 @@ base AS (
         ) AS c0
     FROM jmi_gold.role_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
+    WHERE r.ingest_month BETWEEN '2018-01' AND '2035-12'
 ),
 stripped AS (
     SELECT
@@ -232,6 +235,7 @@ cleaned AS (
         ) AS company_key
     FROM jmi_gold.company_hiring_monthly c
     INNER JOIN lr ON c.run_id = lr.run_id
+    WHERE c.ingest_month BETWEEN '2018-01' AND '2035-12'
 ),
 normalized AS (
     SELECT

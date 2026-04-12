@@ -8,6 +8,10 @@
 --   - Partition columns: ingest_month, run_id (Hive-style partitions on S3)
 --   - Gold DDL under infra/aws/athena/ddl_gold_*.sql uses partition projection
 --     (including pipeline_run_summary) so new S3 prefixes resolve without MSCK.
+--   - Partition projection requires BOTH partition keys in predicates: `run_id` (injected)
+--     AND `ingest_month` (date projection). Every view below includes
+--     `ingest_month BETWEEN '2018-01' AND '2035-12'` — MUST match
+--     `projection.ingest_month.range` in those DDL files (alter both if you widen range).
 --   - Column names match repo DDL (bronze_ingest_date, bronze_run_id in body rows)
 --
 -- Analytics database for views (keeps gold tables in `jmi_gold` unchanged).
@@ -24,7 +28,7 @@ CREATE DATABASE IF NOT EXISTS jmi_analytics;
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.latest_pipeline_run AS
-SELECT MAX(run_id) AS run_id FROM jmi_gold.latest_run_metadata;
+SELECT run_id FROM jmi_gold.latest_run_metadata LIMIT 1;
 
 -- -----------------------------------------------------------------------------
 -- 0b) Raw-grain helpers — Same columns as jmi_gold tables, latest run_id only
@@ -44,7 +48,8 @@ SELECT
     s.ingest_month,
     s.run_id
 FROM jmi_gold.skill_demand_monthly s
-INNER JOIN lr ON s.run_id = lr.run_id;
+INNER JOIN lr ON s.run_id = lr.run_id
+WHERE s.ingest_month BETWEEN '2018-01' AND '2035-12';
 
 CREATE OR REPLACE VIEW jmi_analytics.pipeline_run_summary_latest AS
 WITH lr AS (
@@ -62,7 +67,8 @@ SELECT
     p.ingest_month,
     p.run_id
 FROM jmi_gold.pipeline_run_summary p
-INNER JOIN lr ON p.run_id = lr.run_id;
+INNER JOIN lr ON p.run_id = lr.run_id
+WHERE p.ingest_month BETWEEN '2018-01' AND '2035-12';
 
 -- -----------------------------------------------------------------------------
 -- 1) sheet1_kpis — One row per (ingest_month, run_id) with all six KPI fields
@@ -82,6 +88,7 @@ role_totals AS (
         MAX(r.job_count) AS max_role_job_count
     FROM jmi_gold.role_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
+    WHERE r.ingest_month BETWEEN '2018-01' AND '2035-12'
     GROUP BY r.ingest_month, r.run_id
 ),
 loc_totals AS (
@@ -91,6 +98,7 @@ loc_totals AS (
         SUM(l.job_count) AS located_postings
     FROM jmi_gold.location_demand_monthly l
     INNER JOIN lr ON l.run_id = lr.run_id
+    WHERE l.ingest_month BETWEEN '2018-01' AND '2035-12'
     GROUP BY l.ingest_month, l.run_id
 ),
 loc_top3 AS (
@@ -109,6 +117,7 @@ loc_top3 AS (
             ) AS rn
         FROM jmi_gold.location_demand_monthly l
         INNER JOIN lr ON l.run_id = lr.run_id
+        WHERE l.ingest_month BETWEEN '2018-01' AND '2035-12'
     ) x
     WHERE rn <= 3
     GROUP BY ingest_month, run_id
@@ -129,6 +138,7 @@ loc_hhi_calc AS (
         ON l.ingest_month = lt.ingest_month
         AND l.run_id = lt.run_id
     WHERE lt.located_postings > 0
+        AND l.ingest_month BETWEEN '2018-01' AND '2035-12'
     GROUP BY l.ingest_month, l.run_id
 ),
 comp_totals AS (
@@ -138,6 +148,7 @@ comp_totals AS (
         SUM(c.job_count) AS company_postings_sum
     FROM jmi_gold.company_hiring_monthly c
     INNER JOIN lr ON c.run_id = lr.run_id
+    WHERE c.ingest_month BETWEEN '2018-01' AND '2035-12'
     GROUP BY c.ingest_month, c.run_id
 ),
 comp_hhi_calc AS (
@@ -156,6 +167,7 @@ comp_hhi_calc AS (
         ON c.ingest_month = ct.ingest_month
         AND c.run_id = ct.run_id
     WHERE ct.company_postings_sum > 0
+        AND c.ingest_month BETWEEN '2018-01' AND '2035-12'
     GROUP BY c.ingest_month, c.run_id
 )
 SELECT
@@ -208,6 +220,7 @@ ranked AS (
         ) AS rn
     FROM jmi_gold.location_demand_monthly l
     INNER JOIN lr ON l.run_id = lr.run_id
+    WHERE l.ingest_month BETWEEN '2018-01' AND '2035-12'
 ),
 rolled AS (
     SELECT
@@ -255,6 +268,7 @@ ranked AS (
         ) AS rn
     FROM jmi_gold.company_hiring_monthly c
     INNER JOIN lr ON c.run_id = lr.run_id
+    WHERE c.ingest_month BETWEEN '2018-01' AND '2035-12'
 ),
 rolled AS (
     SELECT
@@ -297,6 +311,7 @@ totals AS (
         SUM(r.job_count) AS total_jobs
     FROM jmi_gold.role_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
+    WHERE r.ingest_month BETWEEN '2018-01' AND '2035-12'
     GROUP BY r.ingest_month, r.run_id
 )
 SELECT
@@ -326,7 +341,8 @@ FROM jmi_gold.role_demand_monthly r
 INNER JOIN lr ON r.run_id = lr.run_id
 INNER JOIN totals t
     ON r.ingest_month = t.ingest_month
-    AND r.run_id = t.run_id;
+    AND r.run_id = t.run_id
+WHERE r.ingest_month BETWEEN '2018-01' AND '2035-12';
 
 -- -----------------------------------------------------------------------------
 -- 5) role_top20 — Support table for Sheet 1 (top 20 by postings)
@@ -348,6 +364,7 @@ ranked AS (
         ) AS pareto_rank
     FROM jmi_gold.role_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
+    WHERE r.ingest_month BETWEEN '2018-01' AND '2035-12'
 )
 SELECT
     ingest_month,
@@ -362,8 +379,10 @@ WHERE pareto_rank <= 20;
 -- NOTES (schema assumptions)
 -- =============================================================================
 -- 1) If your Glue/Athena table names differ, replace `jmi_gold` prefix only.
--- 2) Gold tables use partition projection in repo DDL; new S3 prefixes under the
---    configured month/run_id template are visible without MSCK REPAIR.
+-- 2) Gold tables use partition projection in repo DDL; queries must filter both
+--    `run_id` (via latest_pipeline_run join) and `ingest_month` within the DDL
+--    projection range — otherwise Athena may scan no paths. New S3 prefixes under
+--    the configured month/run_id template are visible without MSCK REPAIR.
 -- 3) latest_run_metadata is a single overwritten Parquet file; no MSCK. Run the Gold
 --    transform so the file exists before relying on latest_pipeline_run.
 -- 4) `location_hhi` / `company_hhi`: when located_postings = 0 or

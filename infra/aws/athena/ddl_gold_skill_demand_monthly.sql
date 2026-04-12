@@ -1,3 +1,5 @@
+-- Partition projection: queries must filter ingest_month within projection.ingest_month.range below
+-- and run_id (see docs/dashboard_implementation/ATHENA_VIEWS.sql). No MSCK REPAIR for new run_id paths.
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold.skill_demand_monthly (
   skill string,
   job_count bigint,

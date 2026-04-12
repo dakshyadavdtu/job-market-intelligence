@@ -13,10 +13,12 @@ Step-by-step implementation manual for the frozen two-sheet dashboard. Follow or
 3. Run **`ATHENA_VIEWS.sql`** end-to-end, then optional **`ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql`**.
 4. Script uses `CREATE DATABASE IF NOT EXISTS jmi_analytics;` — if it fails, create the database manually in Athena, then re-run view statements.
 5. Run the **Gold** transform at least once so `gold/latest_run_metadata/part-00001.parquet` exists (written by `transform_gold.py`). No **MSCK** is required for latest-run detection or for new Gold partitions **within** the configured projection month range.
-6. Validate SQL (latest run is chosen automatically via `jmi_analytics.latest_pipeline_run` → `jmi_gold.latest_run_metadata`):
+6. **Partition projection (critical):** Gold monthly tables use **injected** `run_id` plus **date** `ingest_month`. Athena only resolves S3 paths when the query includes **both** a `run_id` predicate (the views join `latest_pipeline_run`) **and** an `ingest_month` predicate within `projection.ingest_month.range` from the DDL (repo views use `ingest_month BETWEEN '2018-01' AND '2035-12'` to match `ddl_gold_*_monthly.sql`). Direct `SELECT * FROM jmi_gold.*` without those filters can return **no rows** even when S3 has data.
+7. Validate SQL (latest run is chosen automatically via `jmi_analytics.latest_pipeline_run` → `jmi_gold.latest_run_metadata`):
    - `SELECT run_id FROM jmi_analytics.latest_pipeline_run;` → newest `run_id` string.
    - `SELECT * FROM jmi_analytics.sheet1_kpis;` → one row per `ingest_month` in the **latest** pipeline run only.
    - `SELECT MAX(cumulative_job_pct) FROM jmi_analytics.role_pareto;` → **100.0** (within float tolerance).
+   - Optional sanity on base Gold (must include month bounds): `SELECT COUNT(*) FROM jmi_gold.role_demand_monthly WHERE run_id = (SELECT run_id FROM jmi_analytics.latest_pipeline_run) AND ingest_month BETWEEN '2018-01' AND '2035-12';` → **> 0** after a successful Gold run.
 
 ### A2 — QuickSight account
 
