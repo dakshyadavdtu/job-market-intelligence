@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
@@ -18,10 +20,12 @@ def _merged_silver_path(cfg: AppConfig) -> DataPath:
 def _latest_silver_file(cfg: AppConfig) -> Path:
     if cfg.silver_root.is_s3:
         raise FileNotFoundError("Pass silver_file or merged_silver_file when JMI_DATA_ROOT is S3.")
-    files = sorted(
-        cfg.silver_root.as_path().glob("jobs/ingest_date=*/run_id=*/part-*.parquet"),
-        key=lambda p: p.stat().st_mtime,
-    )
+    base = cfg.silver_root.as_path() / "jobs"
+    if cfg.source_name == "arbeitnow":
+        pattern = "ingest_date=*/run_id=*/part-*.parquet"
+    else:
+        pattern = f"source={cfg.source_name}/ingest_date=*/run_id=*/part-*.parquet"
+    files = sorted(base.glob(pattern), key=lambda p: p.stat().st_mtime)
     if not files:
         raise FileNotFoundError("No silver files found. Run silver transform first.")
     return files[-1]
@@ -157,8 +161,10 @@ def run(
     silver_file: str | None = None,
     merged_silver_file: str | None = None,
     pipeline_run_id: str | None = None,
+    *,
+    cfg: AppConfig | None = None,
 ) -> dict:
-    cfg = AppConfig()
+    cfg = cfg or AppConfig()
     df, resolved_path = _resolve_silver_dataframe(cfg, silver_file, merged_silver_file)
     if df.empty:
         raise RuntimeError("Silver dataset is empty.")
@@ -276,8 +282,12 @@ def run(
             }
         )
 
-    latest_meta_path = cfg.gold_root / "latest_run_metadata" / "part-00001.parquet"
-    write_parquet(latest_meta_path, pd.DataFrame([{"run_id": prid}]))
+    # Single-file pointer used by Athena `latest_pipeline_run` for Arbeitnow dashboards.
+    # Other sources write fact tables only so we do not overwrite the global latest run_id.
+    latest_meta_path: DataPath | None = None
+    if cfg.source_name == "arbeitnow":
+        latest_meta_path = cfg.gold_root / "latest_run_metadata" / "part-00001.parquet"
+        write_parquet(latest_meta_path, pd.DataFrame([{"run_id": prid}]))
 
     payload = {
         "stage": "gold",
@@ -291,11 +301,34 @@ def run(
         "location_output_files": location_outputs,
         "company_output_files": company_outputs,
         "pipeline_run_summary_output_files": summary_outputs,
-        "latest_run_metadata_file": str(latest_meta_path),
+        "latest_run_metadata_file": str(latest_meta_path) if latest_meta_path else "",
+        "latest_run_metadata_skipped": cfg.source_name != "arbeitnow",
     }
     (cfg.quality_root / f"gold_quality_{prid}.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return payload
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(), indent=2))
+    parser = argparse.ArgumentParser(description="Silver → Gold aggregates.")
+    parser.add_argument(
+        "--source",
+        default=None,
+        metavar="NAME",
+        help="Silver source partition for merged/latest path (e.g. adzuna_in). Default: arbeitnow.",
+    )
+    parser.add_argument("--silver-file", default=None, metavar="PATH")
+    parser.add_argument("--merged-silver-file", default=None, metavar="PATH")
+    args = parser.parse_args()
+    base_cfg = AppConfig()
+    if args.source:
+        base_cfg = replace(base_cfg, source_name=args.source)
+    print(
+        json.dumps(
+            run(
+                args.silver_file,
+                args.merged_silver_file,
+                cfg=base_cfg,
+            ),
+            indent=2,
+        )
+    )

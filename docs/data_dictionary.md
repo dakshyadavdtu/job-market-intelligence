@@ -24,3 +24,5 @@ Strict contract: Parquet files contain **only** the columns below (no legacy sal
 ## Gold (`skill_demand_monthly`)
 
 - `skill`, `job_count`, partition `ingest_month`
+
+**Multi-source:** Fact tables include `source` (e.g. `adzuna_in`). Run Gold with `--source adzuna_in` to build partitions from that source’s merged Silver. `latest_run_metadata` is updated only for **Arbeitnow** Gold runs so `jmi_analytics.latest_pipeline_run` keeps pointing at the primary dashboard batch.

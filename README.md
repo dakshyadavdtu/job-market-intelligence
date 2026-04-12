@@ -181,6 +181,8 @@ JMI therefore separates concerns:
 - `data/gold/pipeline_run_summary/...`
 - `data/quality/gold_quality_YYYY-MM_<run_id>.json`
 
+**Run (Adzuna Silver → Gold):** `python -m src.jmi.pipelines.transform_gold --source adzuna_in` (reads `silver/jobs/source=adzuna_in/merged/latest.parquet`). **Does not** overwrite `gold/latest_run_metadata/` (that pointer stays Arbeitnow-oriented for existing Athena views).
+
 **Why it exists:** **Gold-first analytics**—BI tools should not rescan all raw jobs for every chart refresh if a **small aggregate** answers the question.
 
 ---
