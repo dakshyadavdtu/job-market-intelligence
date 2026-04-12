@@ -13,11 +13,11 @@ Step-by-step implementation manual for the frozen two-sheet dashboard. Follow or
 3. Run **`ATHENA_VIEWS.sql`** end-to-end, then optional **`ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql`**.
 4. Script uses `CREATE DATABASE IF NOT EXISTS jmi_analytics;` — if it fails, create the database manually in Athena, then re-run view statements.
 5. Run the **Gold** transform at least once so `gold/latest_run_metadata/part-00001.parquet` exists (written by `transform_gold.py`). No **MSCK** is required for latest-run detection or for new Gold partitions **within** the configured projection month range.
-6. **Partition projection (critical):** Gold monthly tables use **injected** `run_id` plus **date** `ingest_month`. Athena only resolves S3 paths when the query includes **both** a `run_id` predicate (the views join `latest_pipeline_run`) **and** an `ingest_month` predicate within `projection.ingest_month.range` from the DDL (repo views use `ingest_month BETWEEN '2018-01' AND '2035-12'` to match `ddl_gold_*_monthly.sql`). Direct `SELECT * FROM jmi_gold.*` without those filters can return **no rows** even when S3 has data. Repo Gold DDL **does not** set `storage.location.template` so Athena uses the default **Hive-style** paths under each table `LOCATION` (`ingest_month=<val>/run_id=<val>/`), matching `transform_gold.py`.
+6. **Partition projection (critical):** Gold monthly tables use **date** `ingest_month` and **`run_id` as `enum`** in `ddl_gold_*_monthly.sql` (append each new Gold `run_id` to `projection.run_id.values` in Glue after each run—see `docs/aws_live_fix_gold_projection.md`). Athena views use `ingest_month BETWEEN '2018-01' AND '2035-12'` to match `projection.ingest_month.range`. Repo Gold DDL **does not** set `storage.location.template`; paths follow default Hive-style layout under each table `LOCATION`.
 7. Validate SQL (latest run is chosen automatically via `jmi_analytics.latest_pipeline_run` → `jmi_gold.latest_run_metadata`):
    - `SELECT run_id FROM jmi_analytics.latest_pipeline_run;` → newest `run_id` string.
    - `SELECT * FROM jmi_analytics.sheet1_kpis;` → one row per `ingest_month` in the **latest** pipeline run only.
-   - `SELECT MAX(cumulative_job_pct) FROM jmi_analytics.role_pareto;` → **100.0** (within float tolerance).
+   - `SELECT MAX(cumulative_job_pct) FROM jmi_analytics.role_group_pareto;` → **100.0** (within float tolerance). Optional raw: `role_pareto`.
    - Optional sanity on base Gold (must include month bounds): `SELECT COUNT(*) FROM jmi_gold.role_demand_monthly WHERE run_id = (SELECT run_id FROM jmi_analytics.latest_pipeline_run) AND ingest_month BETWEEN '2018-01' AND '2035-12';` → **> 0** after a successful Gold run.
 
 ### A2 — QuickSight account
@@ -25,30 +25,44 @@ Step-by-step implementation manual for the frozen two-sheet dashboard. Follow or
 1. Ensure QuickSight **same region** as Athena (or SPICE refresh supported path).
 2. **Manage QuickSight** → **Security & permissions** → Athena + S3 access for gold bucket (if not already).
 
-### A3 — Create datasets (Athena source)
+### A3 — Create datasets (Athena source) — **final production set**
 
-Create **seven** datasets (names suggested; match `DASHBOARD_SPEC.md`):
+Create these **seven** datasets for the **locked** dashboard (names suggested; point all at **`jmi_analytics`**):
 
-| # | Dataset name | Athena table/view |
-|---|----------------|-------------------|
-| 1 | `DS_SHEET1_KPIS` | `jmi_analytics.sheet1_kpis` |
-| 2 | `DS_SKILLS` | `jmi_analytics.skill_demand_monthly_latest` |
-| 3 | `DS_LOC_TOP15` | `jmi_analytics.location_top15_other` |
-| 4 | `DS_ROLE_PARETO` | `jmi_analytics.role_pareto` |
-| 5 | `DS_ROLE_TOP20` | `jmi_analytics.role_top20` |
-| 6 | `DS_COMPANY_TOP12` | `jmi_analytics.company_top12_other` |
-| 7 | `DS_PIPELINE_SUMMARY` | `jmi_analytics.pipeline_run_summary_latest` |
+| # | Dataset name | Athena view | Sheet / use |
+|---|----------------|-------------|---------------|
+| 1 | `DS_SHEET1_KPIS` | `sheet1_kpis` | Sheet 1 — KPI row |
+| 2 | `DS_SKILLS` | `skill_demand_monthly_latest` | Sheet 1 — skills donut |
+| 3 | `DS_LOC_TOP15` | `location_top15_other` | Sheet 1 — location treemap + table |
+| 4 | `DS_ROLE_GROUP_PARETO` | `role_group_pareto` | Sheet 1 — role **family** Pareto (presentation) |
+| 5 | `DS_ROLE_GROUP_TOP20` | `role_group_top20` | Sheet 1 — top 20 **families** table |
+| 6 | `DS_COMPANY_TOP15_CLEAN` | `company_top15_other_clean` | Sheet 1 — company treemap (normalized names) |
+| 7 | `DS_PIPELINE_SUMMARY` | `pipeline_run_summary_latest` | Sheet 2 — proof table |
+
+**Optional drill-down only** (add only if you want raw title-level visuals alongside families):
+
+| Dataset name | Athena view |
+|----------------|-------------|
+| `DS_ROLE_PARETO_RAW` | `role_pareto` |
+| `DS_ROLE_TOP20_RAW` | `role_top20` |
+
+**Deprecated for final demo (do not use as primary):** `company_top12_other` — superseded by **`company_top15_other_clean`** (same treemap pattern, legal-suffix normalization, Top **15** + Other). Keep `company_top12_other` in Athena for legacy only.
 
 For each dataset:
 
-- Data source: **Athena**.
-- Table/view: as above.
-- **Import mode:** Direct Query **or** SPICE (if SPICE, schedule refresh after pipeline runs).
-- Finish **without** analysis yet (or save default analysis — you will add visuals in dashboard).
+- Data source: **Athena** · **AwsDataCatalog** · database **`jmi_analytics`**.
+- **Import mode:** **Direct Query** (lowest staleness) **or** **SPICE** (refresh after each Gold run and after Glue `run_id` enum updates).
+- Finish **without** full analysis layout until datasets validate (row counts > 0 for latest run).
 
 ### A4 — Dashboard parameters (optional)
 
 `jmi_analytics` views already restrict data to **`run_id`** from **`jmi_gold.latest_run_metadata`** (see `latest_pipeline_run`). Parameters are **optional**: use **`p_ingest_month`** (and rarely **`p_run_id`**) only if you need to override or narrow a multi-month latest run in a visual.
+
+### A5 — One-time / recurring maintenance (Gold → Athena → QuickSight)
+
+1. **After each successful Gold run:** append the new **`run_id`** string to **`projection.run_id.values`** on **all five** partitioned **`jmi_gold`** tables (**same comma-separated list on each**). If you skip this, Athena will not see the new run’s S3 prefixes under partition projection. Details: `docs/aws_live_fix_gold_projection.md`.
+2. **QuickSight SPICE:** refresh all datasets that use **`jmi_analytics`** views after the enum update (or rely on Direct Query for always-fresh reads).
+3. **Costs:** prefer **Direct Query** for small latest-run views during development; **SPICE** for stable demos—schedule refresh only as often as the pipeline runs (e.g. every 4 hours), not on a faster cadence than needed.
 
 ---
 
@@ -180,34 +194,38 @@ For each dataset:
 5. **Conditional formatting:** Data bars on `job_count` if available.
 6. **Check:** Row count ≤ 16; sums to **located postings**.
 
-### D8 — S1-PARETO-ROLE
+### D8 — S1-PARETO-ROLE (role **families** — final)
 
 1. Add **Combo chart** (bar + line).
-2. Dataset: **`DS_ROLE_PARETO`**.
-3. **X-axis:** `pareto_rank` (continuous or categorical — use **integer** ordering).
+2. Dataset: **`DS_ROLE_GROUP_PARETO`** (`jmi_analytics.role_group_pareto`).
+3. **X-axis:** `pareto_rank` (integer ordering).
 4. **Bar value:** `job_count`.
 5. **Line value:** `cumulative_job_pct`.
 6. **Sort:** `pareto_rank` ascending.
-7. **Tooltip:** include **`role`**, `pareto_rank`, `job_count`, `cumulative_job_pct`, `share_of_total`.
+7. **Tooltip:** **`role_group`**, `pareto_rank`, `job_count`, `cumulative_job_pct`, `share_of_total`.
 8. **Check:** Last `cumulative_job_pct` = **100%**.
 
-**Common issue:** Line flat or missing → line field on secondary axis; enable **dual axis** if QS requires.
+**Optional:** duplicate visual using **`DS_ROLE_PARETO_RAW`** (`role_pareto`) and field **`role`** instead of **`role_group`** for raw-title drill-down only.
 
-### D9 — S1-TABLE-ROLE
+**Common issue:** Line flat or missing → line on secondary axis; enable **dual axis** if QS requires.
+
+### D9 — S1-TABLE-ROLE (top 20 **families** — final)
 
 1. Add **Table**.
-2. Dataset: **`DS_ROLE_TOP20`**.
-3. Columns: `pareto_rank`, `role`, `job_count`.
+2. Dataset: **`DS_ROLE_GROUP_TOP20`** (`jmi_analytics.role_group_top20`).
+3. Columns: `pareto_rank`, **`role_group`**, `job_count`.
 4. **Sort:** `pareto_rank` asc.
-5. **Column widths:** Widen `role`; enable **wrap text**.
-6. **Check:** 20 rows max.
+5. **Column widths:** Widen `role_group`; enable **wrap text**.
+6. **Check:** ≤ 20 rows per `(ingest_month, run_id)` slice.
 
-### D10 — S1-TREEMAP-COMPANY
+**Optional:** second table from **`DS_ROLE_TOP20_RAW`** with column **`role`** for raw titles.
+
+### D10 — S1-TREEMAP-COMPANY (final)
 
 1. Add **Treemap**.
-2. Dataset: **`DS_COMPANY_TOP12`**.
+2. Dataset: **`DS_COMPANY_TOP15_CLEAN`** (`jmi_analytics.company_top15_other_clean`).
 3. **Group:** `company_label`. **Size:** `job_count`.
-4. **Check:** **Other** present if >12 companies.
+4. **Check:** **Other** present if >15 distinct employers after normalization.
 
 If unreadable → **`VISUAL_FALLBACK_RULES.md`** Section Companies.
 

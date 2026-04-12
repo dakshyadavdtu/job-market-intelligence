@@ -222,16 +222,16 @@ This document is the **single master reference** for the QuickSight dashboard. T
 
 | Attribute | Value |
 |-----------|--------|
-| **Purpose** | Head vs tail: cumulative posting coverage by ranked role. |
+| **Purpose** | Head vs tail: cumulative posting coverage by ranked role **family** (presentation) or raw title (optional). |
 | **Sheet** | 1 |
-| **Dataset / view** | `jmi_analytics.role_pareto` |
+| **Dataset / view** | **Production:** `jmi_analytics.role_group_pareto` · **Optional drill-down:** `jmi_analytics.role_pareto` |
 | **Visual type** | Combo chart (bar + line) |
-| **Fields used** | **X-axis:** `pareto_rank` (integer 1…R); **Bar:** `job_count`; **Line:** `cumulative_job_pct` |
+| **Fields used** | **X-axis:** `pareto_rank` (integer 1…R); **Bar:** `job_count`; **Line:** `cumulative_job_pct` · **Category label:** `role_group` (production) or `role` (raw) |
 | **Sorting** | `pareto_rank` ascending |
 | **Filters** | Optional `ingest_month` (latest `run_id` via `jmi_analytics` views) |
-| **Tooltip** | **`role`**, `pareto_rank`, `job_count`, `cumulative_job_pct`, `share_of_total` |
-| **Title** | Role titles — Pareto coverage |
-| **Subtitle** | Bars = postings per title; line = cumulative % of total postings. |
+| **Tooltip** | **`role_group`** or **`role`**, `pareto_rank`, `job_count`, `cumulative_job_pct`, `share_of_total` |
+| **Title** | Role families — Pareto coverage *(or “role titles” if using raw view)* |
+| **Subtitle** | Bars = postings per bucket; line = cumulative % of total postings. |
 | **What NOT to show** | Truncated ranks for line endpoint (line must reach 100% at max rank). |
 
 ---
@@ -240,16 +240,16 @@ This document is the **single master reference** for the QuickSight dashboard. T
 
 | Attribute | Value |
 |-----------|--------|
-| **Purpose** | Readable long labels for top titles. |
+| **Purpose** | Readable labels for top **role families** (production) or raw titles (optional). |
 | **Sheet** | 1 |
-| **Dataset / view** | `jmi_analytics.role_top20` |
+| **Dataset / view** | **Production:** `jmi_analytics.role_group_top20` · **Optional drill-down:** `jmi_analytics.role_top20` |
 | **Visual type** | Table |
-| **Fields used** | `role`, `job_count`, `pareto_rank`; hide `ingest_month`/`run_id` or use as filter only. |
+| **Fields used** | **`role_group`**, `job_count`, `pareto_rank` (or **`role`** for raw); hide `ingest_month`/`run_id` or use as filter only. |
 | **Sorting** | `pareto_rank` ascending |
 | **Filters** | Optional `ingest_month` (latest `run_id` via `jmi_analytics` views) |
 | **Tooltip** | N/A (table) |
-| **Title** | Top 20 role titles (by postings) |
-| **Subtitle** | Full title text; ties broken by view logic. |
+| **Title** | Top 20 role families (by postings) *(or “role titles” if using raw view)* |
+| **Subtitle** | Same ranking order as Pareto for the chosen grain. |
 | **What NOT to show** | All 99 rows; different ranking than Pareto base order (must both sort by job_count desc). |
 
 ---
@@ -258,17 +258,17 @@ This document is the **single master reference** for the QuickSight dashboard. T
 
 | Attribute | Value |
 |-----------|--------|
-| **Purpose** | Employer mass concentration (Top 12 + Other). |
+| **Purpose** | Employer mass concentration (**Top 15 + Other**, normalized names). |
 | **Sheet** | 1 |
-| **Dataset / view** | `jmi_analytics.company_top12_other` |
+| **Dataset / view** | **Production:** `jmi_analytics.company_top15_other_clean` · Legacy: `company_top12_other` (12 + Other) — do not use both on the same dashboard. |
 | **Visual type** | Treemap |
 | **Fields used** | **Group:** `company_label`; **Size:** `job_count` |
 | **Sorting** | N/A (size-driven) |
 | **Filters** | Optional `ingest_month` (latest `run_id` via `jmi_analytics` views) |
 | **Tooltip** | `company_label`, `job_count` |
-| **Title** | Employer mass (Top 12 + Other) |
+| **Title** | Employer mass (Top 15 + Other) |
 | **Subtitle** | Area ∝ postings per employer bucket. |
-| **What NOT to show** | 66 separate tiles without Other. |
+| **What NOT to show** | Many separate tiles without **Other**. |
 
 ---
 
