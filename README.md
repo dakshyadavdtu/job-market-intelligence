@@ -95,8 +95,9 @@ JMI therefore separates concerns:
 **Today (implemented):**
 
 - **Arbeitnow** public API (`https://www.arbeitnow.com/api/job-board-api`) as the **first live source**. Connector and normalization live in `src/jmi/connectors/arbeitnow.py`.
+- **Adzuna India** (`source=adzuna_in`): job postings API for India; credentials `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`. End-to-end **local** Bronze → Silver → Gold is implemented. **Full runbook:** `docs/adzuna_india_runbook.md`.
 
-**Planned extensions (design hooks, not full second pipeline in repo):**
+**Planned extensions (design hooks):**
 
 - **Historical CSV**: land files under a controlled **S3 prefix**, validate schema, wrap rows into the **same Bronze envelope** (`raw_payload` + metadata), partition by `source=` and `ingest_date=`.
 - **Trend / signal feeds**: ingest as **new `source=`** values; **do not merge** unrelated semantics into one Bronze folder.
@@ -355,6 +356,8 @@ job-market-intelligence-main/
 4. `python -m src.jmi.pipelines.transform_silver`  
 5. `python -m src.jmi.pipelines.transform_gold`  
 6. `streamlit run dashboard/app.py`  
+
+**Adzuna India (second source, local):** after setting Adzuna env vars, run `ingest_adzuna` → `transform_silver --source adzuna_in` → `transform_gold --source adzuna_in`, or **`./scripts/adzuna_e2e_local.sh`**. See **`docs/adzuna_india_runbook.md`**.
 
 **Environment:** Optional `JMI_DATA_ROOT` points the pipelines at a root path (local folder or `s3://bucket/prefix`). Default is `data/`.
 

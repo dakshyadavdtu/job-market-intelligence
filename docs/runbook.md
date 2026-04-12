@@ -8,6 +8,16 @@
 4. Run gold transform: `python -m src.jmi.pipelines.transform_gold`
 5. Start dashboard: `streamlit run dashboard/app.py`
 
+### Adzuna India (`adzuna_in`)
+
+Requires `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` (or `.env` / `ADZUNA_ENV_FILE`). Then:
+
+1. `python -m src.jmi.pipelines.ingest_adzuna`
+2. `python -m src.jmi.pipelines.transform_silver --source adzuna_in`
+3. `python -m src.jmi.pipelines.transform_gold --source adzuna_in`
+
+Details, caveats, and live-AWS next steps: **`docs/adzuna_india_runbook.md`**.
+
 ## AWS Deployment Actions (Execute only with explicit approval)
 
 Order of operations:
