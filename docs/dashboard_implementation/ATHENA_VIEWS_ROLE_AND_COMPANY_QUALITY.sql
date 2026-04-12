@@ -3,8 +3,8 @@
 -- Additive views for Sheet 1 readability (does NOT replace existing jmi_analytics views).
 -- Run in same region/account as jmi_gold after base ATHENA_VIEWS.sql (needs latest_pipeline_run).
 -- Engine: Athena engine 3 (Trino SQL).
--- Gold partition projection: every scan on projected tables must filter `ingest_month`
--- within `projection.ingest_month.range` (see infra/aws/athena/ddl_gold_*.sql), same as ATHENA_VIEWS.sql.
+-- Gold partition projection: every scan on projected tables must filter `posted_month`
+-- within `projection.posted_month.range` (see infra/aws/athena/ddl_gold_*.sql), same as ATHENA_VIEWS.sql.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -17,7 +17,7 @@ WITH lr AS (
 ),
 base AS (
     SELECT
-        r.ingest_month,
+        r.posted_month,
         r.run_id,
         r."role" AS raw_role,
         r.job_count,
@@ -55,11 +55,11 @@ base AS (
     FROM jmi_gold.role_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
     WHERE r.source = 'arbeitnow'
-      AND r.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND r.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 stripped AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         raw_role,
         job_count,
@@ -68,7 +68,7 @@ stripped AS (
 ),
 classified AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         raw_role,
         job_count,
@@ -114,7 +114,7 @@ classified AS (
     FROM stripped
 )
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     raw_role,
     cleaned_role_title,
@@ -128,16 +128,16 @@ FROM classified;
 
 CREATE OR REPLACE VIEW jmi_analytics.role_group_demand_monthly AS
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     normalized_role_group AS role_group,
     SUM(job_count) AS job_count
 FROM jmi_analytics.role_title_classified
-GROUP BY ingest_month, run_id, normalized_role_group;
+GROUP BY posted_month, run_id, normalized_role_group;
 
 -- -----------------------------------------------------------------------------
 -- 2) role_group_top20 — Top 20 families by postings
---     One row per (run_id, role_group): sums all ingest_month for latest run only.
+--     One row per (run_id, role_group): sums all posted_month for latest run only.
 --     (Partitioning only by month+run duplicated the same family across months.)
 -- -----------------------------------------------------------------------------
 
@@ -150,14 +150,14 @@ agg AS (
         r.run_id,
         r.role_group,
         SUM(r.job_count) AS job_count,
-        MAX(r.ingest_month) AS ingest_month
+        MAX(r.posted_month) AS posted_month
     FROM jmi_analytics.role_group_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
     GROUP BY r.run_id, r.role_group
 ),
 ranked AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         role_group,
         job_count,
@@ -168,7 +168,7 @@ ranked AS (
     FROM agg
 )
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     role_group,
     job_count,
@@ -189,7 +189,7 @@ agg AS (
         r.run_id,
         r.role_group,
         SUM(r.job_count) AS job_count,
-        MAX(r.ingest_month) AS ingest_month
+        MAX(r.posted_month) AS posted_month
     FROM jmi_analytics.role_group_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
     GROUP BY r.run_id, r.role_group
@@ -202,7 +202,7 @@ totals AS (
     GROUP BY run_id
 )
 SELECT
-    g.ingest_month,
+    g.posted_month,
     g.run_id,
     g.role_group,
     g.job_count,
@@ -229,7 +229,7 @@ INNER JOIN totals t ON g.run_id = t.run_id;
 
 -- -----------------------------------------------------------------------------
 -- 4) company_top15_other_clean — Legal-suffix collapse + Top 50 + long-tail bucket
---     Run-level totals (all ingest_month summed for latest run) before ranking.
+--     Run-level totals (all posted_month summed for latest run) before ranking.
 --     Display labels: word-level casing + suffix polish (GmbH, SE, AG, e.V., …); TLD .ai lower.
 -- -----------------------------------------------------------------------------
 
@@ -239,7 +239,7 @@ WITH lr AS (
 ),
 cleaned AS (
     SELECT
-        c.ingest_month,
+        c.posted_month,
         c.run_id,
         c.job_count,
         trim(
@@ -264,11 +264,11 @@ cleaned AS (
     FROM jmi_gold.company_hiring_monthly c
     INNER JOIN lr ON c.run_id = lr.run_id
     WHERE c.source = 'arbeitnow'
-      AND c.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND c.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 normalized AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         CASE
             WHEN company_key = '' OR company_key IS NULL THEN '(unknown employer)'
@@ -282,13 +282,13 @@ agg AS (
         run_id,
         company_key,
         SUM(job_count) AS job_count,
-        MAX(ingest_month) AS ingest_month
+        MAX(posted_month) AS posted_month
     FROM normalized
     GROUP BY run_id, company_key
 ),
 ranked AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         company_key,
         job_count,
@@ -301,7 +301,7 @@ ranked AS (
 rolled AS (
     SELECT
         run_id,
-        MAX(ingest_month) AS ingest_month,
+        MAX(posted_month) AS posted_month,
         CASE
             WHEN rn <= 50 THEN company_key
             ELSE '__LONG_TAIL__'
@@ -317,7 +317,7 @@ rolled AS (
 ),
 labeled AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         company_label,
         job_count,
@@ -359,7 +359,7 @@ labeled AS (
     FROM rolled
 )
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     CASE display_label_raw
         WHEN 'My Humancapital GmbH' THEN 'My Humancapital'

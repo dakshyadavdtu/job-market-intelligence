@@ -7,22 +7,75 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-def _gold_table_root(table: str) -> Path:
-    """Prefer v2 modular layout data/gold/<table>/source=arbeitnow/; fall back to legacy data/gold/<table>/ (no source segment)."""
-    base = Path("data/gold")
-    v2 = base / table / "source=arbeitnow"
-    legacy = base / table
+DATA_GOLD = Path("data/gold")
+COMPARISON_TOTALS = Path("data/derived/comparison/posted_month_source_totals/part-00001.parquet")
+HEALTH_ARBEITNOW = Path("data/health/latest_ingest.json")
+HEALTH_ADZUNA = Path("data/health/latest_ingest_adzuna_in.json")
+
+
+def _gold_source_root(table: str, source: str) -> Path:
+    """Modular layout: data/gold/<table>/source=<slug>/. Legacy: data/gold/<table>/ (arbeitnow-only)."""
+    v2 = DATA_GOLD / table / f"source={source}"
     if v2.exists():
         return v2
-    return legacy
+    if source == "arbeitnow":
+        legacy = DATA_GOLD / table
+        if legacy.exists():
+            return legacy
+    return v2
 
 
-ROOT_SKILL = _gold_table_root("skill_demand_monthly")
-ROOT_ROLE = _gold_table_root("role_demand_monthly")
-ROOT_LOCATION = _gold_table_root("location_demand_monthly")
-ROOT_COMPANY = _gold_table_root("company_hiring_monthly")
-ROOT_SUMMARY = _gold_table_root("pipeline_run_summary")
-HEALTH_FILE = Path("data/health/latest_ingest.json")
+def _latest_run_id_for_source(source: str) -> str | None:
+    meta = DATA_GOLD / f"source={source}" / "latest_run_metadata" / "part-00001.parquet"
+    if not meta.exists():
+        return None
+    try:
+        m = pd.read_parquet(meta)
+        if m is not None and not m.empty and "run_id" in m.columns:
+            return str(m["run_id"].iloc[0])
+    except Exception:
+        return None
+    return None
+
+
+def _month_key_from_path(path: Path) -> str | None:
+    for part in path.parts:
+        if part.startswith("posted_month="):
+            return part.split("=", 1)[1]
+        if part.startswith("ingest_month="):
+            return part.split("=", 1)[1]
+    return None
+
+
+def _list_fact_paths(table: str, source: str, run_id: str | None) -> tuple[list[Path], str]:
+    """Return (paths, grain_label) where grain is posted_month or ingest_month (legacy)."""
+    root = _gold_source_root(table, source)
+    if not root.exists():
+        return [], "posted_month"
+    if run_id:
+        pm = sorted(root.glob(f"posted_month=*/run_id={run_id}/part-*.parquet"))
+        if pm:
+            return pm, "posted_month"
+        im = sorted(root.glob(f"ingest_month=*/run_id={run_id}/part-*.parquet"))
+        if im:
+            return im, "ingest_month"
+    pm2 = sorted(root.glob("posted_month=*/run_id=*/part-*.parquet"))
+    if pm2:
+        return pm2, "posted_month"
+    im2 = sorted(root.glob("ingest_month=*/run_id=*/part-*.parquet"))
+    return im2, "ingest_month"
+
+
+def _pick_parquet_for_month(paths: list[Path], posted_month: str) -> Path | None:
+    for p in paths:
+        if _month_key_from_path(p) == posted_month:
+            return p
+    return paths[-1] if paths else None
+
+
+def _available_months(paths: list[Path]) -> list[str]:
+    keys = [_month_key_from_path(p) for p in paths]
+    return sorted({k for k in keys if k}, reverse=True)
 
 TABLE_TOP = 20
 CHART_TOP = 12
@@ -198,11 +251,6 @@ def format_skill_display(raw: object) -> str:
     return s.title()
 
 
-def _latest_parquet(root: Path) -> Path | None:
-    files = sorted(root.glob("ingest_month=*/run_id=*/part-*.parquet"))
-    return files[-1] if files else None
-
-
 def _read_parquet(path: Path | None) -> pd.DataFrame | None:
     if path is None or not path.exists():
         return None
@@ -306,33 +354,99 @@ def _render_ranked_section(
         )
 
 
-st.set_page_config(page_title="JMI Dashboard", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="JMI Dashboard", layout="wide", initial_sidebar_state="expanded")
+
+st.sidebar.markdown("### Analysis scope")
+analysis_mode = st.sidebar.radio(
+    "Dataset",
+    ["arbeitnow", "adzuna_in", "comparison"],
+    format_func=lambda x: {
+        "arbeitnow": "Arbeitnow (base Gold)",
+        "adzuna_in": "Adzuna India (base Gold)",
+        "comparison": "Comparison / benchmark (derived)",
+    }[x],
+    horizontal=False,
+)
 
 st.markdown("## Job Market Intelligence")
-st.caption("Local Gold analytics — skills, roles, locations, and hiring signals from the latest pipeline run.")
+st.caption(
+    "Local analytics: **posted_month** = job posting month (from Silver `posted_at`). "
+    "Comparison totals live under `data/derived/comparison/`."
+)
 
-health: dict = {}
-if HEALTH_FILE.exists():
-    try:
-        health = json.loads(HEALTH_FILE.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        health = {}
-
-path_skill = _latest_parquet(ROOT_SKILL)
-path_role = _latest_parquet(ROOT_ROLE)
-path_location = _latest_parquet(ROOT_LOCATION)
-path_company = _latest_parquet(ROOT_COMPANY)
-path_summary = _latest_parquet(ROOT_SUMMARY)
-
-if not any([path_skill, path_role, path_location, path_company, path_summary]):
-    st.info("No Gold datasets yet. Run ingest, silver, and gold transforms.")
+if analysis_mode == "comparison":
+    st.markdown("### Cross-source comparison (derived)")
+    st.caption(f"Source file: `{COMPARISON_TOTALS}` — job counts by **posted_month** × **source** from merged Silver.")
+    if not COMPARISON_TOTALS.exists():
+        st.warning(
+            "No comparison file yet. Run **Gold** (it refreshes `derived/comparison/`) or "
+            "`python -m src.jmi.pipelines.transform_derived_comparison`."
+        )
+        st.stop()
+    df_cmp = _read_parquet(COMPARISON_TOTALS)
+    if df_cmp is None or df_cmp.empty:
+        st.info("Comparison file is empty.")
+        st.stop()
+    pm_sel = st.sidebar.selectbox(
+        "Posted month",
+        sorted(df_cmp["posted_month"].unique().tolist(), reverse=True),
+    )
+    sub = df_cmp[df_cmp["posted_month"] == pm_sel]
+    st.dataframe(sub, use_container_width=True, hide_index=True)
+    if len(sub) > 1:
+        st.bar_chart(sub.set_index("source")["job_count"], height=280)
     st.stop()
+
+rid = _latest_run_id_for_source(analysis_mode)
+paths_skill, grain = _list_fact_paths("skill_demand_monthly", analysis_mode, rid)
+if not paths_skill:
+    st.info("No Gold datasets for this source yet. Run ingest → silver → gold.")
+    st.stop()
+
+months = _available_months(paths_skill)
+if not months:
+    st.warning("No month partitions found under Gold for this source/run.")
+    st.stop()
+posted_month_sel = st.sidebar.selectbox(
+    "Posted month (analysis axis)",
+    months,
+    index=0,
+    help="Counts are aggregated by the calendar month of **posted_at** in Silver (not pipeline ingest date).",
+)
+st.sidebar.caption(f"Partition key in paths: **{grain}** (legacy layouts may still use ingest_month).")
+
+path_skill = _pick_parquet_for_month(paths_skill, posted_month_sel)
+paths_role, _ = _list_fact_paths("role_demand_monthly", analysis_mode, rid)
+paths_loc, _ = _list_fact_paths("location_demand_monthly", analysis_mode, rid)
+paths_co, _ = _list_fact_paths("company_hiring_monthly", analysis_mode, rid)
+paths_sum, _ = _list_fact_paths("pipeline_run_summary", analysis_mode, rid)
+path_role = _pick_parquet_for_month(paths_role, posted_month_sel)
+path_location = _pick_parquet_for_month(paths_loc, posted_month_sel)
+path_company = _pick_parquet_for_month(paths_co, posted_month_sel)
+path_summary = _pick_parquet_for_month(paths_sum, posted_month_sel)
 
 df_skill = _read_parquet(path_skill)
 df_role = _read_parquet(path_role)
 df_location = _read_parquet(path_location)
 df_company = _read_parquet(path_company)
 df_summary = _read_parquet(path_summary)
+
+health: dict = {}
+if HEALTH_ARBEITNOW.exists():
+    try:
+        health = json.loads(HEALTH_ARBEITNOW.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        health = {}
+health_adzuna: dict = {}
+if HEALTH_ADZUNA.exists():
+    try:
+        health_adzuna = json.loads(HEALTH_ADZUNA.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        health_adzuna = {}
+
+if not any([path_skill, path_role, path_location, path_company, path_summary]):
+    st.info("No Gold datasets yet. Run ingest, silver, and gold transforms.")
+    st.stop()
 
 skill_rows = int(len(df_skill)) if df_skill is not None and not df_skill.empty else 0
 role_rows = int(len(df_role)) if df_role is not None and not df_role.empty else 0
@@ -344,6 +458,7 @@ if df_summary is not None and not df_summary.empty and "status" in df_summary.co
     pipeline_status = str(df_summary["status"].iloc[0])
 
 st.markdown("### Overview")
+st.caption(f"Source **{analysis_mode}** · analysis month **{posted_month_sel}** · path grain **{grain}**")
 with st.container(border=True):
     k1, k2, k3, k4, k5 = st.columns(5)
     k1.metric("Skill rows", f"{skill_rows:,}")
@@ -369,6 +484,8 @@ if df_summary is not None and not df_summary.empty:
             _kv("Roles", row.get("role_row_count"))
             _kv("Locations", row.get("location_row_count"))
             _kv("Companies", row.get("company_row_count"))
+            if "time_axis" in row.index:
+                _kv("Time axis mix", row.get("time_axis"))
     with right:
         st.markdown("**Status**")
         status_val = str(row.get("status", "—"))
@@ -378,7 +495,7 @@ if df_summary is not None and not df_summary.empty:
             st.error(status_val)
         else:
             st.info("—")
-        st.caption("From `pipeline_run_summary` (latest partition).")
+        st.caption("From `pipeline_run_summary` for the selected **posted_month** partition.")
 else:
     st.warning("No `pipeline_run_summary` data found. Run the gold transform.")
 
@@ -389,12 +506,14 @@ ing_left, ing_right = st.columns(2, gap="large")
 with ing_left:
     with st.container(border=True):
         st.markdown("**Ingest health**")
-        st.caption("`data/health/latest_ingest.json`")
-        _kv("Source", health.get("source"))
-        _kv("Last run id", health.get("run_id"))
-        _kv("Bronze ingest date", health.get("bronze_ingest_date"))
-        _kv("Batch created at", health.get("batch_created_at"))
-        _kv("Bronze record count", health.get("record_count"))
+        h = health_adzuna if analysis_mode == "adzuna_in" else health
+        cap = "`data/health/latest_ingest_adzuna_in.json`" if analysis_mode == "adzuna_in" else "`data/health/latest_ingest.json`"
+        st.caption(cap)
+        _kv("Source", h.get("source"))
+        _kv("Last run id", h.get("run_id"))
+        _kv("Bronze ingest date", h.get("bronze_ingest_date"))
+        _kv("Batch created at", h.get("batch_created_at"))
+        _kv("Bronze record count", h.get("record_count"))
 with ing_right:
     with st.container(border=True):
         st.markdown("**Gold lineage**")

@@ -17,22 +17,22 @@ QUERIES: list[tuple[str, str | None, str]] = [
     (
         "cnt_skill_an",
         "jmi_gold_v2",
-        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'arbeitnow' AND ingest_month BETWEEN '2018-01' AND '2035-12'",
+        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'arbeitnow' AND posted_month BETWEEN '2018-01' AND '2035-12'",
     ),
     (
         "cnt_skill_ad",
         "jmi_gold_v2",
-        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'adzuna_in' AND ingest_month BETWEEN '2018-01' AND '2035-12'",
+        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'adzuna_in' AND posted_month BETWEEN '2018-01' AND '2035-12'",
     ),
     (
         "cnt_skill_an_run",
         "jmi_gold_v2",
-        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'arbeitnow' AND run_id = '20260411T170924Z-f61e46e1' AND ingest_month BETWEEN '2018-01' AND '2035-12'",
+        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'arbeitnow' AND run_id = '20260411T170924Z-f61e46e1' AND posted_month BETWEEN '2018-01' AND '2035-12'",
     ),
     (
         "cnt_skill_ad_run",
         "jmi_gold_v2",
-        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'adzuna_in' AND run_id = '20260412T104501Z-2225d40a' AND ingest_month BETWEEN '2018-01' AND '2035-12'",
+        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'adzuna_in' AND run_id = '20260412T104501Z-2225d40a' AND posted_month BETWEEN '2018-01' AND '2035-12'",
     ),
     ("vw_lr", "jmi_analytics_v2", "SELECT * FROM jmi_analytics_v2.latest_pipeline_run"),
     ("vw_lr_ad", "jmi_analytics_v2", "SELECT * FROM jmi_analytics_v2.latest_pipeline_run_adzuna"),

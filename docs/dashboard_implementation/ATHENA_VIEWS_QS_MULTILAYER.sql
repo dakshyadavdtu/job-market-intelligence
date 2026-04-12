@@ -21,12 +21,12 @@ SELECT
     c.company_name,
     c.job_count,
     c.source,
-    c.ingest_month,
+    c.posted_month,
     c.run_id
 FROM jmi_gold.company_hiring_monthly c
 INNER JOIN lr ON c.run_id = lr.run_id
 WHERE c.source = 'arbeitnow'
-  AND c.ingest_month BETWEEN '2018-01' AND '2035-12';
+  AND c.posted_month BETWEEN '2018-01' AND '2035-12';
 
 -- -----------------------------------------------------------------------------
 -- LAYER 2 — INDIA / ADZUNA: location × month for heat map (when multiple months exist)
@@ -38,14 +38,14 @@ WITH lr AS (
 )
 SELECT
     l.location AS location_label,
-    l.ingest_month,
+    l.posted_month,
     l.job_count,
     l.run_id,
     l.source
 FROM jmi_gold.location_demand_monthly l
 INNER JOIN lr ON l.run_id = lr.run_id
 WHERE l.source = 'adzuna_in'
-  AND l.ingest_month BETWEEN '2018-01' AND '2035-12';
+  AND l.posted_month BETWEEN '2018-01' AND '2035-12';
 
 -- -----------------------------------------------------------------------------
 -- LAYER 2 — INDIA / ADZUNA: city volume vs share of national volume (scatter / bubble)
@@ -58,27 +58,27 @@ WITH lr AS (
 base AS (
     SELECT
         l.location AS location_label,
-        l.ingest_month,
+        l.posted_month,
         l.job_count,
         l.run_id
     FROM jmi_gold.location_demand_monthly l
     INNER JOIN lr ON l.run_id = lr.run_id
     WHERE l.source = 'adzuna_in'
-      AND l.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND l.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 tot AS (
-    SELECT run_id, ingest_month, SUM(job_count) AS national_total
+    SELECT run_id, posted_month, SUM(job_count) AS national_total
     FROM base
-    GROUP BY run_id, ingest_month
+    GROUP BY run_id, posted_month
 )
 SELECT
     b.location_label,
-    b.ingest_month,
+    b.posted_month,
     b.job_count AS city_job_count,
     b.run_id,
     CAST(b.job_count AS DOUBLE) / CAST(NULLIF(t.national_total, 0) AS DOUBLE) AS city_share_of_national
 FROM base b
-INNER JOIN tot t ON b.run_id = t.run_id AND b.ingest_month = t.ingest_month;
+INNER JOIN tot t ON b.run_id = t.run_id AND b.posted_month = t.posted_month;
 
 -- -----------------------------------------------------------------------------
 -- LAYER 2 — INDIA / ADZUNA: box-plot friendly grain (skill rows)
@@ -90,7 +90,7 @@ SELECT
     skill,
     job_count,
     source,
-    ingest_month,
+    posted_month,
     run_id
 FROM jmi_analytics.skill_demand_monthly_adzuna_latest;
 
@@ -102,27 +102,27 @@ FROM jmi_analytics.skill_demand_monthly_adzuna_latest;
 CREATE OR REPLACE VIEW jmi_analytics.comparison_region_month_totals AS
 SELECT
     'EU' AS region_label,
-    r.ingest_month,
+    r.posted_month,
     r.run_id,
     SUM(r.job_count) AS total_postings
 FROM jmi_gold.role_demand_monthly r
 INNER JOIN (SELECT run_id FROM jmi_analytics.latest_pipeline_run) lr ON r.run_id = lr.run_id
 WHERE r.source = 'arbeitnow'
-  AND r.ingest_month BETWEEN '2018-01' AND '2035-12'
-GROUP BY r.ingest_month, r.run_id
+  AND r.posted_month BETWEEN '2018-01' AND '2035-12'
+GROUP BY r.posted_month, r.run_id
 
 UNION ALL
 
 SELECT
     'IN' AS region_label,
-    r.ingest_month,
+    r.posted_month,
     r.run_id,
     SUM(r.job_count) AS total_postings
 FROM jmi_gold.role_demand_monthly r
 INNER JOIN (SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna) lr ON r.run_id = lr.run_id
 WHERE r.source = 'adzuna_in'
-  AND r.ingest_month BETWEEN '2018-01' AND '2035-12'
-GROUP BY r.ingest_month, r.run_id;
+  AND r.posted_month BETWEEN '2018-01' AND '2035-12'
+GROUP BY r.posted_month, r.run_id;
 
 -- -----------------------------------------------------------------------------
 -- LAYER 3 — COMPARISON: skill tag shares within region (for 100% stacked / mix charts)
@@ -135,55 +135,55 @@ WITH eu AS (
     SELECT
         s.skill,
         s.job_count,
-        s.ingest_month,
+        s.posted_month,
         s.run_id
     FROM jmi_gold.skill_demand_monthly s
     INNER JOIN (SELECT run_id FROM jmi_analytics.latest_pipeline_run) lr ON s.run_id = lr.run_id
     WHERE s.source = 'arbeitnow'
-      AND s.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND s.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 eu_tot AS (
-    SELECT ingest_month, run_id, SUM(job_count) AS tag_sum
+    SELECT posted_month, run_id, SUM(job_count) AS tag_sum
     FROM eu
-    GROUP BY ingest_month, run_id
+    GROUP BY posted_month, run_id
 ),
 eu_shares AS (
     SELECT
         'EU' AS region_label,
         e.skill,
-        e.ingest_month,
+        e.posted_month,
         e.run_id,
         e.job_count AS skill_tag_count,
         CAST(e.job_count AS DOUBLE) / CAST(NULLIF(t.tag_sum, 0) AS DOUBLE) AS share_within_region_skill_tags
     FROM eu e
-    INNER JOIN eu_tot t ON e.ingest_month = t.ingest_month AND e.run_id = t.run_id
+    INNER JOIN eu_tot t ON e.posted_month = t.posted_month AND e.run_id = t.run_id
 ),
 adzuna_skills AS (
     SELECT
         s.skill,
         s.job_count,
-        s.ingest_month,
+        s.posted_month,
         s.run_id
     FROM jmi_gold.skill_demand_monthly s
     INNER JOIN (SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna) lr ON s.run_id = lr.run_id
     WHERE s.source = 'adzuna_in'
-      AND s.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND s.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 adzuna_skill_tot AS (
-    SELECT ingest_month, run_id, SUM(job_count) AS tag_sum
+    SELECT posted_month, run_id, SUM(job_count) AS tag_sum
     FROM adzuna_skills
-    GROUP BY ingest_month, run_id
+    GROUP BY posted_month, run_id
 ),
 in_shares AS (
     SELECT
         'IN' AS region_label,
         i.skill,
-        i.ingest_month,
+        i.posted_month,
         i.run_id,
         i.job_count AS skill_tag_count,
         CAST(i.job_count AS DOUBLE) / CAST(NULLIF(t.tag_sum, 0) AS DOUBLE) AS share_within_region_skill_tags
     FROM adzuna_skills i
-    INNER JOIN adzuna_skill_tot t ON i.ingest_month = t.ingest_month AND i.run_id = t.run_id
+    INNER JOIN adzuna_skill_tot t ON i.posted_month = t.posted_month AND i.run_id = t.run_id
 )
 SELECT * FROM eu_shares
 UNION ALL

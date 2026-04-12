@@ -11,10 +11,11 @@ import pandas as pd
 from src.jmi.config import AppConfig, DataPath, split_s3_uri
 from src.jmi.paths import silver_jobs_batch_part, silver_jobs_merged_latest
 from src.jmi.connectors.adzuna import ADZUNA_SOURCE_SLUG
-from src.jmi.connectors.skill_extract import extract_silver_skills
+from src.jmi.connectors.skill_extract import adzuna_enrich_weak_skills, extract_silver_skills
 from src.jmi.pipelines.silver_schema import (
-    adzuna_category_hint,
     adzuna_location_for_silver,
+    adzuna_skill_blob_context,
+    adzuna_title_norm_for_silver,
     align_silver_dataframe_to_canonical,
     normalize_company_norm,
     normalize_location_raw,
@@ -171,9 +172,19 @@ def run(bronze_file: str | None = None, *, cfg: AppConfig | None = None) -> dict
         title, company, location, tags = _flat_payload_fields(source, payload)
         slug = _clean_text(row.get("source_slug") or payload.get("slug"))
         desc_stripped = strip_html_description(_clean_text(payload.get("description")))
-        extra_skill_ctx = adzuna_category_hint(payload) if source == ADZUNA_SOURCE_SLUG else ""
+        extra_skill_ctx = adzuna_skill_blob_context(payload) if source == ADZUNA_SOURCE_SLUG else ""
         skills = extract_silver_skills(tags, title, desc_stripped, extra_context=extra_skill_ctx)
+        if source == ADZUNA_SOURCE_SLUG:
+            skills = adzuna_enrich_weak_skills(
+                skills, title, desc_stripped, extra_context=extra_skill_ctx
+            )
         rid = row.get("run_id", bronze_run_id)
+
+        title_norm = (
+            adzuna_title_norm_for_silver(title, payload)
+            if source == ADZUNA_SOURCE_SLUG
+            else normalize_title_norm(title)
+        )
 
         flattened.append(
             {
@@ -181,7 +192,7 @@ def run(bronze_file: str | None = None, *, cfg: AppConfig | None = None) -> dict
                 "job_id_strategy": row.get("job_id_strategy", ""),
                 "source": row.get("source"),
                 "source_job_id": _source_job_id_from_row(row, slug),
-                "title_norm": normalize_title_norm(title),
+                "title_norm": title_norm,
                 "company_norm": normalize_company_norm(company),
                 "location_raw": normalize_location_raw(location),
                 "remote_type": remote_type_for_silver(

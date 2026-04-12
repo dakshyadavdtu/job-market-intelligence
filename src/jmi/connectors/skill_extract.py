@@ -189,6 +189,8 @@ SKILL_ALLOWLIST: frozenset[str] = frozenset(
         "video editing",
         "vfx",
         "quality assurance",
+        "financial services",
+        "field sales",
     }
 )
 
@@ -229,6 +231,9 @@ SKILL_ALIAS_MAP: dict[str, tuple[str, ...]] = {
     "data engineer": ("data engineering",),
     "automation engineering": ("automation",),
     "vertrieb": ("sales",),
+    "bpo": ("customer service",),
+    "telecalling": ("customer service",),
+    "telecaller": ("customer service",),
     "einkauf": ("procurement",),
     "buchhaltung": ("accounting",),
     "buchhalter": ("accounting",),
@@ -610,3 +615,22 @@ def extract_silver_skills(
     if found:
         return sorted(found)
     return _source_tag_fallback_skills(tag_list)
+
+
+def adzuna_enrich_weak_skills(
+    skills: list[str],
+    title_raw: str,
+    description_text: str,
+    *,
+    extra_context: str = "",
+) -> list[str]:
+    """When Adzuna returns fewer than two skills, re-run extraction with category folded into the title blob.
+
+    Title tokens are often blocked by SKILL_STOPLIST; synthetic title improves phrase matches without inventing tags.
+    """
+    if len(skills) >= 2:
+        return sorted(set(skills))
+    syn_title = f"{title_raw} {extra_context}".strip()
+    merged = extract_silver_skills(None, syn_title, description_text, extra_context=extra_context)
+    out = sorted(set(skills) | set(merged))
+    return out if out else skills

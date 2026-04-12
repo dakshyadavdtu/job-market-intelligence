@@ -8,11 +8,11 @@ Layout (examples):
   bronze/source=<slug>/ingest_date=YYYY-MM-DD/run_id=<id>/raw.jsonl.gz
   silver/jobs/source=<slug>/ingest_date=.../run_id=.../part-00001.parquet
   silver/jobs/source=<slug>/merged/latest.parquet
-  gold/<table>/source=<slug>/ingest_month=YYYY-MM/run_id=<id>/part-00001.parquet
+  gold/<table>/source=<slug>/posted_month=YYYY-MM/run_id=<id>/part-00001.parquet
   gold/source=<slug>/latest_run_metadata/part-00001.parquet
 
 Derived / comparison outputs (not source-native facts):
-  derived/comparison/...
+  derived/comparison/posted_month_source_totals/part-00001.parquet
 """
 
 from __future__ import annotations
@@ -44,15 +44,15 @@ def gold_fact_partition(
     cfg: AppConfig,
     table_name: str,
     *,
-    ingest_month: str,
+    posted_month: str,
     pipeline_run_id: str,
 ) -> DataPath:
-    """Gold fact path: table-first, then source partition (matches Glue LOCATION .../gold/<table>/)."""
+    """Gold fact path: analysis grain is **posted_month** (job posting month from Silver `posted_at`)."""
     return (
         cfg.gold_root
         / table_name
         / f"source={cfg.source_name}"
-        / f"ingest_month={ingest_month}"
+        / f"posted_month={posted_month}"
         / f"run_id={pipeline_run_id}"
         / "part-00001.parquet"
     )
@@ -66,3 +66,8 @@ def gold_latest_run_metadata_file(cfg: AppConfig) -> DataPath:
 def derived_comparison_root(cfg: AppConfig) -> DataPath:
     """Benchmark / combined outputs — not mixed into source-native Gold facts."""
     return cfg.data_root / "derived" / "comparison"
+
+
+def derived_comparison_totals_parquet(cfg: AppConfig) -> DataPath:
+    """Cross-source posted-month job totals (Silver → derived; for dashboard / Athena views)."""
+    return derived_comparison_root(cfg) / "posted_month_source_totals" / "part-00001.parquet"

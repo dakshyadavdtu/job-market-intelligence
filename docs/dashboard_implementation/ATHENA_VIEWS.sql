@@ -5,13 +5,13 @@
 --   - Database `jmi_gold` exists with external tables:
 --       role_demand_monthly, location_demand_monthly, company_hiring_monthly,
 --       skill_demand_monthly, pipeline_run_summary, latest_run_metadata
---   - Partition columns: source, ingest_month, run_id (Hive-style paths under each table LOCATION)
+--   - Partition columns: source, posted_month, run_id (Hive-style paths under each table LOCATION)
 --   - Gold DDL under infra/aws/athena/ddl_gold_*.sql uses partition projection
 --     (including pipeline_run_summary) so new S3 prefixes resolve without MSCK.
 --   - Partition projection requires BOTH partition keys in predicates: `run_id` (enum in
---     ddl_gold_*.sql; append new run_ids in Glue) AND `ingest_month` (date projection). Every view below includes
---     `ingest_month BETWEEN '2018-01' AND '2035-12'` — MUST match
---     `projection.ingest_month.range` in those DDL files (alter both if you widen range).
+--     ddl_gold_*.sql; append new run_ids in Glue) AND `posted_month` (date projection). Every view below includes
+--     `posted_month BETWEEN '2018-01' AND '2035-12'` — MUST match
+--     `projection.posted_month.range` in those DDL files (alter both if you widen range).
 --   - Column names match repo DDL (bronze_ingest_date, bronze_run_id in body rows)
 --
 -- Analytics database for views (keeps gold tables in `jmi_gold` unchanged).
@@ -45,12 +45,12 @@ SELECT
     s.source,
     s.bronze_ingest_date,
     s.bronze_run_id,
-    s.ingest_month,
+    s.posted_month,
     s.run_id
 FROM jmi_gold.skill_demand_monthly s
 INNER JOIN lr ON s.run_id = lr.run_id
 WHERE s.source = 'arbeitnow'
-  AND s.ingest_month BETWEEN '2018-01' AND '2035-12';
+  AND s.posted_month BETWEEN '2018-01' AND '2035-12';
 
 CREATE OR REPLACE VIEW jmi_analytics.pipeline_run_summary_latest AS
 WITH lr AS (
@@ -65,15 +65,15 @@ SELECT
     p.location_row_count,
     p.company_row_count,
     p.status,
-    p.ingest_month,
+    p.posted_month,
     p.run_id
 FROM jmi_gold.pipeline_run_summary p
 INNER JOIN lr ON p.run_id = lr.run_id
 WHERE p.source = 'arbeitnow'
-  AND p.ingest_month BETWEEN '2018-01' AND '2035-12';
+  AND p.posted_month BETWEEN '2018-01' AND '2035-12';
 
 -- -----------------------------------------------------------------------------
--- 1) sheet1_kpis — One row per (ingest_month, run_id) with all six KPI fields
+-- 1) sheet1_kpis — One row per (posted_month, run_id) with all six KPI fields
 --     (restricted to latest pipeline run only)
 -- -----------------------------------------------------------------------------
 
@@ -84,52 +84,52 @@ lr AS (
 ),
 role_totals AS (
     SELECT
-        r.ingest_month,
+        r.posted_month,
         r.run_id,
         SUM(r.job_count) AS total_postings,
         MAX(r.job_count) AS max_role_job_count
     FROM jmi_gold.role_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
     WHERE r.source = 'arbeitnow'
-      AND r.ingest_month BETWEEN '2018-01' AND '2035-12'
-    GROUP BY r.ingest_month, r.run_id
+      AND r.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY r.posted_month, r.run_id
 ),
 loc_totals AS (
     SELECT
-        l.ingest_month,
+        l.posted_month,
         l.run_id,
         SUM(l.job_count) AS located_postings
     FROM jmi_gold.location_demand_monthly l
     INNER JOIN lr ON l.run_id = lr.run_id
     WHERE l.source = 'arbeitnow'
-      AND l.ingest_month BETWEEN '2018-01' AND '2035-12'
-    GROUP BY l.ingest_month, l.run_id
+      AND l.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY l.posted_month, l.run_id
 ),
 loc_top3 AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         SUM(job_count) AS top3_location_job_sum
     FROM (
         SELECT
-            l.ingest_month,
+            l.posted_month,
             l.run_id,
             l.job_count,
             ROW_NUMBER() OVER (
-                PARTITION BY l.ingest_month, l.run_id
+                PARTITION BY l.posted_month, l.run_id
                 ORDER BY l.job_count DESC, l.location ASC
             ) AS rn
         FROM jmi_gold.location_demand_monthly l
         INNER JOIN lr ON l.run_id = lr.run_id
         WHERE l.source = 'arbeitnow'
-          AND l.ingest_month BETWEEN '2018-01' AND '2035-12'
+          AND l.posted_month BETWEEN '2018-01' AND '2035-12'
     ) x
     WHERE rn <= 3
-    GROUP BY ingest_month, run_id
+    GROUP BY posted_month, run_id
 ),
 loc_hhi_calc AS (
     SELECT
-        l.ingest_month,
+        l.posted_month,
         l.run_id,
         SUM(
             POWER(
@@ -140,27 +140,27 @@ loc_hhi_calc AS (
     FROM jmi_gold.location_demand_monthly l
     INNER JOIN lr ON l.run_id = lr.run_id
     INNER JOIN loc_totals lt
-        ON l.ingest_month = lt.ingest_month
+        ON l.posted_month = lt.posted_month
         AND l.run_id = lt.run_id
     WHERE lt.located_postings > 0
         AND l.source = 'arbeitnow'
-        AND l.ingest_month BETWEEN '2018-01' AND '2035-12'
-    GROUP BY l.ingest_month, l.run_id
+        AND l.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY l.posted_month, l.run_id
 ),
 comp_totals AS (
     SELECT
-        c.ingest_month,
+        c.posted_month,
         c.run_id,
         SUM(c.job_count) AS company_postings_sum
     FROM jmi_gold.company_hiring_monthly c
     INNER JOIN lr ON c.run_id = lr.run_id
     WHERE c.source = 'arbeitnow'
-      AND c.ingest_month BETWEEN '2018-01' AND '2035-12'
-    GROUP BY c.ingest_month, c.run_id
+      AND c.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY c.posted_month, c.run_id
 ),
 comp_hhi_calc AS (
     SELECT
-        c.ingest_month,
+        c.posted_month,
         c.run_id,
         SUM(
             POWER(
@@ -171,15 +171,15 @@ comp_hhi_calc AS (
     FROM jmi_gold.company_hiring_monthly c
     INNER JOIN lr ON c.run_id = lr.run_id
     INNER JOIN comp_totals ct
-        ON c.ingest_month = ct.ingest_month
+        ON c.posted_month = ct.posted_month
         AND c.run_id = ct.run_id
     WHERE ct.company_postings_sum > 0
         AND c.source = 'arbeitnow'
-        AND c.ingest_month BETWEEN '2018-01' AND '2035-12'
-    GROUP BY c.ingest_month, c.run_id
+        AND c.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY c.posted_month, c.run_id
 )
 SELECT
-    r.ingest_month,
+    r.posted_month,
     r.run_id,
     r.total_postings,
     COALESCE(l.located_postings, CAST(0 AS BIGINT)) AS located_postings,
@@ -200,17 +200,17 @@ SELECT
     END AS top1_role_share
 FROM role_totals r
 LEFT JOIN loc_totals l
-    ON r.ingest_month = l.ingest_month AND r.run_id = l.run_id
+    ON r.posted_month = l.posted_month AND r.run_id = l.run_id
 LEFT JOIN loc_top3 t3
-    ON r.ingest_month = t3.ingest_month AND r.run_id = t3.run_id
+    ON r.posted_month = t3.posted_month AND r.run_id = t3.run_id
 LEFT JOIN loc_hhi_calc lh
-    ON r.ingest_month = lh.ingest_month AND r.run_id = lh.run_id
+    ON r.posted_month = lh.posted_month AND r.run_id = lh.run_id
 LEFT JOIN comp_hhi_calc ch
-    ON r.ingest_month = ch.ingest_month AND r.run_id = ch.run_id;
+    ON r.posted_month = ch.posted_month AND r.run_id = ch.run_id;
 
 -- -----------------------------------------------------------------------------
 -- 2) location_top15_other — Top 15 locations + Other (for treemap + table)
---     Run-level totals (all ingest_month summed for latest run) before ranking.
+--     Run-level totals (all posted_month summed for latest run) before ranking.
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.location_top15_other AS
@@ -219,27 +219,27 @@ WITH lr AS (
 ),
 base AS (
     SELECT
-        l.ingest_month,
+        l.posted_month,
         l.run_id,
         l.location,
         l.job_count
     FROM jmi_gold.location_demand_monthly l
     INNER JOIN lr ON l.run_id = lr.run_id
     WHERE l.source = 'arbeitnow'
-      AND l.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND l.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 agg AS (
     SELECT
         run_id,
         location,
         SUM(job_count) AS job_count,
-        MAX(ingest_month) AS ingest_month
+        MAX(posted_month) AS posted_month
     FROM base
     GROUP BY run_id, location
 ),
 ranked AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         location,
         job_count,
@@ -252,7 +252,7 @@ ranked AS (
 rolled AS (
     SELECT
         run_id,
-        MAX(ingest_month) AS ingest_month,
+        MAX(posted_month) AS posted_month,
         CASE
             WHEN rn <= 15 THEN location
             ELSE 'Other'
@@ -267,7 +267,7 @@ rolled AS (
         END
 )
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     location_label,
     job_count
@@ -284,22 +284,22 @@ WITH lr AS (
 ),
 ranked AS (
     SELECT
-        c.ingest_month,
+        c.posted_month,
         c.run_id,
         c.company_name,
         c.job_count,
         ROW_NUMBER() OVER (
-            PARTITION BY c.ingest_month, c.run_id
+            PARTITION BY c.posted_month, c.run_id
             ORDER BY c.job_count DESC, c.company_name ASC
         ) AS rn
     FROM jmi_gold.company_hiring_monthly c
     INNER JOIN lr ON c.run_id = lr.run_id
     WHERE c.source = 'arbeitnow'
-      AND c.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND c.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 rolled AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         CASE
             WHEN rn <= 12 THEN company_name
@@ -308,7 +308,7 @@ rolled AS (
         SUM(job_count) AS job_count
     FROM ranked
     GROUP BY
-        ingest_month,
+        posted_month,
         run_id,
         CASE
             WHEN rn <= 12 THEN company_name
@@ -316,7 +316,7 @@ rolled AS (
         END
 )
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     company_label,
     job_count
@@ -333,22 +333,22 @@ WITH lr AS (
 ),
 totals AS (
     SELECT
-        r.ingest_month,
+        r.posted_month,
         r.run_id,
         SUM(r.job_count) AS total_jobs
     FROM jmi_gold.role_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
     WHERE r.source = 'arbeitnow'
-      AND r.ingest_month BETWEEN '2018-01' AND '2035-12'
-    GROUP BY r.ingest_month, r.run_id
+      AND r.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY r.posted_month, r.run_id
 )
 SELECT
-    r.ingest_month,
+    r.posted_month,
     r.run_id,
     r.role,
     r.job_count,
     ROW_NUMBER() OVER (
-        PARTITION BY r.ingest_month, r.run_id
+        PARTITION BY r.posted_month, r.run_id
         ORDER BY r.job_count DESC, r.role ASC
     ) AS pareto_rank,
     CASE
@@ -359,7 +359,7 @@ SELECT
     CASE
         WHEN t.total_jobs > 0
             THEN 100.0 * SUM(r.job_count) OVER (
-                PARTITION BY r.ingest_month, r.run_id
+                PARTITION BY r.posted_month, r.run_id
                 ORDER BY r.job_count DESC, r.role ASC
                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
             ) / CAST(t.total_jobs AS DOUBLE)
@@ -368,10 +368,10 @@ SELECT
 FROM jmi_gold.role_demand_monthly r
 INNER JOIN lr ON r.run_id = lr.run_id
 INNER JOIN totals t
-    ON r.ingest_month = t.ingest_month
+    ON r.posted_month = t.posted_month
     AND r.run_id = t.run_id
 WHERE r.source = 'arbeitnow'
-      AND r.ingest_month BETWEEN '2018-01' AND '2035-12';
+      AND r.posted_month BETWEEN '2018-01' AND '2035-12';
 
 -- -----------------------------------------------------------------------------
 -- 5) role_top20 — Support table for Sheet 1 (top 20 by postings)
@@ -383,21 +383,21 @@ WITH lr AS (
 ),
 ranked AS (
     SELECT
-        r.ingest_month,
+        r.posted_month,
         r.run_id,
         r.role,
         r.job_count,
         ROW_NUMBER() OVER (
-            PARTITION BY r.ingest_month, r.run_id
+            PARTITION BY r.posted_month, r.run_id
             ORDER BY r.job_count DESC, r.role ASC
         ) AS pareto_rank
     FROM jmi_gold.role_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
     WHERE r.source = 'arbeitnow'
-      AND r.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND r.posted_month BETWEEN '2018-01' AND '2035-12'
 )
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     role,
     job_count,
@@ -410,7 +410,7 @@ WHERE pareto_rank <= 20;
 -- =============================================================================
 -- 1) If your Glue/Athena table names differ, replace `jmi_gold` prefix only.
 -- 2) Gold tables use partition projection in repo DDL; queries must filter both
---    `run_id` (via latest_pipeline_run join) and `ingest_month` within the DDL
+--    `run_id` (via latest_pipeline_run join) and `posted_month` within the DDL
 --    projection range — otherwise Athena may scan no paths. New S3 prefixes under
 --    the configured month/run_id template are visible without MSCK REPAIR.
 -- 3) latest_run_metadata is a single overwritten Parquet file; no MSCK. Run the Gold

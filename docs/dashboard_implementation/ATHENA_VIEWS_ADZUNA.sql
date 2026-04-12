@@ -7,7 +7,7 @@
 CREATE DATABASE IF NOT EXISTS jmi_analytics;
 
 -- -----------------------------------------------------------------------------
--- 0) latest_pipeline_run_adzuna — Newest Adzuna pipeline run (by ingest_month, run_id)
+-- 0) latest_pipeline_run_adzuna — Newest Adzuna pipeline run (by posted_month, run_id)
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.latest_pipeline_run_adzuna AS
@@ -28,12 +28,12 @@ SELECT
     s.source,
     s.bronze_ingest_date,
     s.bronze_run_id,
-    s.ingest_month,
+    s.posted_month,
     s.run_id
 FROM jmi_gold.skill_demand_monthly s
 INNER JOIN lr ON s.run_id = lr.run_id
 WHERE s.source = 'adzuna_in'
-  AND s.ingest_month BETWEEN '2018-01' AND '2035-12';
+  AND s.posted_month BETWEEN '2018-01' AND '2035-12';
 
 CREATE OR REPLACE VIEW jmi_analytics.pipeline_run_summary_adzuna_latest AS
 WITH lr AS (
@@ -48,12 +48,12 @@ SELECT
     p.location_row_count,
     p.company_row_count,
     p.status,
-    p.ingest_month,
+    p.posted_month,
     p.run_id
 FROM jmi_gold.pipeline_run_summary p
 INNER JOIN lr ON p.run_id = lr.run_id
 WHERE p.source = 'adzuna_in'
-  AND p.ingest_month BETWEEN '2018-01' AND '2035-12';
+  AND p.posted_month BETWEEN '2018-01' AND '2035-12';
 
 -- -----------------------------------------------------------------------------
 -- location_top15_other_adzuna
@@ -65,27 +65,27 @@ WITH lr AS (
 ),
 base AS (
     SELECT
-        l.ingest_month,
+        l.posted_month,
         l.run_id,
         l.location,
         l.job_count
     FROM jmi_gold.location_demand_monthly l
     INNER JOIN lr ON l.run_id = lr.run_id
     WHERE l.source = 'adzuna_in'
-      AND l.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND l.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 agg AS (
     SELECT
         run_id,
         location,
         SUM(job_count) AS job_count,
-        MAX(ingest_month) AS ingest_month
+        MAX(posted_month) AS posted_month
     FROM base
     GROUP BY run_id, location
 ),
 ranked AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         location,
         job_count,
@@ -98,7 +98,7 @@ ranked AS (
 rolled AS (
     SELECT
         run_id,
-        MAX(ingest_month) AS ingest_month,
+        MAX(posted_month) AS posted_month,
         CASE
             WHEN rn <= 15 THEN location
             ELSE 'Other'
@@ -113,7 +113,7 @@ rolled AS (
         END
 )
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     location_label,
     job_count
@@ -126,7 +126,7 @@ WITH lr AS (
 ),
 base AS (
     SELECT
-        r.ingest_month,
+        r.posted_month,
         r.run_id,
         r."role" AS raw_role,
         r.job_count,
@@ -164,11 +164,11 @@ base AS (
     FROM jmi_gold.role_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
     WHERE r.source = 'adzuna_in'
-      AND r.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND r.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 stripped AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         raw_role,
         job_count,
@@ -177,7 +177,7 @@ stripped AS (
 ),
 classified AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         raw_role,
         job_count,
@@ -223,7 +223,7 @@ classified AS (
     FROM stripped
 )
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     raw_role,
     cleaned_role_title,
@@ -237,16 +237,16 @@ FROM classified;
 
 CREATE OR REPLACE VIEW jmi_analytics.role_group_demand_monthly_adzuna AS
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     normalized_role_group AS role_group,
     SUM(job_count) AS job_count
 FROM jmi_analytics.role_title_classified_adzuna
-GROUP BY ingest_month, run_id, normalized_role_group;
+GROUP BY posted_month, run_id, normalized_role_group;
 
 -- -----------------------------------------------------------------------------
 -- 2) role_group_top20_adzuna — Top 20 families by postings
---     One row per (run_id, role_group): sums all ingest_month for latest run only.
+--     One row per (run_id, role_group): sums all posted_month for latest run only.
 --     (Partitioning only by month+run duplicated the same family across months.)
 -- -----------------------------------------------------------------------------
 
@@ -259,14 +259,14 @@ agg AS (
         r.run_id,
         r.role_group,
         SUM(r.job_count) AS job_count,
-        MAX(r.ingest_month) AS ingest_month
+        MAX(r.posted_month) AS posted_month
     FROM jmi_analytics.role_group_demand_monthly_adzuna r
     INNER JOIN lr ON r.run_id = lr.run_id
     GROUP BY r.run_id, r.role_group
 ),
 ranked AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         role_group,
         job_count,
@@ -277,7 +277,7 @@ ranked AS (
     FROM agg
 )
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     role_group,
     job_count,
@@ -298,7 +298,7 @@ agg AS (
         r.run_id,
         r.role_group,
         SUM(r.job_count) AS job_count,
-        MAX(r.ingest_month) AS ingest_month
+        MAX(r.posted_month) AS posted_month
     FROM jmi_analytics.role_group_demand_monthly_adzuna r
     INNER JOIN lr ON r.run_id = lr.run_id
     GROUP BY r.run_id, r.role_group
@@ -311,7 +311,7 @@ totals AS (
     GROUP BY run_id
 )
 SELECT
-    g.ingest_month,
+    g.posted_month,
     g.run_id,
     g.role_group,
     g.job_count,
@@ -338,7 +338,7 @@ INNER JOIN totals t ON g.run_id = t.run_id;
 
 -- -----------------------------------------------------------------------------
 -- 4) company_top15_other_clean_adzuna — Legal-suffix collapse + Top 50 + long-tail bucket
---     Run-level totals (all ingest_month summed for latest run) before ranking.
+--     Run-level totals (all posted_month summed for latest run) before ranking.
 --     Display labels: word-level casing + suffix polish (GmbH, SE, AG, e.V., …); TLD .ai lower.
 -- -----------------------------------------------------------------------------
 
@@ -348,7 +348,7 @@ WITH lr AS (
 ),
 cleaned AS (
     SELECT
-        c.ingest_month,
+        c.posted_month,
         c.run_id,
         c.job_count,
         trim(
@@ -373,11 +373,11 @@ cleaned AS (
     FROM jmi_gold.company_hiring_monthly c
     INNER JOIN lr ON c.run_id = lr.run_id
     WHERE c.source = 'adzuna_in'
-      AND c.ingest_month BETWEEN '2018-01' AND '2035-12'
+      AND c.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 normalized AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         CASE
             WHEN company_key = '' OR company_key IS NULL THEN '(unknown employer)'
@@ -391,13 +391,13 @@ agg AS (
         run_id,
         company_key,
         SUM(job_count) AS job_count,
-        MAX(ingest_month) AS ingest_month
+        MAX(posted_month) AS posted_month
     FROM normalized
     GROUP BY run_id, company_key
 ),
 ranked AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         company_key,
         job_count,
@@ -410,7 +410,7 @@ ranked AS (
 rolled AS (
     SELECT
         run_id,
-        MAX(ingest_month) AS ingest_month,
+        MAX(posted_month) AS posted_month,
         CASE
             WHEN rn <= 50 THEN company_key
             ELSE '__LONG_TAIL__'
@@ -426,7 +426,7 @@ rolled AS (
 ),
 labeled AS (
     SELECT
-        ingest_month,
+        posted_month,
         run_id,
         company_label,
         job_count,
@@ -468,7 +468,7 @@ labeled AS (
     FROM rolled
 )
 SELECT
-    ingest_month,
+    posted_month,
     run_id,
     CASE display_label_raw
         WHEN 'My Humancapital GmbH' THEN 'My Humancapital'

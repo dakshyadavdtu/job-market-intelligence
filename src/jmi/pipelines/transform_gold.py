@@ -10,6 +10,7 @@ import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath
 from src.jmi.paths import gold_fact_partition, gold_latest_run_metadata_file
+from src.jmi.pipelines.gold_time import assign_posted_month_and_time_axis, dominant_time_axis
 from src.jmi.pipelines.silver_schema import normalize_location_raw, skills_json_to_list
 from src.jmi.utils.io import write_parquet
 
@@ -77,6 +78,7 @@ def _build_monthly_skill(sub: pd.DataFrame, rep_date: str, bronze_run_id: str) -
     # `source` is added in `run()` so live Athena tables (legacy path) can filter `WHERE source = ...`.
     skill_agg["bronze_ingest_date"] = rep_date
     skill_agg["bronze_run_id"] = bronze_run_id
+    skill_agg["time_axis"] = dominant_time_axis(sub["time_axis"]) if "time_axis" in sub.columns else "posted"
     return skill_agg
 
 
@@ -119,6 +121,7 @@ def _build_monthly_role(sub: pd.DataFrame, rep_date: str, bronze_run_id: str) ->
     )
     role_agg["bronze_ingest_date"] = rep_date
     role_agg["bronze_run_id"] = bronze_run_id
+    role_agg["time_axis"] = dominant_time_axis(sub["time_axis"]) if "time_axis" in sub.columns else "posted"
     return role_agg
 
 
@@ -135,6 +138,7 @@ def _build_monthly_location(sub: pd.DataFrame, rep_date: str, bronze_run_id: str
     )
     location_agg["bronze_ingest_date"] = rep_date
     location_agg["bronze_run_id"] = bronze_run_id
+    location_agg["time_axis"] = dominant_time_axis(sub["time_axis"]) if "time_axis" in sub.columns else "posted"
     return location_agg
 
 
@@ -153,6 +157,7 @@ def _build_monthly_company(sub: pd.DataFrame, rep_date: str, bronze_run_id: str)
     )
     company_agg["bronze_ingest_date"] = rep_date
     company_agg["bronze_run_id"] = bronze_run_id
+    company_agg["time_axis"] = dominant_time_axis(sub["time_axis"]) if "time_axis" in sub.columns else "posted"
     return company_agg
 
 
@@ -175,18 +180,17 @@ def run(
     source = str(df["source"].iloc[0])
     if str(cfg.source_name) != source:
         raise RuntimeError(f"Silver source {source!r} does not match pipeline source_name={cfg.source_name!r}")
-    df = df.copy()
-    df["ingest_month"] = df["bronze_ingest_date"].astype(str).str[:7]
-    bad = df[df["ingest_month"].str.len() != 7]
-    if not bad.empty:
-        raise RuntimeError("Invalid bronze_ingest_date values in silver data.")
+    df = assign_posted_month_and_time_axis(df)
+    df = df[df["posted_month"].astype(str).str.match(r"^\d{4}-\d{2}$", na=False)]
+    if df.empty:
+        raise RuntimeError("No Silver rows with a valid posted_month (check posted_at and bronze_ingest_date).")
 
     prid = pipeline_run_id or os.environ.get("JMI_PIPELINE_RUN_ID")
     if not prid:
         ordered = df.sort_values(by=["bronze_ingest_date", "bronze_run_id", "ingested_at"])
         prid = str(ordered["bronze_run_id"].iloc[-1])
 
-    months = sorted(df["ingest_month"].unique())
+    months = sorted(df["posted_month"].unique())
     skill_outputs: list[str] = []
     role_outputs: list[str] = []
     location_outputs: list[str] = []
@@ -194,8 +198,8 @@ def run(
     summary_outputs: list[str] = []
     summary_rows: list[dict] = []
 
-    for ingest_month in months:
-        sub = df[df["ingest_month"] == ingest_month]
+    for posted_month in months:
+        sub = df[df["posted_month"] == posted_month]
         rep_date = str(sub["bronze_ingest_date"].max())
 
         skill_agg = _build_monthly_skill(sub, rep_date, prid)
@@ -208,10 +212,10 @@ def run(
         location_agg["source"] = source
         company_agg["source"] = source
 
-        skill_out_path = gold_fact_partition(cfg, "skill_demand_monthly", ingest_month=ingest_month, pipeline_run_id=prid)
-        role_out_path = gold_fact_partition(cfg, "role_demand_monthly", ingest_month=ingest_month, pipeline_run_id=prid)
-        location_out_path = gold_fact_partition(cfg, "location_demand_monthly", ingest_month=ingest_month, pipeline_run_id=prid)
-        company_out_path = gold_fact_partition(cfg, "company_hiring_monthly", ingest_month=ingest_month, pipeline_run_id=prid)
+        skill_out_path = gold_fact_partition(cfg, "skill_demand_monthly", posted_month=posted_month, pipeline_run_id=prid)
+        role_out_path = gold_fact_partition(cfg, "role_demand_monthly", posted_month=posted_month, pipeline_run_id=prid)
+        location_out_path = gold_fact_partition(cfg, "location_demand_monthly", posted_month=posted_month, pipeline_run_id=prid)
+        company_out_path = gold_fact_partition(cfg, "company_hiring_monthly", posted_month=posted_month, pipeline_run_id=prid)
 
         write_parquet(skill_out_path, skill_agg)
         write_parquet(role_out_path, role_agg)
@@ -235,11 +239,12 @@ def run(
                     "location_row_count": location_row_count,
                     "company_row_count": company_row_count,
                     "status": status,
+                    "time_axis": dominant_time_axis(sub["time_axis"]) if "time_axis" in sub.columns else "posted",
                 }
             ]
         )
 
-        summary_out_path = gold_fact_partition(cfg, "pipeline_run_summary", ingest_month=ingest_month, pipeline_run_id=prid)
+        summary_out_path = gold_fact_partition(cfg, "pipeline_run_summary", posted_month=posted_month, pipeline_run_id=prid)
         write_parquet(summary_out_path, summary_df)
 
         skill_outputs.append(str(skill_out_path))
@@ -249,7 +254,7 @@ def run(
         summary_outputs.append(str(summary_out_path))
         summary_rows.append(
             {
-                "ingest_month": ingest_month,
+                "posted_month": posted_month,
                 "bronze_ingest_date": rep_date,
                 "skill_row_count": skill_row_count,
                 "role_row_count": role_row_count,
@@ -267,8 +272,9 @@ def run(
         "stage": "gold",
         "pipeline_run_id": prid,
         "source": source,
-        "ingest_months_rebuilt": months,
-        "summary_by_month": summary_rows,
+        "posted_months_rebuilt": months,
+        "time_grain": "posted_month",
+        "summary_by_posted_month": summary_rows,
         "source_silver_file": resolved_path,
         "skill_output_files": skill_outputs,
         "role_output_files": role_outputs,
@@ -278,6 +284,12 @@ def run(
         "latest_run_metadata_file": str(latest_meta_path),
         "latest_run_metadata_skipped": False,
     }
+    try:
+        from src.jmi.pipelines.transform_derived_comparison import run_derived_comparison
+
+        payload["derived_comparison"] = run_derived_comparison(cfg)
+    except Exception as exc:
+        payload["derived_comparison"] = {"status": "ERROR", "error": str(exc)}
     (cfg.quality_root / f"gold_quality_{prid}.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return payload
 

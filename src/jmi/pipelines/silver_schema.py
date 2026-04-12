@@ -41,6 +41,8 @@ def normalize_company_norm(company: str) -> str:
     c = (company or "").strip()
     if not c:
         return ""
+    # Vendor display names sometimes use pipes ("Control One | AI") — normalize to spaces for analytics.
+    c = c.replace("|", " ")
     c = _WS.sub(" ", c).lower()
     # Drop leading English article when it is clearly a company prefix ("The Sleep" -> "sleep")
     if c.startswith("the ") and len(c) > 8:
@@ -52,6 +54,153 @@ def normalize_company_norm(company: str) -> str:
 _CANONICAL_LOCATION_ALIASES: dict[str, str] = {
     "frankfurt": "frankfurt am main",
 }
+
+# India: normalize mixed vendor strings (city-only, city+state, state+country, country-only) to a small set of forms:
+#   "{city}, {state}" | "{state}, india" | "{city}, india" (weak) | "india"
+_INDIA_SEGMENT_ALIASES: dict[str, str] = {
+    "orissa": "odisha",
+    "bengaluru": "bangalore",
+    "gurugram": "gurgaon",
+}
+
+_INDIA_STATES_AND_UTS: frozenset[str] = frozenset(
+    {
+        "andhra pradesh",
+        "arunachal pradesh",
+        "assam",
+        "bihar",
+        "chhattisgarh",
+        "goa",
+        "gujarat",
+        "haryana",
+        "himachal pradesh",
+        "jharkhand",
+        "karnataka",
+        "kerala",
+        "madhya pradesh",
+        "maharashtra",
+        "manipur",
+        "meghalaya",
+        "mizoram",
+        "nagaland",
+        "odisha",
+        "punjab",
+        "rajasthan",
+        "sikkim",
+        "tamil nadu",
+        "telangana",
+        "tripura",
+        "uttar pradesh",
+        "uttarakhand",
+        "west bengal",
+        "delhi",
+        "jammu and kashmir",
+        "ladakh",
+        "puducherry",
+        "chandigarh",
+        "dadra and nagar haveli and daman and diu",
+        "lakshadweep",
+        "andaman and nicobar islands",
+    }
+)
+
+# Major cities → state/UT for India (when API returns city-only or "city, india").
+_INDIA_CITY_TO_STATE: dict[str, str] = {
+    "mumbai": "maharashtra",
+    "pune": "maharashtra",
+    "nagpur": "maharashtra",
+    "nashik": "maharashtra",
+    "thane": "maharashtra",
+    "navi mumbai": "maharashtra",
+    "bangalore": "karnataka",
+    "hyderabad": "telangana",
+    "chennai": "tamil nadu",
+    "coimbatore": "tamil nadu",
+    "madurai": "tamil nadu",
+    "kolkata": "west bengal",
+    "ahmedabad": "gujarat",
+    "surat": "gujarat",
+    "vadodara": "gujarat",
+    "jaipur": "rajasthan",
+    "lucknow": "uttar pradesh",
+    "kanpur": "uttar pradesh",
+    "noida": "uttar pradesh",
+    "ghaziabad": "uttar pradesh",
+    "gurgaon": "haryana",
+    "faridabad": "haryana",
+    "indore": "madhya pradesh",
+    "bhopal": "madhya pradesh",
+    "kozhikode": "kerala",
+    "kochi": "kerala",
+    "thiruvananthapuram": "kerala",
+    "visakhapatnam": "andhra pradesh",
+    "vijayawada": "andhra pradesh",
+    "patna": "bihar",
+    "ranchi": "jharkhand",
+    "bhubaneswar": "odisha",
+    "guwahati": "assam",
+    "chandigarh": "chandigarh",
+    "mysore": "karnataka",
+    "mysuru": "karnataka",
+}
+
+
+def _alias_india_segment(seg: str) -> str:
+    s = seg.strip().lower()
+    return _INDIA_SEGMENT_ALIASES.get(s, s)
+
+
+def _is_india_location_context(parts: list[str]) -> bool:
+    if not parts:
+        return False
+    for p in parts:
+        if p in ("india", "in", "bharat"):
+            return True
+        if p in _INDIA_STATES_AND_UTS:
+            return True
+        if p in _INDIA_CITY_TO_STATE:
+            return True
+    return False
+
+
+def _canonicalize_india_location_parts(parts: list[str]) -> str:
+    """Return canonical India string: prefer city+state; else state+india; else india."""
+    raw = [_alias_india_segment(p) for p in parts if p and str(p).strip()]
+    if not raw:
+        return ""
+    dedup: list[str] = [raw[0]]
+    for x in raw[1:]:
+        if x != dedup[-1]:
+            dedup.append(x)
+    raw = dedup
+
+    if len(raw) == 1:
+        only = raw[0]
+        if only in ("india", "in"):
+            return "india"
+        if only in _INDIA_STATES_AND_UTS:
+            return f"{only}, india"
+        if only in _INDIA_CITY_TO_STATE:
+            return f"{only}, {_INDIA_CITY_TO_STATE[only]}"
+        return only
+
+    if len(raw) == 2:
+        a, b = raw[0], raw[1]
+        if b in ("india", "in"):
+            if a in _INDIA_STATES_AND_UTS:
+                return f"{a}, india"
+            if a in _INDIA_CITY_TO_STATE:
+                return f"{a}, {_INDIA_CITY_TO_STATE[a]}"
+            return f"{a}, india"
+        if b in _INDIA_STATES_AND_UTS:
+            return f"{a}, {b}"
+        return f"{a}, {b}"
+
+    # 3+ segments: drop redundant trailing india after city, state
+    if raw[-1] in ("india", "in") and raw[-2] in _INDIA_STATES_AND_UTS and len(raw) >= 3:
+        if raw[-3] not in _INDIA_STATES_AND_UTS:
+            return f"{raw[-3]}, {raw[-2]}"
+    return ", ".join(raw)
 
 
 def _clean_location_segment(raw: str) -> str:
@@ -85,7 +234,15 @@ def normalize_location_raw(value: object) -> str:
         out = "berlin"
     else:
         out = ", ".join(deduped)
-    return _CANONICAL_LOCATION_ALIASES.get(out, out)
+    out = _CANONICAL_LOCATION_ALIASES.get(out, out)
+    # India: unify mixed API shapes (city-only, city+state, state+india, india-only).
+    parts_in = [_clean_location_segment(s) for s in out.split(",")]
+    parts_in = [p for p in parts_in if p]
+    if parts_in and _is_india_location_context(parts_in):
+        canon = _canonicalize_india_location_parts(parts_in)
+        if canon:
+            return canon
+    return out
 
 
 def strip_html_description(raw: str) -> str:
@@ -157,18 +314,61 @@ _ADZUNA_GENERIC_CATEGORY_LABELS: frozenset[str] = frozenset(
     }
 )
 
+# Category tags that are too vague to append to title_norm or skill context.
+_ADZUNA_GENERIC_CATEGORY_TAGS: frozenset[str] = frozenset(
+    {
+        "jobs",
+        "job",
+        "all-jobs",
+        "general",
+        "vacancies",
+        "careers",
+        "all",
+        "other",
+    }
+)
 
-def adzuna_category_hint(payload: dict[str, Any]) -> str:
-    """Non-Bronze hint text for skill extraction (category label when not generic)."""
+# Two-word titles that are clearly truncated fragments (e.g. "Head Of") — fold category in.
+_ADZUNA_TITLE_FRAGMENT_SECONDS: frozenset[str] = frozenset({"of", "and", "the", "&"})
+
+
+def adzuna_skill_blob_context(payload: dict[str, Any]) -> str:
+    """Adzuna category tag + non-generic label for skill/title context (hyphens → spaces in tag)."""
     cat = payload.get("category")
     if not isinstance(cat, dict):
         return ""
+    parts: list[str] = []
+    tag = str(cat.get("tag") or "").strip().lower()
+    if tag and tag not in _ADZUNA_GENERIC_CATEGORY_TAGS:
+        parts.append(tag.replace("-", " "))
     lab = str(cat.get("label") or "").strip()
-    if not lab:
-        return ""
-    if lab.strip().lower() in _ADZUNA_GENERIC_CATEGORY_LABELS:
-        return ""
-    return lab
+    if lab and lab.strip().lower() not in _ADZUNA_GENERIC_CATEGORY_LABELS:
+        parts.append(lab)
+    return _WS.sub(" ", " ".join(parts)).strip()
+
+
+def adzuna_category_hint(payload: dict[str, Any]) -> str:
+    """Same as adzuna_skill_blob_context (kept for callers that used the old name)."""
+    return adzuna_skill_blob_context(payload)
+
+
+def adzuna_title_norm_for_silver(title: str, payload: dict[str, Any]) -> str:
+    """Normalize title; for very short Adzuna-only titles, append category tag for analytics (e.g. lead → lead - it-jobs)."""
+    base = normalize_title_norm(title)
+    if not base:
+        return base
+    words = base.split()
+    if len(words) > 2:
+        return base
+    if len(words) == 2 and words[1] not in _ADZUNA_TITLE_FRAGMENT_SECONDS:
+        return base
+    cat = payload.get("category")
+    if not isinstance(cat, dict):
+        return base
+    tag = str(cat.get("tag") or "").strip().lower()
+    if not tag or tag in _ADZUNA_GENERIC_CATEGORY_TAGS:
+        return base
+    return f"{base} - {tag}"
 
 
 def adzuna_location_for_silver(payload: dict[str, Any]) -> str:
@@ -223,18 +423,26 @@ def adzuna_location_for_silver(payload: dict[str, Any]) -> str:
 
 _REMOTE_HYBRID_RE = re.compile(r"\bhybrid\b", re.IGNORECASE)
 _REMOTE_REMOTE_RE = re.compile(
-    r"\b(remote|wfh|work\s+from\s+home|work-from-home|work\s+remotely|fully\s+remote|remote\s+work|remote\s+role)\b",
+    r"\b(remote|wfh|work\s+from\s+home|work-from-home|work\s+remotely|fully\s+remote|remote\s+work|remote\s+role|telecommut(?:e|ing))\b",
     re.IGNORECASE,
 )
 _REMOTE_ONSITE_RE = re.compile(
-    r"\b(onsite|on-site|on\s+site|office-based|office\s+based|report(?:ing)?\s+to\s+office|on-?prem(?:ises)?)\b",
+    r"\b(onsite|on-site|on\s+site|office-based|office\s+based|report(?:ing)?\s+to\s+office|on-?prem(?:ises)?|work\s+from\s+office|office\s+only|based\s+in\s+office)\b",
     re.IGNORECASE,
 )
 
 
 def remote_type_from_adzuna_payload(payload: dict[str, Any], title: str, desc: str) -> str:
-    """Adzuna has no boolean `remote` field — infer from title + description only."""
-    text = f"{title}\n{desc}".strip().lower()
+    """Adzuna has no boolean `remote` field — infer from title, description, category, and contract hints."""
+    cat = payload.get("category")
+    lab = ""
+    tag = ""
+    if isinstance(cat, dict):
+        lab = str(cat.get("label") or "")
+        tag = str(cat.get("tag") or "")
+    ct = str(payload.get("contract_time") or "")
+    cty = str(payload.get("contract_type") or "")
+    text = f"{title}\n{desc}\n{lab}\n{tag}\n{ct}\n{cty}".strip().lower()
     if not text:
         return "unknown"
     if _REMOTE_HYBRID_RE.search(text):
