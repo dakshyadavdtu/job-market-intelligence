@@ -25,4 +25,4 @@ Strict contract: Parquet files contain **only** the columns below (no legacy sal
 
 - `skill`, `job_count`, partition `ingest_month`
 
-**Multi-source:** Fact tables include `source` (e.g. `adzuna_in`). Run Gold with `--source adzuna_in` to build partitions from that source’s merged Silver. `latest_run_metadata` is updated only for **Arbeitnow** Gold runs so `jmi_analytics.latest_pipeline_run` keeps pointing at the primary dashboard batch.
+**Multi-source:** Fact tables include `source` (e.g. `adzuna_in`). Run Gold with `--source adzuna_in` to build partitions from that source’s merged Silver. Each Gold run updates **that source’s** pointer Parquet only: **`gold/source=arbeitnow/latest_run_metadata/`** for default/EU runs and **`gold/source=adzuna_in/latest_run_metadata/`** for Adzuna runs (no cross-source overwrite). Athena **`jmi_gold.latest_run_metadata`** remains EU-oriented via Glue **LOCATION** under the Arbeitnow prefix; Adzuna uses **`latest_run_metadata_adzuna`** (see repo DDL).

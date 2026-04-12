@@ -41,7 +41,7 @@ JMI_ADZUNA_MAX_PAGES=2 python -m src.jmi.pipelines.ingest_adzuna
 # 2) Silver
 python -m src.jmi.pipelines.transform_silver --source adzuna_in
 
-# 3) Gold (does not overwrite gold/latest_run_metadata — Arbeitnow pointer preserved)
+# 3) Gold (writes Adzuna pointer only; does not overwrite data/gold/source=arbeitnow/latest_run_metadata/)
 python -m src.jmi.pipelines.transform_gold --source adzuna_in
 ```
 
@@ -59,7 +59,8 @@ python -m src.jmi.connectors.adzuna --fixture   # doc-shaped JSON, no API
 - **State:** `data/state/source=adzuna_in/connector_state.json`
 - **Silver:** `data/silver/jobs/source=adzuna_in/ingest_date=.../run_id=.../part-00001.parquet` and `.../merged/latest.parquet`
 - **Quality:** `data/quality/silver_quality_<ingest_date>_<run_id>.json`
-- **Gold:** `data/gold/{skill_demand_monthly,role_demand_monthly,location_demand_monthly,company_hiring_monthly,pipeline_run_summary}/ingest_month=YYYY-MM/run_id=<run_id>/part-00001.parquet`
+- **Gold:** `data/gold/{skill_demand_monthly,role_demand_monthly,location_demand_monthly,company_hiring_monthly,pipeline_run_summary}/source=adzuna_in/ingest_month=YYYY-MM/run_id=<run_id>/part-00001.parquet`
+- **Gold pointer:** `data/gold/source=adzuna_in/latest_run_metadata/part-00001.parquet` (written each Adzuna Gold run; separate from EU pointer)
 - **Quality:** `data/quality/gold_quality_<run_id>.json`
 
 Row counts depend on fetch size and **incremental state** (repeat runs may land only jobs newer than the watermark). **Gold** reads **`merged/latest.parquet`**, so aggregates for an `ingest_month` include **all** merged Silver rows in that month—not only the last Bronze batch. **pipeline_run_summary** should show `status: PASS`.
@@ -73,12 +74,12 @@ Row counts depend on fetch size and **incremental state** (repeat runs may land 
 3. **Nested payload:** `company`, `location`, `category` are **objects** in Bronze; Silver flattens what the contract needs; category is **not** a Silver column in this phase.
 4. **Remote:** Adzuna payload has **no** explicit remote flag → Silver `remote_type` is **`unknown`**.
 5. **Roles in Gold:** `role_demand_monthly` is keyed on **`title_norm`** → high cardinality for diverse titles (many one-job “roles”).
-6. **`latest_run_metadata`:** Adzuna Gold runs **do not** update `data/gold/latest_run_metadata/` so existing **Athena `latest_pipeline_run` views** stay tied to **Arbeitnow** until you add a multi-source strategy.
+6. **`latest_run_metadata`:** Adzuna updates **`data/gold/source=adzuna_in/latest_run_metadata/`** only; EU remains **`data/gold/source=arbeitnow/latest_run_metadata/`** — see `docs/STORAGE_LAYOUT_MULTISOURCE.md`.
 
 ## Not done in this repo phase (live AWS / BI)
 
 - **Lambda / EventBridge:** Deployed ingest is still **Arbeitnow-oriented**; Adzuna is **manual/local** unless you add a second handler or parameterize.
-- **Glue / Athena:** No DDL change required to **read** Adzuna Gold files if you **upload** under the same table prefixes with new `run_id` partitions — but **views** that filter on `latest_run_metadata` will **ignore** Adzuna until extended.
+- **Glue / Athena:** Gold tables use **`source`** as a path partition (`gold/<table>/source=<slug>/ingest_month=…/run_id=…`). Deploy repo DDL and sync S3 paths; Adzuna views use **`latest_run_metadata_adzuna`** / `latest_pipeline_run_adzuna`.
 - **QuickSight:** No dataset or visual changes; add **source** / **run_id** parameters when you want India side-by-side.
 
 ## Recommended next live step (do separately, with approval)

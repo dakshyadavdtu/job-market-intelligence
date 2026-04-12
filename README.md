@@ -175,14 +175,12 @@ JMI therefore separates concerns:
 
 **Outputs (examples):**
 
-- `data/gold/skill_demand_monthly/ingest_month=YYYY-MM/run_id=<run_id>/part-00001.parquet`
-- `data/gold/role_demand_monthly/...`
-- `data/gold/location_demand_monthly/...`
-- `data/gold/company_hiring_monthly/...`
-- `data/gold/pipeline_run_summary/...`
+- `data/gold/skill_demand_monthly/source=<arbeitnow|adzuna_in>/ingest_month=YYYY-MM/run_id=<run_id>/part-00001.parquet` (same pattern for role, location, company, pipeline_run_summary). Legacy flat `data/gold/<table>/ingest_month=...` may still exist until migrated; Streamlit falls back to it for Arbeitnow.
+- `data/gold/source=arbeitnow/latest_run_metadata/part-00001.parquet` (EU dashboard pointer); `data/gold/source=adzuna_in/latest_run_metadata/part-00001.parquet` (Adzuna pointer when Adzuna Gold is run).
+- `data/derived/comparison/` — optional benchmark/combined outputs (not source-native Gold).
 - `data/quality/gold_quality_YYYY-MM_<run_id>.json`
 
-**Run (Adzuna Silver → Gold):** `python -m src.jmi.pipelines.transform_gold --source adzuna_in` (reads `silver/jobs/source=adzuna_in/merged/latest.parquet`). **Does not** overwrite `gold/latest_run_metadata/` (that pointer stays Arbeitnow-oriented for existing Athena views).
+**Run (Adzuna Silver → Gold):** `python -m src.jmi.pipelines.transform_gold --source adzuna_in` (reads `silver/jobs/source=adzuna_in/merged/latest.parquet`). Writes **`data/gold/source=adzuna_in/latest_run_metadata/part-00001.parquet`** only; **does not** overwrite **`data/gold/source=arbeitnow/latest_run_metadata/part-00001.parquet`** (EU pointer).
 
 **Why it exists:** **Gold-first analytics**—BI tools should not rescan all raw jobs for every chart refresh if a **small aggregate** answers the question.
 
@@ -365,7 +363,7 @@ job-market-intelligence-main/
 
 - Bronze: `data/bronze/source=arbeitnow/ingest_date=YYYY-MM-DD/run_id=<run_id>/raw.jsonl.gz` + `manifest.json`  
 - Silver: `data/silver/jobs/ingest_date=.../run_id=.../part-00001.parquet`  
-- Gold: `data/gold/{skill_demand_monthly,role_demand_monthly,location_demand_monthly,company_hiring_monthly,pipeline_run_summary}/ingest_month=YYYY-MM/run_id=.../part-00001.parquet`  
+- Gold: `data/gold/<table>/source=<slug>/ingest_month=YYYY-MM/run_id=.../part-00001.parquet` (see `docs/STORAGE_LAYOUT_MULTISOURCE.md`, `docs/MIGRATION_V1_V2.md`)  
 - Quality: `data/quality/silver_quality_*.json`, `data/quality/gold_quality_*.json`  
 - Health: `data/health/latest_ingest.json`  
 
