@@ -7,11 +7,21 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-ROOT_SKILL = Path("data/gold/skill_demand_monthly")
-ROOT_ROLE = Path("data/gold/role_demand_monthly")
-ROOT_LOCATION = Path("data/gold/location_demand_monthly")
-ROOT_COMPANY = Path("data/gold/company_hiring_monthly")
-ROOT_SUMMARY = Path("data/gold/pipeline_run_summary")
+def _gold_table_root(table: str) -> Path:
+    """Prefer v2 modular layout data/gold/<table>/source=arbeitnow/; fall back to legacy data/gold/<table>/ (no source segment)."""
+    base = Path("data/gold")
+    v2 = base / table / "source=arbeitnow"
+    legacy = base / table
+    if v2.exists():
+        return v2
+    return legacy
+
+
+ROOT_SKILL = _gold_table_root("skill_demand_monthly")
+ROOT_ROLE = _gold_table_root("role_demand_monthly")
+ROOT_LOCATION = _gold_table_root("location_demand_monthly")
+ROOT_COMPANY = _gold_table_root("company_hiring_monthly")
+ROOT_SUMMARY = _gold_table_root("pipeline_run_summary")
 HEALTH_FILE = Path("data/health/latest_ingest.json")
 
 TABLE_TOP = 20

@@ -4,6 +4,7 @@ __pycache__/
 __MACOSX/
 .venv/
 venv/
+.env
 data/
 Archive.zip
 infra/aws/lambda/build/
