@@ -3,6 +3,7 @@
 ## Bronze (`raw.jsonl.gz`)
 
 - `source`, `schema_version`, `job_id`, `job_id_strategy`, `ingested_at`, `raw_payload`, batch fields (`run_id`, `bronze_ingest_date`, …)
+- **Adzuna India (`adzuna_in`):** also `source_job_id` (vendor `id`), `source_slug` (same id for parity), `source_url` (`redirect_url`). `raw_payload` is the full Adzuna job object (nested `company` / `location` / `category`, ISO `created`).
 
 ## Silver (`jobs`)
 

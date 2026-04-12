@@ -137,8 +137,10 @@ JMI therefore separates concerns:
 **Outputs (local layout):**
 
 - `data/bronze/source=arbeitnow/ingest_date=YYYY-MM-DD/run_id=<run_id>/raw.jsonl.gz`
+- `data/bronze/source=adzuna_in/ingest_date=YYYY-MM-DD/run_id=<run_id>/raw.jsonl.gz` (Adzuna India; set `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`, then `python -m src.jmi.pipelines.ingest_adzuna`)
 - `data/bronze/.../manifest.json` (counts, paths, schema version)
-- `data/health/latest_ingest.json` (pointer to the latest batch)
+- `data/health/latest_ingest.json` (pointer to the latest Arbeitnow batch)
+- `data/health/latest_ingest_adzuna_in.json` (pointer to the latest Adzuna India batch)
 
 **Why it exists:** If Silver drops a field you later need, **Bronze still has it**. If a vendor changes their schema, you can **detect drift** from historical Bronze.
 

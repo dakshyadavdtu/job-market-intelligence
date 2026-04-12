@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import datetime, timezone
 
 from src.jmi.config import AppConfig, new_run_id
@@ -14,12 +15,14 @@ def _select_jobs_for_bronze(
     state: ConnectorState,
     raw_jobs: list[dict],
     incremental_strategy: str,
+    job_created_at_ts_fn: Callable[[dict], int] | None = None,
 ) -> tuple[list[dict], dict]:
     """Return jobs to land in Bronze and diagnostic counters."""
     if not raw_jobs:
         raise RuntimeError("Source API returned no jobs; refusing to advance incremental state.")
 
-    ts_list = [job_created_at_ts(j) for j in raw_jobs]
+    ts_fn = job_created_at_ts_fn or job_created_at_ts
+    ts_list = [ts_fn(j) for j in raw_jobs]
     max_ts = max(ts_list)
     min_ts = min(ts_list)
     lookback_sec = int(cfg.incremental_lookback_hours) * 3600
@@ -50,7 +53,7 @@ def _select_jobs_for_bronze(
         }
 
     cutoff = wm - lookback_sec
-    selected = [j for j in raw_jobs if job_created_at_ts(j) > cutoff]
+    selected = [j for j in raw_jobs if ts_fn(j) > cutoff]
     return selected, {
         "filter_mode": "fallback_lookback",
         "api_job_count": len(raw_jobs),
