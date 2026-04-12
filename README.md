@@ -152,7 +152,10 @@ JMI therefore separates concerns:
 
 **Outputs:**
 
-- `data/silver/jobs/ingest_date=YYYY-MM-DD/run_id=<run_id>/part-00001.parquet`
+- `data/silver/jobs/ingest_date=YYYY-MM-DD/run_id=<run_id>/part-00001.parquet` (Arbeitnow — legacy flat layout)
+- `data/silver/jobs/source=adzuna_in/ingest_date=YYYY-MM-DD/run_id=<run_id>/part-00001.parquet` (Adzuna India)
+
+**Run (Adzuna Bronze → Silver):** `python -m src.jmi.pipelines.transform_silver --source adzuna_in`
 - `data/quality/silver_quality_YYYY-MM-DD_<run_id>.json`
 
 **Why it exists:** **All “cleaning” belongs here**, not in ingestion—so Bronze stays pure and Silver rules stay **testable**.

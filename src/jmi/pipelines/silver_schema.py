@@ -116,6 +116,33 @@ def posted_at_iso_utc(payload: dict[str, Any]) -> str | None:
         return None
 
 
+def posted_at_iso_adzuna_created(payload: dict[str, Any]) -> str | None:
+    """Adzuna job search uses ISO 8601 string `created` (not Unix `created_at`)."""
+    s = str(payload.get("created") or "").strip()
+    if not s:
+        return None
+    try:
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    except (ValueError, TypeError, OSError, OverflowError):
+        return None
+
+
+def posted_at_iso_from_payload(payload: dict[str, Any]) -> str | None:
+    """Arbeitnow first (Unix created_at); then Adzuna (ISO created)."""
+    return posted_at_iso_utc(payload) or posted_at_iso_adzuna_created(payload)
+
+
+def remote_type_for_silver(source: str, payload: dict[str, Any]) -> str:
+    if source == "adzuna_in":
+        return "unknown"
+    return remote_type_from_arbeitnow_payload(payload)
+
+
 # Minimal Silver: only columns Gold needs + essential lineage + canonical job facts (strict parquet contract).
 CANONICAL_SILVER_COLUMN_ORDER: list[str] = [
     "job_id",

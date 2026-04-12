@@ -12,7 +12,8 @@ Strict contract: Parquet files contain **only** the columns below (no legacy sal
 - `job_id`, `source`, `source_job_id` (slug when present)
 - `title_norm`, `company_norm` — Gold role/company rollups (full strings on Bronze `raw_payload`)
 - `location_raw` — `normalize_location_raw` in Silver (comma trim/dedupe); Gold uses the same helper for aggregates
-- `remote_type` — Arbeitnow `remote` flag mapped to `remote` / `onsite` / `unknown`
+- `remote_type` — Arbeitnow `remote` flag mapped to `remote` / `onsite` / `unknown`; **Adzuna India** → `unknown` (no vendor remote flag in payload)
+- `posted_at` — Arbeitnow from Unix `created_at`; **Adzuna** from ISO string `created` in `raw_payload`
 - `skills` — rule-based extraction + API tag fallback
 - `posted_at`, `ingested_at`
 - `job_id_strategy` — audit of `job_id` derivation

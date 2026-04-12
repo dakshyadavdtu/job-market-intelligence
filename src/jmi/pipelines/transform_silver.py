@@ -1,21 +1,24 @@
 from __future__ import annotations
 
+import argparse
 import json
 import re
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath, split_s3_uri
+from src.jmi.connectors.adzuna import ADZUNA_SOURCE_SLUG
 from src.jmi.connectors.skill_extract import extract_silver_skills
 from src.jmi.pipelines.silver_schema import (
     align_silver_dataframe_to_canonical,
     normalize_company_norm,
     normalize_location_raw,
     normalize_title_norm,
-    posted_at_iso_utc,
+    posted_at_iso_from_payload,
     project_silver_to_contract,
-    remote_type_from_arbeitnow_payload,
+    remote_type_for_silver,
     strip_html_description,
 )
 from src.jmi.utils.io import read_jsonl_gz, write_parquet
@@ -36,6 +39,26 @@ def _latest_bronze_file(cfg: AppConfig) -> Path:
 
 def _merged_silver_path(cfg: AppConfig) -> DataPath:
     return cfg.silver_root / "jobs" / f"source={cfg.source_name}" / "merged" / "latest.parquet"
+
+
+def _silver_batch_out_path(cfg: AppConfig, bronze_ingest_date: str, bronze_run_id: str) -> DataPath:
+    """Arbeitnow keeps legacy flat layout; other sources nest under source= for isolation."""
+    if cfg.source_name == "arbeitnow":
+        return (
+            cfg.silver_root
+            / "jobs"
+            / f"ingest_date={bronze_ingest_date}"
+            / f"run_id={bronze_run_id}"
+            / "part-00001.parquet"
+        )
+    return (
+        cfg.silver_root
+        / "jobs"
+        / f"source={cfg.source_name}"
+        / f"ingest_date={bronze_ingest_date}"
+        / f"run_id={bronze_run_id}"
+        / "part-00001.parquet"
+    )
 
 
 _RUN_RE = re.compile(r"(?:^|/)run_id=([^/]+)(?:/|$)")
@@ -60,6 +83,33 @@ def _source_job_id_from_arbeitnow(slug: str) -> str | None:
     return slug if slug else None
 
 
+def _source_job_id_from_row(row: dict, slug: str) -> str | None:
+    if str(row.get("source") or "") == ADZUNA_SOURCE_SLUG:
+        sji = _clean_text(row.get("source_job_id"))
+        return sji if sji else None
+    return _source_job_id_from_arbeitnow(slug)
+
+
+def _flat_payload_fields(source: str, payload: dict) -> tuple[str, str, str, object | None]:
+    """Return (title, company_name, location, tags_or_none) for skill extraction."""
+    if source == ADZUNA_SOURCE_SLUG:
+        title = _clean_text(payload.get("title"))
+        company = ""
+        comp = payload.get("company")
+        if isinstance(comp, dict):
+            company = _clean_text(comp.get("display_name"))
+        loc = ""
+        loc_obj = payload.get("location")
+        if isinstance(loc_obj, dict):
+            loc = _clean_text(loc_obj.get("display_name"))
+        return title, company, loc, None
+
+    title = _clean_text(payload.get("title"))
+    company = _clean_text(payload.get("company_name"))
+    location = _clean_text(payload.get("location"))
+    return title, company, location, payload.get("tags")
+
+
 def _prior_partition_silver_frames(cfg: AppConfig) -> pd.DataFrame | None:
     """When merged/latest.parquet is missing, rebuild prior state from historical per-run partitions."""
     jobs_root = cfg.silver_root / "jobs"
@@ -79,7 +129,11 @@ def _prior_partition_silver_frames(cfg: AppConfig) -> pd.DataFrame | None:
                     paths.append(f"s3://{bucket}/{k}")
     else:
         base = jobs_root.as_path()
-        paths = sorted(str(p) for p in base.glob("ingest_date=*/run_id=*/part-*.parquet"))
+        if cfg.source_name == "arbeitnow":
+            paths = sorted(str(p) for p in base.glob("ingest_date=*/run_id=*/part-*.parquet"))
+        else:
+            sub = base / f"source={cfg.source_name}"
+            paths = sorted(str(p) for p in sub.glob("ingest_date=*/run_id=*/part-*.parquet"))
     if not paths:
         return None
     frames = [align_silver_dataframe_to_canonical(pd.read_parquet(p)) for p in paths]
@@ -112,8 +166,8 @@ def _merge_with_prior_silver(cfg: AppConfig, df_batch: pd.DataFrame) -> pd.DataF
     return project_silver_to_contract(combined)
 
 
-def run(bronze_file: str | None = None) -> dict:
-    cfg = AppConfig()
+def run(bronze_file: str | None = None, *, cfg: AppConfig | None = None) -> dict:
+    cfg = cfg or AppConfig()
     bronze_file_str = bronze_file or str(_latest_bronze_file(cfg))
     bronze_run_id, bronze_ingest_date = _extract_lineage_from_bronze_path(bronze_file_str)
     bronze_rows = read_jsonl_gz(bronze_file_str)
@@ -123,12 +177,11 @@ def run(bronze_file: str | None = None) -> dict:
     flattened: list[dict] = []
     for row in bronze_rows:
         payload = row.get("raw_payload", {})
-        title = _clean_text(payload.get("title"))
-        company = _clean_text(payload.get("company_name"))
-        location = _clean_text(payload.get("location"))
+        source = str(row.get("source") or cfg.source_name or "")
+        title, company, location, tags = _flat_payload_fields(source, payload)
         slug = _clean_text(row.get("source_slug") or payload.get("slug"))
         desc_stripped = strip_html_description(_clean_text(payload.get("description")))
-        skills = extract_silver_skills(payload.get("tags"), title, desc_stripped)
+        skills = extract_silver_skills(tags, title, desc_stripped)
         rid = row.get("run_id", bronze_run_id)
 
         flattened.append(
@@ -136,13 +189,13 @@ def run(bronze_file: str | None = None) -> dict:
                 "job_id": row.get("job_id"),
                 "job_id_strategy": row.get("job_id_strategy", ""),
                 "source": row.get("source"),
-                "source_job_id": _source_job_id_from_arbeitnow(slug),
+                "source_job_id": _source_job_id_from_row(row, slug),
                 "title_norm": normalize_title_norm(title),
                 "company_norm": normalize_company_norm(company),
                 "location_raw": normalize_location_raw(location),
-                "remote_type": remote_type_from_arbeitnow_payload(payload),
+                "remote_type": remote_type_for_silver(source, payload),
                 "skills": skills,
-                "posted_at": posted_at_iso_utc(payload),
+                "posted_at": posted_at_iso_from_payload(payload),
                 "ingested_at": row.get("ingested_at"),
                 "bronze_run_id": rid,
                 "bronze_ingest_date": row.get("bronze_ingest_date", bronze_ingest_date),
@@ -172,13 +225,7 @@ def run(bronze_file: str | None = None) -> dict:
 
     df_merged = project_silver_to_contract(_merge_with_prior_silver(cfg, df_batch))
 
-    out_path = (
-        cfg.silver_root
-        / "jobs"
-        / f"ingest_date={bronze_ingest_date}"
-        / f"run_id={bronze_run_id}"
-        / "part-00001.parquet"
-    )
+    out_path = _silver_batch_out_path(cfg, bronze_ingest_date, bronze_run_id)
     write_parquet(out_path, df_batch)
 
     merged_path = _merged_silver_path(cfg)
@@ -211,4 +258,21 @@ def run(bronze_file: str | None = None) -> dict:
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(), indent=2))
+    parser = argparse.ArgumentParser(description="Bronze → Silver transform.")
+    parser.add_argument(
+        "--source",
+        default=None,
+        metavar="NAME",
+        help="Bronze source partition (e.g. adzuna_in). Default: arbeitnow from AppConfig.",
+    )
+    parser.add_argument(
+        "--bronze-file",
+        default=None,
+        metavar="PATH",
+        help="Explicit path to raw.jsonl.gz (optional).",
+    )
+    args = parser.parse_args()
+    base_cfg = AppConfig()
+    if args.source:
+        base_cfg = replace(base_cfg, source_name=args.source)
+    print(json.dumps(run(args.bronze_file, cfg=base_cfg), indent=2))
