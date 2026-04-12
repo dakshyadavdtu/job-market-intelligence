@@ -14,7 +14,7 @@ Step-by-step implementation manual for the frozen two-sheet dashboard. Follow or
 2. Apply **`infra/aws/athena/ddl_gold_*.sql`** so **all** Gold tables match the repo. **`CREATE TABLE IF NOT EXISTS` does not refresh TBLPROPERTIES** on existing tables—if you previously created Gold tables with `storage.location.template` set, **drop** each partitioned `jmi_gold.*` table (after dropping dependent `jmi_analytics` views) and recreate from the repo, **or** remove `storage.location.template` in the Glue table editor so Athena uses default Hive paths under `LOCATION`. **Step-by-step live recovery (prefer Glue in-place):** `docs/aws_live_fix_gold_projection.md`. **Post-fix validation:** `infra/aws/athena/validate_gold_projection_fix.sql`.
 3. Run **`ATHENA_VIEWS.sql`** end-to-end, then optional **`ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql`**.
 4. Script uses `CREATE DATABASE IF NOT EXISTS jmi_analytics;` — if it fails, create the database manually in Athena, then re-run view statements.
-5. Run the **Gold** transform at least once so `gold/latest_run_metadata/part-00001.parquet` exists (written by `transform_gold.py`). No **MSCK** is required for latest-run detection or for new Gold partitions **within** the configured projection month range.
+5. Run the **Gold** transform at least once so the EU latest-run pointer exists at **`gold/source=arbeitnow/latest_run_metadata/part-00001.parquet`** (v2 modular layout; legacy `gold/latest_run_metadata/part-00001.parquet` may remain until S3 migration). Written by `transform_gold.py`. No **MSCK** is required for latest-run detection or for new Gold partitions **within** the configured projection month range.
 6. **Partition projection (critical):** Gold monthly tables use **date** `ingest_month` and **`run_id` as `enum`** in `ddl_gold_*_monthly.sql` (append each new Gold `run_id` to `projection.run_id.values` in Glue after each run—see `docs/aws_live_fix_gold_projection.md`). Athena views use `ingest_month BETWEEN '2018-01' AND '2035-12'` to match `projection.ingest_month.range`. Repo Gold DDL **does not** set `storage.location.template`; paths follow default Hive-style layout under each table `LOCATION`.
 7. Validate SQL (latest run is chosen automatically via `jmi_analytics.latest_pipeline_run` → `jmi_gold.latest_run_metadata`):
    - `SELECT run_id FROM jmi_analytics.latest_pipeline_run;` → newest `run_id` string.
@@ -255,7 +255,7 @@ If unreadable → **`VISUAL_FALLBACK_RULES.md`** Section Companies.
 
 | Symptom | Action |
 |---------|--------|
-| Empty KPIs | Missing `gold/latest_run_metadata/` Parquet (run Gold); projection range; optional month filter |
+| Empty KPIs | Missing EU pointer Parquet under `gold/source=arbeitnow/latest_run_metadata/` (run Gold); projection range; optional month filter |
 | Pareto line wrong | Re-run Athena `role_pareto` query; check `total_jobs` |
 | Percent wrong scale | Format KPI as percent vs decimal |
 | Treemap illegible | Apply `VISUAL_FALLBACK_RULES.md` |

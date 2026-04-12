@@ -1,19 +1,128 @@
 -- =============================================================================
--- ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql
--- Additive views for Sheet 1 readability (does NOT replace existing jmi_analytics views).
--- Run in same region/account as jmi_gold after base ATHENA_VIEWS.sql (needs latest_pipeline_run).
--- Engine: Athena engine 3 (Trino SQL).
--- Gold partition projection: every scan on projected tables must filter `ingest_month`
--- within `projection.ingest_month.range` (see infra/aws/athena/ddl_gold_*.sql), same as ATHENA_VIEWS.sql.
+-- ATHENA_VIEWS_ADZUNA.sql — Adzuna-only analytics slice (separate from Arbeitnow latest_pipeline_run)
+-- Prerequisites: jmi_gold tables + Adzuna run_ids in Glue projection.run_id.values
+-- Engine: Athena engine 3. Do not alter jmi_analytics.latest_pipeline_run or jmi_gold.latest_run_metadata.
 -- =============================================================================
 
+CREATE DATABASE IF NOT EXISTS jmi_analytics;
+
 -- -----------------------------------------------------------------------------
--- 0) role_title_classified — Raw title → cleaned string → role family (audit grain)
+-- 0) latest_pipeline_run_adzuna — Newest Adzuna pipeline run (by ingest_month, run_id)
 -- -----------------------------------------------------------------------------
 
-CREATE OR REPLACE VIEW jmi_analytics.role_title_classified AS
+CREATE OR REPLACE VIEW jmi_analytics.latest_pipeline_run_adzuna AS
+SELECT run_id FROM jmi_gold.latest_run_metadata_adzuna LIMIT 1;
+
+
+-- -----------------------------------------------------------------------------
+-- Raw-grain + summary — latest Adzuna run only
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW jmi_analytics.skill_demand_monthly_adzuna_latest AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
+)
+SELECT
+    s.skill,
+    s.job_count,
+    s.source,
+    s.bronze_ingest_date,
+    s.bronze_run_id,
+    s.ingest_month,
+    s.run_id
+FROM jmi_gold.skill_demand_monthly s
+INNER JOIN lr ON s.run_id = lr.run_id
+WHERE s.source = 'adzuna_in'
+  AND s.ingest_month BETWEEN '2018-01' AND '2035-12';
+
+CREATE OR REPLACE VIEW jmi_analytics.pipeline_run_summary_adzuna_latest AS
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
+)
+SELECT
+    p.source,
+    p.bronze_ingest_date,
+    p.bronze_run_id,
+    p.skill_row_count,
+    p.role_row_count,
+    p.location_row_count,
+    p.company_row_count,
+    p.status,
+    p.ingest_month,
+    p.run_id
+FROM jmi_gold.pipeline_run_summary p
+INNER JOIN lr ON p.run_id = lr.run_id
+WHERE p.source = 'adzuna_in'
+  AND p.ingest_month BETWEEN '2018-01' AND '2035-12';
+
+-- -----------------------------------------------------------------------------
+-- location_top15_other_adzuna
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE VIEW jmi_analytics.location_top15_other_adzuna AS
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
+),
+base AS (
+    SELECT
+        l.ingest_month,
+        l.run_id,
+        l.location,
+        l.job_count
+    FROM jmi_gold.location_demand_monthly l
+    INNER JOIN lr ON l.run_id = lr.run_id
+    WHERE l.source = 'adzuna_in'
+      AND l.ingest_month BETWEEN '2018-01' AND '2035-12'
+),
+agg AS (
+    SELECT
+        run_id,
+        location,
+        SUM(job_count) AS job_count,
+        MAX(ingest_month) AS ingest_month
+    FROM base
+    GROUP BY run_id, location
+),
+ranked AS (
+    SELECT
+        ingest_month,
+        run_id,
+        location,
+        job_count,
+        ROW_NUMBER() OVER (
+            PARTITION BY run_id
+            ORDER BY job_count DESC, location ASC
+        ) AS rn
+    FROM agg
+),
+rolled AS (
+    SELECT
+        run_id,
+        MAX(ingest_month) AS ingest_month,
+        CASE
+            WHEN rn <= 15 THEN location
+            ELSE 'Other'
+        END AS location_label,
+        SUM(job_count) AS job_count
+    FROM ranked
+    GROUP BY
+        run_id,
+        CASE
+            WHEN rn <= 15 THEN location
+            ELSE 'Other'
+        END
+)
+SELECT
+    ingest_month,
+    run_id,
+    location_label,
+    job_count
+FROM rolled
+WHERE job_count > 0;
+
+CREATE OR REPLACE VIEW jmi_analytics.role_title_classified_adzuna AS
+WITH lr AS (
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
 ),
 base AS (
     SELECT
@@ -54,7 +163,7 @@ base AS (
         ) AS c0
     FROM jmi_gold.role_demand_monthly r
     INNER JOIN lr ON r.run_id = lr.run_id
-    WHERE r.source = 'arbeitnow'
+    WHERE r.source = 'adzuna_in'
       AND r.ingest_month BETWEEN '2018-01' AND '2035-12'
 ),
 stripped AS (
@@ -123,27 +232,27 @@ SELECT
 FROM classified;
 
 -- -----------------------------------------------------------------------------
--- 1) role_group_demand_monthly — Postings by role family
+-- 1) role_group_demand_monthly_adzuna — Postings by role family
 -- -----------------------------------------------------------------------------
 
-CREATE OR REPLACE VIEW jmi_analytics.role_group_demand_monthly AS
+CREATE OR REPLACE VIEW jmi_analytics.role_group_demand_monthly_adzuna AS
 SELECT
     ingest_month,
     run_id,
     normalized_role_group AS role_group,
     SUM(job_count) AS job_count
-FROM jmi_analytics.role_title_classified
+FROM jmi_analytics.role_title_classified_adzuna
 GROUP BY ingest_month, run_id, normalized_role_group;
 
 -- -----------------------------------------------------------------------------
--- 2) role_group_top20 — Top 20 families by postings
+-- 2) role_group_top20_adzuna — Top 20 families by postings
 --     One row per (run_id, role_group): sums all ingest_month for latest run only.
 --     (Partitioning only by month+run duplicated the same family across months.)
 -- -----------------------------------------------------------------------------
 
-CREATE OR REPLACE VIEW jmi_analytics.role_group_top20 AS
+CREATE OR REPLACE VIEW jmi_analytics.role_group_top20_adzuna AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
 ),
 agg AS (
     SELECT
@@ -151,7 +260,7 @@ agg AS (
         r.role_group,
         SUM(r.job_count) AS job_count,
         MAX(r.ingest_month) AS ingest_month
-    FROM jmi_analytics.role_group_demand_monthly r
+    FROM jmi_analytics.role_group_demand_monthly_adzuna r
     INNER JOIN lr ON r.run_id = lr.run_id
     GROUP BY r.run_id, r.role_group
 ),
@@ -177,12 +286,12 @@ FROM ranked
 WHERE pareto_rank <= 20;
 
 -- -----------------------------------------------------------------------------
--- 3) role_group_pareto — Pareto over role families (latest run; all months summed)
+-- 3) role_group_pareto_adzuna — Pareto over role families (latest run; all months summed)
 -- -----------------------------------------------------------------------------
 
-CREATE OR REPLACE VIEW jmi_analytics.role_group_pareto AS
+CREATE OR REPLACE VIEW jmi_analytics.role_group_pareto_adzuna AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
 ),
 agg AS (
     SELECT
@@ -190,7 +299,7 @@ agg AS (
         r.role_group,
         SUM(r.job_count) AS job_count,
         MAX(r.ingest_month) AS ingest_month
-    FROM jmi_analytics.role_group_demand_monthly r
+    FROM jmi_analytics.role_group_demand_monthly_adzuna r
     INNER JOIN lr ON r.run_id = lr.run_id
     GROUP BY r.run_id, r.role_group
 ),
@@ -228,14 +337,14 @@ FROM agg g
 INNER JOIN totals t ON g.run_id = t.run_id;
 
 -- -----------------------------------------------------------------------------
--- 4) company_top15_other_clean — Legal-suffix collapse + Top 50 + long-tail bucket
+-- 4) company_top15_other_clean_adzuna — Legal-suffix collapse + Top 50 + long-tail bucket
 --     Run-level totals (all ingest_month summed for latest run) before ranking.
 --     Display labels: word-level casing + suffix polish (GmbH, SE, AG, e.V., …); TLD .ai lower.
 -- -----------------------------------------------------------------------------
 
-CREATE OR REPLACE VIEW jmi_analytics.company_top15_other_clean AS
+CREATE OR REPLACE VIEW jmi_analytics.company_top15_other_clean_adzuna AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
 ),
 cleaned AS (
     SELECT
@@ -263,7 +372,7 @@ cleaned AS (
         ) AS company_key
     FROM jmi_gold.company_hiring_monthly c
     INNER JOIN lr ON c.run_id = lr.run_id
-    WHERE c.source = 'arbeitnow'
+    WHERE c.source = 'adzuna_in'
       AND c.ingest_month BETWEEN '2018-01' AND '2035-12'
 ),
 normalized AS (
@@ -390,12 +499,3 @@ SELECT
     job_count
 FROM labeled
 WHERE job_count > 0;
-
--- =============================================================================
--- NOTES
--- =============================================================================
--- • role_title_classified: use for viva audit (raw → cleaned → group).
--- • If regexp_like fails on your engine, confirm Athena engine v3.
--- • Tweak keyword lists in classified CTE only; priority = top-to-bottom CASE.
--- • company_top15_other_clean: word-level title case via split/transform (no initcap in all engines).
--- =============================================================================

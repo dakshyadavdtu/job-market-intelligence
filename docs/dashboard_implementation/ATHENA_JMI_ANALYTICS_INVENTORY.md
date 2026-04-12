@@ -11,7 +11,13 @@ All are **required**: base Gold external tables + `latest_run_metadata`. **No** 
 | `skill_demand_monthly`, `role_demand_monthly`, `location_demand_monthly`, `company_hiring_monthly`, `pipeline_run_summary` | Partition-projected facts |
 | `latest_run_metadata` | Single-row `run_id` for latest-run views |
 
-## `jmi_analytics` (13 views)
+## `jmi_analytics` (core + Adzuna + multilayer helpers)
+
+**Core Arbeitnow (production):** `sheet1_kpis`, `skill_demand_monthly_latest`, `location_top15_other`, `role_group_pareto`, `role_group_top20`, `company_top15_other_clean`, `pipeline_run_summary_latest`, `latest_pipeline_run`, `role_title_classified`, `role_group_demand_monthly`, `role_pareto`, `role_top20`, `company_top12_other` — see `QUICKSIGHT_BUILD_CHECKLIST.md` §A3.
+
+**Adzuna slice (`ATHENA_VIEWS_ADZUNA.sql`):** `latest_pipeline_run_adzuna`, `skill_demand_monthly_adzuna_latest`, `pipeline_run_summary_adzuna_latest`, `location_top15_other_adzuna`, `role_title_classified_adzuna`, `role_group_*_adzuna`, `company_top15_other_clean_adzuna`, etc.
+
+**QuickSight multilayer helpers (`ATHENA_VIEWS_QS_MULTILAYER.sql`):** `europe_company_hiring_latest_grain`, `india_location_month_heatmap`, `india_city_scatter_metrics`, `india_skill_job_count_boxplot_grain`, `comparison_region_month_totals`, `comparison_region_skill_mix` — see `QUICKSIGHT_MULTILAYER_BUILD.md`.
 
 | View | Class | Notes |
 |------|--------|------|
