@@ -2,6 +2,7 @@
 -- without MSCK. Latest run_id for dashboards comes from jmi_gold.latest_run_metadata
 -- (written each run); views filter by that run_id and constrain ingest_month within
 -- projection.ingest_month.range (see docs/dashboard_implementation/ATHENA_VIEWS.sql).
+-- Do not set storage.location.template: Athena defaults to Hive-style paths under LOCATION.
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold.pipeline_run_summary (
   source string,
   bronze_ingest_date string,
@@ -25,6 +26,5 @@ TBLPROPERTIES (
   'projection.ingest_month.interval' = '1',
   'projection.ingest_month.interval.unit' = 'MONTHS',
   'projection.ingest_month.range' = '2018-01,2035-12',
-  'projection.run_id.type' = 'injected',
-  'storage.location.template' = 's3://jmi-dakshyadav-job-market-intelligence/gold/pipeline_run_summary/ingest_month=${ingest_month}/run_id=${run_id}/'
+  'projection.run_id.type' = 'injected'
 );

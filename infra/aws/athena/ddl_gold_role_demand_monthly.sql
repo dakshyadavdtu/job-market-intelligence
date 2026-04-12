@@ -1,5 +1,7 @@
 -- Partition projection: queries must filter ingest_month within projection.ingest_month.range below
 -- and run_id (see docs/dashboard_implementation/ATHENA_VIEWS.sql). No MSCK REPAIR for new run_id paths.
+-- Do not set storage.location.template: Athena defaults to Hive-style paths under LOCATION
+-- (ingest_month=<val>/run_id=<val>/), matching transform_gold.py S3 layout.
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold.role_demand_monthly (
   role string,
   job_count bigint,
@@ -20,6 +22,5 @@ TBLPROPERTIES (
   'projection.ingest_month.interval' = '1',
   'projection.ingest_month.interval.unit' = 'MONTHS',
   'projection.ingest_month.range' = '2018-01,2035-12',
-  'projection.run_id.type' = 'injected',
-  'storage.location.template' = 's3://jmi-dakshyadav-job-market-intelligence/gold/role_demand_monthly/ingest_month=${ingest_month}/run_id=${run_id}/'
+  'projection.run_id.type' = 'injected'
 );
