@@ -9,23 +9,25 @@ from pathlib import Path
 import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath
+from src.jmi.paths import gold_fact_partition, gold_latest_run_metadata_file
 from src.jmi.pipelines.silver_schema import normalize_location_raw, skills_json_to_list
 from src.jmi.utils.io import write_parquet
 
 
 def _merged_silver_path(cfg: AppConfig) -> DataPath:
-    return cfg.silver_root / "jobs" / f"source={cfg.source_name}" / "merged" / "latest.parquet"
+    from src.jmi.paths import silver_jobs_merged_latest
+
+    return silver_jobs_merged_latest(cfg)
 
 
 def _latest_silver_file(cfg: AppConfig) -> Path:
     if cfg.silver_root.is_s3:
         raise FileNotFoundError("Pass silver_file or merged_silver_file when JMI_DATA_ROOT is S3.")
     base = cfg.silver_root.as_path() / "jobs"
-    if cfg.source_name == "arbeitnow":
-        pattern = "ingest_date=*/run_id=*/part-*.parquet"
-    else:
-        pattern = f"source={cfg.source_name}/ingest_date=*/run_id=*/part-*.parquet"
-    files = sorted(base.glob(pattern), key=lambda p: p.stat().st_mtime)
+    sub = base / f"source={cfg.source_name}"
+    files = sorted(sub.glob("ingest_date=*/run_id=*/part-*.parquet"), key=lambda p: p.stat().st_mtime)
+    if not files and cfg.source_name == "arbeitnow":
+        files = sorted(base.glob("ingest_date=*/run_id=*/part-*.parquet"), key=lambda p: p.stat().st_mtime)
     if not files:
         raise FileNotFoundError("No silver files found. Run silver transform first.")
     return files[-1]
@@ -62,7 +64,7 @@ def _resolve_silver_dataframe(
     raise FileNotFoundError("No readable non-empty silver parquet found.")
 
 
-def _build_monthly_skill(sub: pd.DataFrame, source: str, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
+def _build_monthly_skill(sub: pd.DataFrame, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
     skills_col = sub["skills"].map(skills_json_to_list)
     skill_df = pd.DataFrame({"job_id": sub["job_id"], "skills": skills_col}).explode("skills").dropna(subset=["skills"])
     skill_df = skill_df[skill_df["skills"].astype(str).str.strip() != ""]
@@ -72,7 +74,7 @@ def _build_monthly_skill(sub: pd.DataFrame, source: str, rep_date: str, bronze_r
         .rename(columns={"skills": "skill", "job_id": "job_count"})
         .sort_values("job_count", ascending=False)
     )
-    skill_agg["source"] = source
+    # `source` is added in `run()` so live Athena tables (legacy path) can filter `WHERE source = ...`.
     skill_agg["bronze_ingest_date"] = rep_date
     skill_agg["bronze_run_id"] = bronze_run_id
     return skill_agg
@@ -104,7 +106,7 @@ def _company_series(sub: pd.DataFrame) -> pd.Series:
     return pd.Series([""] * len(sub), index=sub.index)
 
 
-def _build_monthly_role(sub: pd.DataFrame, source: str, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
+def _build_monthly_role(sub: pd.DataFrame, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
     role_source_series = _role_series(sub)
     role_df = pd.DataFrame({"role": role_source_series.fillna("").astype(str)})
     role_df["role"] = role_df["role"].str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
@@ -115,13 +117,12 @@ def _build_monthly_role(sub: pd.DataFrame, source: str, rep_date: str, bronze_ru
         .rename(columns={"size": "job_count"})
         .sort_values("job_count", ascending=False)
     )
-    role_agg["source"] = source
     role_agg["bronze_ingest_date"] = rep_date
     role_agg["bronze_run_id"] = bronze_run_id
     return role_agg
 
 
-def _build_monthly_location(sub: pd.DataFrame, source: str, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
+def _build_monthly_location(sub: pd.DataFrame, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
     location_source_series = _location_series(sub)
     location_df = pd.DataFrame({"location": location_source_series.fillna("").astype(str)})
     location_df["location"] = location_df["location"].map(normalize_location_raw)
@@ -132,13 +133,12 @@ def _build_monthly_location(sub: pd.DataFrame, source: str, rep_date: str, bronz
         .rename(columns={"size": "job_count"})
         .sort_values("job_count", ascending=False)
     )
-    location_agg["source"] = source
     location_agg["bronze_ingest_date"] = rep_date
     location_agg["bronze_run_id"] = bronze_run_id
     return location_agg
 
 
-def _build_monthly_company(sub: pd.DataFrame, source: str, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
+def _build_monthly_company(sub: pd.DataFrame, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
     company_source_series = _company_series(sub)
     company_df = pd.DataFrame({"company_name": company_source_series.fillna("").astype(str)})
     company_df["company_name"] = (
@@ -151,7 +151,6 @@ def _build_monthly_company(sub: pd.DataFrame, source: str, rep_date: str, bronze
         .rename(columns={"size": "job_count"})
         .sort_values("job_count", ascending=False)
     )
-    company_agg["source"] = source
     company_agg["bronze_ingest_date"] = rep_date
     company_agg["bronze_run_id"] = bronze_run_id
     return company_agg
@@ -174,6 +173,8 @@ def run(
         raise RuntimeError(f"Silver file missing lineage columns: {sorted(missing)}")
 
     source = str(df["source"].iloc[0])
+    if str(cfg.source_name) != source:
+        raise RuntimeError(f"Silver source {source!r} does not match pipeline source_name={cfg.source_name!r}")
     df = df.copy()
     df["ingest_month"] = df["bronze_ingest_date"].astype(str).str[:7]
     bad = df[df["ingest_month"].str.len() != 7]
@@ -197,39 +198,20 @@ def run(
         sub = df[df["ingest_month"] == ingest_month]
         rep_date = str(sub["bronze_ingest_date"].max())
 
-        skill_agg = _build_monthly_skill(sub, source, rep_date, prid)
-        role_agg = _build_monthly_role(sub, source, rep_date, prid)
-        location_agg = _build_monthly_location(sub, source, rep_date, prid)
-        company_agg = _build_monthly_company(sub, source, rep_date, prid)
+        skill_agg = _build_monthly_skill(sub, rep_date, prid)
+        role_agg = _build_monthly_role(sub, rep_date, prid)
+        location_agg = _build_monthly_location(sub, rep_date, prid)
+        company_agg = _build_monthly_company(sub, rep_date, prid)
+        # Live Athena/Glue tables expect `source` in the Parquet body (path may omit source= prefix).
+        skill_agg["source"] = source
+        role_agg["source"] = source
+        location_agg["source"] = source
+        company_agg["source"] = source
 
-        skill_out_path = (
-            cfg.gold_root
-            / "skill_demand_monthly"
-            / f"ingest_month={ingest_month}"
-            / f"run_id={prid}"
-            / "part-00001.parquet"
-        )
-        role_out_path = (
-            cfg.gold_root
-            / "role_demand_monthly"
-            / f"ingest_month={ingest_month}"
-            / f"run_id={prid}"
-            / "part-00001.parquet"
-        )
-        location_out_path = (
-            cfg.gold_root
-            / "location_demand_monthly"
-            / f"ingest_month={ingest_month}"
-            / f"run_id={prid}"
-            / "part-00001.parquet"
-        )
-        company_out_path = (
-            cfg.gold_root
-            / "company_hiring_monthly"
-            / f"ingest_month={ingest_month}"
-            / f"run_id={prid}"
-            / "part-00001.parquet"
-        )
+        skill_out_path = gold_fact_partition(cfg, "skill_demand_monthly", ingest_month=ingest_month, pipeline_run_id=prid)
+        role_out_path = gold_fact_partition(cfg, "role_demand_monthly", ingest_month=ingest_month, pipeline_run_id=prid)
+        location_out_path = gold_fact_partition(cfg, "location_demand_monthly", ingest_month=ingest_month, pipeline_run_id=prid)
+        company_out_path = gold_fact_partition(cfg, "company_hiring_monthly", ingest_month=ingest_month, pipeline_run_id=prid)
 
         write_parquet(skill_out_path, skill_agg)
         write_parquet(role_out_path, role_agg)
@@ -257,13 +239,7 @@ def run(
             ]
         )
 
-        summary_out_path = (
-            cfg.gold_root
-            / "pipeline_run_summary"
-            / f"ingest_month={ingest_month}"
-            / f"run_id={prid}"
-            / "part-00001.parquet"
-        )
+        summary_out_path = gold_fact_partition(cfg, "pipeline_run_summary", ingest_month=ingest_month, pipeline_run_id=prid)
         write_parquet(summary_out_path, summary_df)
 
         skill_outputs.append(str(skill_out_path))
@@ -282,12 +258,10 @@ def run(
             }
         )
 
-    # Single-file pointer used by Athena `latest_pipeline_run` for Arbeitnow dashboards.
-    # Other sources write fact tables only so we do not overwrite the global latest run_id.
-    latest_meta_path: DataPath | None = None
-    if cfg.source_name == "arbeitnow":
-        latest_meta_path = cfg.gold_root / "latest_run_metadata" / "part-00001.parquet"
-        write_parquet(latest_meta_path, pd.DataFrame([{"run_id": prid}]))
+    # Per-source pointer: gold/source=arbeitnow/latest_run_metadata/ vs gold/source=adzuna_in/latest_run_metadata/
+    # Athena: jmi_gold.latest_run_metadata (EU) and jmi_gold.latest_run_metadata_adzuna (India).
+    latest_meta_path = gold_latest_run_metadata_file(cfg)
+    write_parquet(latest_meta_path, pd.DataFrame([{"run_id": prid}]))
 
     payload = {
         "stage": "gold",
@@ -301,8 +275,8 @@ def run(
         "location_output_files": location_outputs,
         "company_output_files": company_outputs,
         "pipeline_run_summary_output_files": summary_outputs,
-        "latest_run_metadata_file": str(latest_meta_path) if latest_meta_path else "",
-        "latest_run_metadata_skipped": cfg.source_name != "arbeitnow",
+        "latest_run_metadata_file": str(latest_meta_path),
+        "latest_run_metadata_skipped": False,
     }
     (cfg.quality_root / f"gold_quality_{prid}.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return payload

@@ -133,6 +133,62 @@ SKILL_ALLOWLIST: frozenset[str] = frozenset(
         "accounting",
         "procurement",
         "logistics",
+        # Broader tech / data / cloud (Adzuna + India market coverage)
+        "spring boot",
+        "express",
+        "nestjs",
+        "hibernate",
+        "grpc",
+        "protobuf",
+        "nginx",
+        "selenium",
+        "jira",
+        "confluence",
+        "figma",
+        "microsoft fabric",
+        "azure data factory",
+        "azure synapse",
+        "oracle",
+        "pl/sql",
+        "t-sql",
+        "cassandra",
+        "dynamodb",
+        "quarkus",
+        "opencv",
+        "cuda",
+        "mlflow",
+        "delta lake",
+        "apache spark",
+        "react native",
+        "flutter",
+        "swiftui",
+        "svelte",
+        "webpack",
+        "jest",
+        "cypress",
+        "postman",
+        "openapi",
+        "swagger",
+        "sharepoint",
+        "power apps",
+        "power automate",
+        "qlik",
+        "informatica",
+        "talend",
+        "matlab",
+        "solidity",
+        "ansible tower",
+        "prometheus",
+        "grafana",
+        "splunk",
+        "elk stack",
+        "frontend",
+        "backend",
+        "fullstack",
+        "presales",
+        "video editing",
+        "vfx",
+        "quality assurance",
     }
 )
 
@@ -185,6 +241,29 @@ SKILL_ALIAS_MAP: dict[str, tuple[str, ...]] = {
     "einzelhandel": ("retail",),
     "lagerist": ("warehouse",),
     "call center": ("customer service",),
+    "pl/sql": ("pl/sql",),
+    "pl sql": ("pl/sql",),
+    "springboot": ("spring boot",),
+    "spring-boot": ("spring boot",),
+    "ms fabric": ("microsoft fabric",),
+    "fabric (microsoft)": ("microsoft fabric",),
+    "azure fabric": ("microsoft fabric",),
+    "next.js": ("react",),
+    "nextjs": ("react",),
+    "nestjs": ("node",),
+    "go lang": ("golang",),
+    "oracle pl/sql": ("oracle", "pl/sql"),
+    "oracle sql": ("oracle", "sql"),
+    "t sql": ("t-sql",),
+    "tsql": ("t-sql",),
+    "pyspark": ("apache spark",),
+    "py torch": ("pytorch",),
+    "scikit learn": ("machine learning",),
+    "sklearn": ("machine learning",),
+    "powerapps": ("power apps",),
+    "influencer": ("social media", "digital marketing"),
+    "full-stack": ("fullstack",),
+    "full stack": ("fullstack",),
 }
 
 # Tokens / phrases never promoted to skills (too generic or noisy).
@@ -488,8 +567,14 @@ def extract_silver_skills(
     tags: Iterable[str] | None,
     title_raw: str,
     description_text: str,
+    *,
+    extra_context: str = "",
 ) -> list[str]:
-    """Return sorted unique canonical skills derived from tags, title, and description."""
+    """Return sorted unique canonical skills derived from tags, title, and description.
+
+    `extra_context` is optional text (e.g. Adzuna category label) folded into the match blob
+    when tags are missing — improves recall without changing Bronze.
+    """
     found: set[str] = set()
     tag_list = _normalize_tags_input(tags)
 
@@ -505,7 +590,7 @@ def extract_silver_skills(
             if _phrase_in_blob(phrase, tag_blob):
                 found.add(phrase)
 
-    blob = _normalize_blob(title_raw, description_text, " ".join(tag_list))
+    blob = _normalize_blob(title_raw, description_text, " ".join(tag_list), extra_context)
     if blob:
         for phrase in _ALLOWLIST_BY_LEN:
             if _phrase_in_blob(phrase, blob):

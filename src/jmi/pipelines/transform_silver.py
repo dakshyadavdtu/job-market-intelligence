@@ -9,9 +9,12 @@ from pathlib import Path
 import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath, split_s3_uri
+from src.jmi.paths import silver_jobs_batch_part, silver_jobs_merged_latest
 from src.jmi.connectors.adzuna import ADZUNA_SOURCE_SLUG
 from src.jmi.connectors.skill_extract import extract_silver_skills
 from src.jmi.pipelines.silver_schema import (
+    adzuna_category_hint,
+    adzuna_location_for_silver,
     align_silver_dataframe_to_canonical,
     normalize_company_norm,
     normalize_location_raw,
@@ -38,27 +41,12 @@ def _latest_bronze_file(cfg: AppConfig) -> Path:
 
 
 def _merged_silver_path(cfg: AppConfig) -> DataPath:
-    return cfg.silver_root / "jobs" / f"source={cfg.source_name}" / "merged" / "latest.parquet"
+    return silver_jobs_merged_latest(cfg)
 
 
 def _silver_batch_out_path(cfg: AppConfig, bronze_ingest_date: str, bronze_run_id: str) -> DataPath:
-    """Arbeitnow keeps legacy flat layout; other sources nest under source= for isolation."""
-    if cfg.source_name == "arbeitnow":
-        return (
-            cfg.silver_root
-            / "jobs"
-            / f"ingest_date={bronze_ingest_date}"
-            / f"run_id={bronze_run_id}"
-            / "part-00001.parquet"
-        )
-    return (
-        cfg.silver_root
-        / "jobs"
-        / f"source={cfg.source_name}"
-        / f"ingest_date={bronze_ingest_date}"
-        / f"run_id={bronze_run_id}"
-        / "part-00001.parquet"
-    )
+    """Modular layout: silver/jobs/source=<slug>/ingest_date=.../run_id=.../part-00001.parquet (all sources)."""
+    return silver_jobs_batch_part(cfg, bronze_ingest_date, bronze_run_id)
 
 
 _RUN_RE = re.compile(r"(?:^|/)run_id=([^/]+)(?:/|$)")
@@ -98,10 +86,7 @@ def _flat_payload_fields(source: str, payload: dict) -> tuple[str, str, str, obj
         comp = payload.get("company")
         if isinstance(comp, dict):
             company = _clean_text(comp.get("display_name"))
-        loc = ""
-        loc_obj = payload.get("location")
-        if isinstance(loc_obj, dict):
-            loc = _clean_text(loc_obj.get("display_name"))
+        loc = adzuna_location_for_silver(payload)
         return title, company, loc, None
 
     title = _clean_text(payload.get("title"))
@@ -125,15 +110,20 @@ def _prior_partition_silver_frames(cfg: AppConfig) -> pd.DataFrame | None:
                 k = obj["Key"]
                 if "/merged/" in k:
                     continue
-                if k.endswith(".parquet") and "part-" in k:
+                if not (k.endswith(".parquet") and "part-" in k):
+                    continue
+                if f"/source={cfg.source_name}/" in k:
+                    paths.append(f"s3://{bucket}/{k}")
+                elif cfg.source_name == "arbeitnow" and "/source=" not in k and "/ingest_date=" in k:
+                    # Legacy flat keys under jobs/ (pre–source-prefix migration)
                     paths.append(f"s3://{bucket}/{k}")
     else:
         base = jobs_root.as_path()
-        if cfg.source_name == "arbeitnow":
+        sub = base / f"source={cfg.source_name}"
+        paths = sorted(str(p) for p in sub.glob("ingest_date=*/run_id=*/part-*.parquet"))
+        if not paths and cfg.source_name == "arbeitnow":
+            # Legacy flat layout (pre–source-prefix migration): silver/jobs/ingest_date=.../run_id=.../
             paths = sorted(str(p) for p in base.glob("ingest_date=*/run_id=*/part-*.parquet"))
-        else:
-            sub = base / f"source={cfg.source_name}"
-            paths = sorted(str(p) for p in sub.glob("ingest_date=*/run_id=*/part-*.parquet"))
     if not paths:
         return None
     frames = [align_silver_dataframe_to_canonical(pd.read_parquet(p)) for p in paths]
@@ -181,7 +171,8 @@ def run(bronze_file: str | None = None, *, cfg: AppConfig | None = None) -> dict
         title, company, location, tags = _flat_payload_fields(source, payload)
         slug = _clean_text(row.get("source_slug") or payload.get("slug"))
         desc_stripped = strip_html_description(_clean_text(payload.get("description")))
-        skills = extract_silver_skills(tags, title, desc_stripped)
+        extra_skill_ctx = adzuna_category_hint(payload) if source == ADZUNA_SOURCE_SLUG else ""
+        skills = extract_silver_skills(tags, title, desc_stripped, extra_context=extra_skill_ctx)
         rid = row.get("run_id", bronze_run_id)
 
         flattened.append(
@@ -193,7 +184,9 @@ def run(bronze_file: str | None = None, *, cfg: AppConfig | None = None) -> dict
                 "title_norm": normalize_title_norm(title),
                 "company_norm": normalize_company_norm(company),
                 "location_raw": normalize_location_raw(location),
-                "remote_type": remote_type_for_silver(source, payload),
+                "remote_type": remote_type_for_silver(
+                    source, payload, title=title, description_plain=desc_stripped
+                ),
                 "skills": skills,
                 "posted_at": posted_at_iso_from_payload(payload),
                 "ingested_at": row.get("ingested_at"),

@@ -31,6 +31,9 @@ def normalize_title_norm(title: str) -> str:
     t = _TITLE_GENDER_PAREN.sub(" ", t)
     t = _WS.sub(" ", t).strip()
     t = _TITLE_EDGE_TRIM.sub("", t)
+    # Collapse stray slash-only fragments ("manager/" -> "manager")
+    t = re.sub(r"\s*/\s*$", "", t).strip()
+    t = re.sub(r"\s*/\s+", " ", t)
     return t.lower().strip()
 
 
@@ -38,7 +41,12 @@ def normalize_company_norm(company: str) -> str:
     c = (company or "").strip()
     if not c:
         return ""
-    return _WS.sub(" ", c).lower()
+    c = _WS.sub(" ", c).lower()
+    # Drop leading English article when it is clearly a company prefix ("The Sleep" -> "sleep")
+    if c.startswith("the ") and len(c) > 8:
+        c = c[4:].strip()
+    c = _TITLE_EDGE_TRIM.sub("", c)
+    return c.strip()
 
 
 _CANONICAL_LOCATION_ALIASES: dict[str, str] = {
@@ -137,9 +145,116 @@ def posted_at_iso_from_payload(payload: dict[str, Any]) -> str | None:
     return posted_at_iso_utc(payload) or posted_at_iso_adzuna_created(payload)
 
 
-def remote_type_for_silver(source: str, payload: dict[str, Any]) -> str:
-    if source == "adzuna_in":
+_ADZUNA_GENERIC_CATEGORY_LABELS: frozenset[str] = frozenset(
+    {
+        "it jobs",
+        "jobs",
+        "job",
+        "general",
+        "all jobs",
+        "vacancies",
+        "careers",
+    }
+)
+
+
+def adzuna_category_hint(payload: dict[str, Any]) -> str:
+    """Non-Bronze hint text for skill extraction (category label when not generic)."""
+    cat = payload.get("category")
+    if not isinstance(cat, dict):
+        return ""
+    lab = str(cat.get("label") or "").strip()
+    if not lab:
+        return ""
+    if lab.strip().lower() in _ADZUNA_GENERIC_CATEGORY_LABELS:
+        return ""
+    return lab
+
+
+def adzuna_location_for_silver(payload: dict[str, Any]) -> str:
+    """Prefer city/state from `location.area` when `display_name` is country-only.
+
+    Adzuna often sends `display_name: \"India\"` with `area: ['India']` only — keep that.
+    When `display_name` is country-level but `area` has a full hierarchy, use city + state.
+    """
+    loc_obj = payload.get("location")
+    if not isinstance(loc_obj, dict):
+        return ""
+    display = str(loc_obj.get("display_name") or "").strip()
+    area_raw = loc_obj.get("area")
+    area_list: list[str] = []
+    if isinstance(area_raw, list):
+        area_list = [str(a).strip() for a in area_raw if a is not None and str(a).strip()]
+    al = [x.lower() for x in area_list]
+
+    dlow = display.lower().strip()
+    country_names = (
+        "india",
+        "in",
+        "bharat",
+        "united states",
+        "usa",
+        "united kingdom",
+        "uk",
+        "uae",
+        "germany",
+        "france",
+    )
+    is_country_only = dlow in country_names or (dlow in ("india", "in") and "," not in display)
+
+    if is_country_only and len(area_list) >= 3:
+        # Typical vendor order: country, region/state, city
+        return f"{area_list[-1]}, {area_list[-2]}"
+    if is_country_only and len(area_list) == 2:
+        if al[0] in ("india", "in", "usa", "uk"):
+            return area_list[-1]
+        return f"{area_list[-1]}, {area_list[0]}"
+
+    if display:
+        return display
+    if len(area_list) >= 3:
+        return f"{area_list[-1]}, {area_list[-2]}"
+    if len(area_list) == 2:
+        return f"{area_list[-1]}, {area_list[0]}"
+    if len(area_list) == 1:
+        return area_list[0]
+    return ""
+
+
+_REMOTE_HYBRID_RE = re.compile(r"\bhybrid\b", re.IGNORECASE)
+_REMOTE_REMOTE_RE = re.compile(
+    r"\b(remote|wfh|work\s+from\s+home|work-from-home|work\s+remotely|fully\s+remote|remote\s+work|remote\s+role)\b",
+    re.IGNORECASE,
+)
+_REMOTE_ONSITE_RE = re.compile(
+    r"\b(onsite|on-site|on\s+site|office-based|office\s+based|report(?:ing)?\s+to\s+office|on-?prem(?:ises)?)\b",
+    re.IGNORECASE,
+)
+
+
+def remote_type_from_adzuna_payload(payload: dict[str, Any], title: str, desc: str) -> str:
+    """Adzuna has no boolean `remote` field — infer from title + description only."""
+    text = f"{title}\n{desc}".strip().lower()
+    if not text:
         return "unknown"
+    if _REMOTE_HYBRID_RE.search(text):
+        return "hybrid"
+    if _REMOTE_REMOTE_RE.search(text):
+        return "remote"
+    if _REMOTE_ONSITE_RE.search(text):
+        return "onsite"
+    return "unknown"
+
+
+def remote_type_for_silver(
+    source: str,
+    payload: dict[str, Any],
+    *,
+    title: str = "",
+    description_plain: str = "",
+) -> str:
+    if source == "adzuna_in":
+        return remote_type_from_adzuna_payload(payload, title, description_plain)
     return remote_type_from_arbeitnow_payload(payload)
 
 
