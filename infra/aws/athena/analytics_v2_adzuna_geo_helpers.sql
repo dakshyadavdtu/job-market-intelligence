@@ -4,7 +4,14 @@
 -- State extraction: rule-based (India strings from Silver), not geocoding.
 -- City lat/lon: approximate centroids (2 decimal places); geocode_method = approximate_centroid_2dp.
 --
--- QuickSight: use latitude/longitude (double) for point maps; use country + state_geo for filled maps.
+-- QuickSight (required — Athena cannot set this): GEOSPATIAL types are assigned in the DATASET EDITOR,
+-- not in Glue/SQL. Plain DOUBLE/VARCHAR from Athena will NOT drop into the GEOSPATIAL well until labeled.
+--
+-- Point map (v2_in_geo_city_points_monthly): In Dataset > Prepare data, set field types:
+--   latitude -> Latitude, longitude -> Longitude (place-marker icon). Then create a geospatial hierarchy:
+--   Add to hierarchy > Create new geospatial hierarchy > confirm latitude/longitude field wells.
+--   Optional hierarchy: country (Country=India), state_geo (State or region), city (City).
+-- Filled map (v2_in_geo_state_monthly): country -> Country; state_geo -> State or region (filter NULL).
 -- state_geo is NULL when india_state_name is unmapped_* so map binding is not polluted.
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_in_geo_location_rules AS
