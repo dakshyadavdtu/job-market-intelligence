@@ -53,7 +53,7 @@ def main() -> int:
     months = sorted(valid["posted_month"].astype(str).unique().tolist())
     out = {
         "gold_latest_run_id": rid,
-        "merged_silver_path": str(path),
+        "merged_silver_path": str(path.resolve()),
         "rows_same_run": int(len(sub)),
         "distinct_valid_posted_month": months,
         "n_distinct_valid_posted_month": len(months),
