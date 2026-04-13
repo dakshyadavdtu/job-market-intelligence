@@ -3,6 +3,9 @@
 
 CREATE DATABASE IF NOT EXISTS jmi_gold_v2;
 
+DROP TABLE IF EXISTS jmi_gold_v2.derived_yearly_exploratory_manifest;
+DROP TABLE IF EXISTS jmi_gold_v2.derived_yearly_exploratory_source_year_totals;
+
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_yearly_exploratory_manifest (
   layer_scope string,
   exploratory_only boolean,
@@ -14,7 +17,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_yearly_exploratory_manif
   materialized_at_utc string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/yearly/manifest/';
+LOCATION 's3://BUCKET/gold/comparison_yearly/manifest/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_yearly_exploratory_source_year_totals (
   source string,
@@ -28,7 +31,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_yearly_exploratory_sourc
   materialized_at_utc string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/yearly/exploratory_source_year_totals/';
+LOCATION 's3://BUCKET/gold/comparison_yearly/exploratory_source_year_totals/';
 
 -- Analytics views (jmi_analytics_v2 = views only)
 

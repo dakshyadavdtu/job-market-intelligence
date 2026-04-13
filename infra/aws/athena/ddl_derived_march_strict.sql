@@ -3,6 +3,12 @@
 
 CREATE DATABASE IF NOT EXISTS jmi_gold_v2;
 
+DROP TABLE IF EXISTS jmi_gold_v2.derived_march_strict_manifest;
+DROP TABLE IF EXISTS jmi_gold_v2.derived_march_strict_month_totals;
+DROP TABLE IF EXISTS jmi_gold_v2.derived_march_strict_benchmark_summary;
+DROP TABLE IF EXISTS jmi_gold_v2.derived_march_strict_skill_mix;
+DROP TABLE IF EXISTS jmi_gold_v2.derived_march_strict_role_mix;
+
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_march_strict_manifest (
   layer_scope string,
   run_id_arbeitnow string,
@@ -13,7 +19,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_march_strict_manifest (
   materialized_at_utc string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/march_strict/manifest/';
+LOCATION 's3://BUCKET/gold/comparison_march_only/manifest/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_march_strict_month_totals (
   source string,
@@ -23,7 +29,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_march_strict_month_total
   layer_scope string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/march_strict/month_totals/';
+LOCATION 's3://BUCKET/gold/comparison_march_only/month_totals/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_march_strict_benchmark_summary (
   layer_scope string,
@@ -34,7 +40,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_march_strict_benchmark_s
   materialized_at_utc string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/march_strict/benchmark_summary/';
+LOCATION 's3://BUCKET/gold/comparison_march_only/benchmark_summary/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_march_strict_skill_mix (
   skill string,
@@ -48,7 +54,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_march_strict_skill_mix (
   layer_scope string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/march_strict/skill_mix/';
+LOCATION 's3://BUCKET/gold/comparison_march_only/skill_mix/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_march_strict_role_mix (
   role string,
@@ -62,7 +68,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_march_strict_role_mix (
   layer_scope string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/march_strict/role_mix/';
+LOCATION 's3://BUCKET/gold/comparison_march_only/role_mix/';
 
 -- Analytics views (jmi_analytics_v2 = views only)
 

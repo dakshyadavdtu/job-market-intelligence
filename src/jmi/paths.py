@@ -13,10 +13,11 @@ Layout (examples):
   gold/source=<slug>/latest_run_metadata/part-00001.parquet
   gold_legacy/<table>/...  (archived ingest_month= partitions only; not written by current pipeline)
 
-Derived / comparison outputs (not source-native facts):
-  derived/comparison/posted_month_source_totals/part-00001.parquet
-  derived/comparison/strict_common_month/{manifest|month_totals|benchmark_summary|skill_mix|role_mix}/part-00001.parquet
-  derived/comparison/yearly/exploratory_source_year_totals/part-00001.parquet
+Gold grouped / comparison outputs (materialized analytical rollups):
+  gold/comparison_posted_month_source_totals/part-00001.parquet
+  gold/comparison_strict_common_month/{manifest|month_totals|benchmark_summary|skill_mix|role_mix}/part-00001.parquet
+  gold/comparison_yearly/{manifest|exploratory_source_year_totals}/part-00001.parquet
+  gold/comparison_march_only/{manifest|month_totals|benchmark_summary|skill_mix|role_mix}/part-00001.parquet
 """
 
 from __future__ import annotations
@@ -84,19 +85,14 @@ def gold_latest_run_metadata_file(cfg: AppConfig) -> DataPath:
     return out
 
 
-def derived_comparison_root(cfg: AppConfig) -> DataPath:
-    """Benchmark / combined outputs — not mixed into source-native Gold facts."""
-    return cfg.data_root / "derived" / "comparison"
-
-
 def derived_comparison_totals_parquet(cfg: AppConfig) -> DataPath:
-    """Cross-source posted-month job totals (Silver → derived; for dashboard / Athena views)."""
-    return derived_comparison_root(cfg) / "posted_month_source_totals" / "part-00001.parquet"
+    """Cross-source posted-month totals materialized in Gold-side grouped output."""
+    return cfg.gold_root / "comparison_posted_month_source_totals" / "part-00001.parquet"
 
 
 def derived_strict_common_root(cfg: AppConfig) -> DataPath:
-    """Physically materialized strict intersection layer (Gold-backed; not view-only)."""
-    return derived_comparison_root(cfg) / "strict_common_month"
+    """Physically materialized strict intersection layer in Gold grouped outputs."""
+    return cfg.gold_root / "comparison_strict_common_month"
 
 
 def derived_strict_common_manifest_parquet(cfg: AppConfig) -> DataPath:
@@ -120,8 +116,8 @@ def derived_strict_common_role_mix_parquet(cfg: AppConfig) -> DataPath:
 
 
 def derived_march_strict_root(cfg: AppConfig) -> DataPath:
-    """March-only slice of strict intersection; written only when *-03 months are common."""
-    return derived_comparison_root(cfg) / "march_strict"
+    """March-only strict slice in Gold grouped outputs; written only when *-03 is common."""
+    return cfg.gold_root / "comparison_march_only"
 
 
 def derived_march_strict_manifest_parquet(cfg: AppConfig) -> DataPath:
@@ -145,8 +141,8 @@ def derived_march_strict_role_mix_parquet(cfg: AppConfig) -> DataPath:
 
 
 def derived_yearly_exploratory_root(cfg: AppConfig) -> DataPath:
-    """Exploratory calendar-year rollup from latest Gold runs (not strict-intersection filtered)."""
-    return derived_comparison_root(cfg) / "yearly"
+    """Calendar-year grouped rollup materialized in Gold grouped outputs."""
+    return cfg.gold_root / "comparison_yearly"
 
 
 def derived_yearly_exploratory_source_year_totals_parquet(cfg: AppConfig) -> DataPath:

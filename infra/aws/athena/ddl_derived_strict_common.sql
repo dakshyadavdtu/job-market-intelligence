@@ -3,6 +3,12 @@
 
 CREATE DATABASE IF NOT EXISTS jmi_gold_v2;
 
+DROP TABLE IF EXISTS jmi_gold_v2.derived_strict_common_manifest;
+DROP TABLE IF EXISTS jmi_gold_v2.derived_strict_common_month_totals;
+DROP TABLE IF EXISTS jmi_gold_v2.derived_strict_common_benchmark_summary;
+DROP TABLE IF EXISTS jmi_gold_v2.derived_strict_common_skill_mix;
+DROP TABLE IF EXISTS jmi_gold_v2.derived_strict_common_role_mix;
+
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_manifest (
   layer_scope string,
   run_id_arbeitnow string,
@@ -14,7 +20,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_manifest (
   materialized_at_utc string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/strict_common_month/manifest/';
+LOCATION 's3://BUCKET/gold/comparison_strict_common_month/manifest/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_month_totals (
   source string,
@@ -24,7 +30,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_month_tota
   layer_scope string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/strict_common_month/month_totals/';
+LOCATION 's3://BUCKET/gold/comparison_strict_common_month/month_totals/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_benchmark_summary (
   layer_scope string,
@@ -36,7 +42,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_benchmark_
   materialized_at_utc string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/strict_common_month/benchmark_summary/';
+LOCATION 's3://BUCKET/gold/comparison_strict_common_month/benchmark_summary/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_skill_mix (
   skill string,
@@ -50,7 +56,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_skill_mix 
   layer_scope string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/strict_common_month/skill_mix/';
+LOCATION 's3://BUCKET/gold/comparison_strict_common_month/skill_mix/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_role_mix (
   role string,
@@ -64,7 +70,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_role_mix (
   layer_scope string
 )
 STORED AS PARQUET
-LOCATION 's3://BUCKET/derived/comparison/strict_common_month/role_mix/';
+LOCATION 's3://BUCKET/gold/comparison_strict_common_month/role_mix/';
 
 -- Analytics views (jmi_analytics_v2 = views only)
 
