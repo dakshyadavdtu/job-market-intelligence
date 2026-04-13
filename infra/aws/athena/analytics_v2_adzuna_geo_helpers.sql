@@ -3,6 +3,9 @@
 --
 -- State extraction: rule-based (India strings from Silver), not geocoding.
 -- City lat/lon: approximate centroids (2 decimal places); geocode_method = approximate_centroid_2dp.
+--
+-- QuickSight: use latitude/longitude (double) for point maps; use country + state_geo for filled maps.
+-- state_geo is NULL when india_state_name is unmapped_* so map binding is not polluted.
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_in_geo_location_rules AS
 WITH base AS (
@@ -140,8 +143,11 @@ SELECT
   latest_bronze_run_id,
   CAST(state_name AS varchar) AS state_name,
   CAST(state_name_display AS varchar) AS state_name_display,
-  CAST(TRIM(state_name_display) AS varchar) AS state_geo,
   CAST('India' AS varchar) AS country,
+  CASE
+    WHEN lower(trim(state_name)) LIKE 'unmapped%' THEN CAST(NULL AS varchar)
+    ELSE CAST(TRIM(state_name_display) AS varchar)
+  END AS state_geo,
   job_count
 FROM agg;
 
@@ -236,7 +242,23 @@ SELECT
   max(bronze_run_id) AS latest_bronze_run_id,
   lower(trim(city_label)) AS city_key,
   trim(city_label) AS city_label_display,
+  CAST(trim(city_label) AS varchar) AS city,
+  CAST('India' AS varchar) AS country,
   india_state_name AS state_name,
+  CASE
+    WHEN india_state_name LIKE 'unmapped%' THEN CAST(NULL AS varchar)
+    ELSE CAST(
+      TRIM(
+        array_join(
+          transform(
+            split(replace(india_state_name, '_', ' '), ' '),
+            w -> concat(upper(substr(w, 1, 1)), substr(w, 2))
+          ),
+          ' '
+        )
+      ) AS varchar
+    )
+  END AS state_geo,
   CAST(approx_lat AS double) AS latitude,
   CAST(approx_lon AS double) AS longitude,
   max(CAST('approximate_centroid_2dp' AS varchar)) AS geocode_method,
