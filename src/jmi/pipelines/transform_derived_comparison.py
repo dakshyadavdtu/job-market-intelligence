@@ -17,10 +17,11 @@ def run_derived_comparison(cfg: AppConfig | None = None) -> dict:
     cfg = cfg or AppConfig()
     rows: list[dict] = []
     for src in ("arbeitnow", "adzuna_in"):
-        p = cfg.silver_root.as_path() / "jobs" / f"source={src}" / "merged" / "latest.parquet"
-        if not p.is_file():
+        p = cfg.silver_root / "jobs" / f"source={src}" / "merged" / "latest.parquet"
+        try:
+            df = pd.read_parquet(str(p))
+        except Exception:
             continue
-        df = pd.read_parquet(p)
         if df.empty:
             continue
         df = assign_posted_month_and_time_axis(df)
