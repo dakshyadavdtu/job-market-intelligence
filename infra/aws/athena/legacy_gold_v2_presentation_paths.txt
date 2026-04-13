@@ -1,0 +1,6 @@
+Removed from active architecture (no pipeline writes; no Glue registration after cleanup).
+
+Orphan S3 prefixes if blobs remain:
+  s3://<JMI_BUCKET>/gold_v2/presentation/
+
+Use source-truth Gold facts under gold/<table>/source=<slug>/… and jmi_analytics_v2.comparison_* for cross-source work.

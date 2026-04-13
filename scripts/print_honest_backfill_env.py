@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Print recommended env vars to land honest multi-month API rows and check presentation months."""
+"""Print recommended env vars to land honest multi-month API rows."""
 from __future__ import annotations
 
 # Epoch for 2026-03-01 00:00:00 UTC (for Arbeitnow min_created_at when using API filter).
@@ -24,10 +24,7 @@ export JMI_ARBEITNOW_MIN_CREATED_AT=%s
 # 5) Adzuna: more search pages (honest API pagination; default in code is now higher):
 # export JMI_ADZUNA_MAX_PAGES=40
 
-# 6) After Bronze/Silver/Gold rebuild, presentation manifest checks target months:
-export JMI_PRESENTATION_REQUIRED_MONTHS=2026-03,2026-04
-
-# 7) Repair merged/latest from full silver batch union (optional):
+# 6) Repair merged/latest from full silver batch union (optional):
 # python scripts/rebuild_merged_silver_from_union.py --source arbeitnow
 # python scripts/rebuild_merged_silver_from_union.py --source adzuna_in
 """

@@ -13,10 +13,6 @@ Layout (examples):
   gold/source=<slug>/latest_run_metadata/part-00001.parquet
   gold_legacy/<table>/...  (archived ingest_month= partitions only; not written by current pipeline)
 
-Gold v2 presentation (teacher-friendly; same tree for both sources; truthful scope only):
-  gold_v2/presentation/<v2_fact>/monthly/source=<slug>/posted_month=YYYY-MM/part-00001.parquet
-  gold_v2/presentation/<v2_fact>/yearly/source=<slug>/year=YYYY/part-00001.parquet
-
 Legacy comparison parquet prefixes (orphaned if present; not written by the pipeline — use Athena
 ``jmi_analytics_v2.comparison_*`` and ``v2_*`` views; see ``infra/aws/athena/legacy_comparison_gold_parquet_paths.txt``):
   gold/comparison_strict_common_month/…
@@ -87,40 +83,3 @@ def gold_latest_run_metadata_file(cfg: AppConfig) -> DataPath:
     if f"/{source_seg}/latest_run_metadata/" not in normalized:
         raise RuntimeError(f"refusing non-source-scoped latest_run_metadata path: {out}")
     return out
-
-
-def gold_v2_presentation_monthly_parquet(
-    cfg: AppConfig,
-    presentation_fact: str,
-    *,
-    source_slug: str,
-    posted_month: str,
-) -> DataPath:
-    """e.g. presentation_fact=v2_skill_demand → gold_v2/presentation/v2_skill_demand/monthly/source=.../posted_month=..."""
-    return (
-        cfg.gold_v2_root
-        / "presentation"
-        / presentation_fact
-        / "monthly"
-        / f"source={source_slug}"
-        / f"posted_month={posted_month}"
-        / "part-00001.parquet"
-    )
-
-
-def gold_v2_presentation_yearly_parquet(
-    cfg: AppConfig,
-    presentation_fact: str,
-    *,
-    source_slug: str,
-    calendar_year: str,
-) -> DataPath:
-    return (
-        cfg.gold_v2_root
-        / "presentation"
-        / presentation_fact
-        / "yearly"
-        / f"source={source_slug}"
-        / f"year={calendar_year}"
-        / "part-00001.parquet"
-    )
