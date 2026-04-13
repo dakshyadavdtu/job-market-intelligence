@@ -210,6 +210,13 @@ def _process_pipeline_summary(
     return {"gold_table": gold_table, "months": months, "yearly_years": years, "monthly_paths": out_m, "yearly_paths": out_y}
 
 
+def _required_months_from_env() -> list[str]:
+    raw = (os.environ.get("JMI_PRESENTATION_REQUIRED_MONTHS") or "").strip()
+    if not raw:
+        return []
+    return [m.strip() for m in raw.split(",") if m.strip()]
+
+
 def run(
     *,
     cfg: AppConfig | None = None,
@@ -220,8 +227,10 @@ def run(
     sources = sources or ("arbeitnow", "adzuna_in")
     pbid = presentation_build_id or os.environ.get("JMI_PRESENTATION_BUILD_ID") or new_run_id()
     built_at = datetime.now(timezone.utc).isoformat()
+    required_months = _required_months_from_env()
 
     per_source: list[dict] = []
+    month_gaps: list[str] = []
     for src in sources:
         run_id = _read_latest_run_id(cfg, src)
         key_cols = {
@@ -254,6 +263,15 @@ def run(
                         key_col=kc,
                     )
                 )
+        if required_months:
+            months_skill = set(
+                _list_posted_months_for_run(cfg, "skill_demand_monthly", src, run_id)
+            )
+            for m in required_months:
+                if m not in months_skill:
+                    gap = f"{src}: gold source-truth missing posted_month={m} (skill_demand_monthly)"
+                    month_gaps.append(gap)
+
         per_source.append(
             {
                 "source": src,
@@ -262,32 +280,21 @@ def run(
             }
         )
 
+    manifest_body = {
+        "presentation_build_id": pbid,
+        "built_at": built_at,
+        "required_months_checked": required_months,
+        "month_coverage_gaps": month_gaps,
+        "sources": per_source,
+    }
+
     manifest_path = cfg.gold_v2_root / "presentation" / "_manifest" / "presentation_build.json"
     if manifest_path.is_s3:
-        manifest_path.write_text(
-            json.dumps(
-                {
-                    "presentation_build_id": pbid,
-                    "built_at": built_at,
-                    "sources": per_source,
-                },
-                indent=2,
-            )
-        )
+        manifest_path.write_text(json.dumps(manifest_body, indent=2))
     else:
         mp = manifest_path.as_path()
         mp.parent.mkdir(parents=True, exist_ok=True)
-        mp.write_text(
-            json.dumps(
-                {
-                    "presentation_build_id": pbid,
-                    "built_at": built_at,
-                    "sources": per_source,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
+        mp.write_text(json.dumps(manifest_body, indent=2), encoding="utf-8")
 
     return {
         "stage": "gold_v2_presentation",
@@ -295,6 +302,8 @@ def run(
         "built_at": built_at,
         "sources": per_source,
         "manifest": str(manifest_path),
+        "required_months_checked": required_months,
+        "month_coverage_gaps": month_gaps,
     }
 
 

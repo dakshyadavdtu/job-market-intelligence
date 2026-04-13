@@ -33,7 +33,9 @@ COUNTRY_INDIA = "in"
 DEFAULT_TIMEOUT_SEC = 45
 DEFAULT_RESULTS_PER_PAGE = 50
 ADZUNA_SOURCE_SLUG = "adzuna_in"
-ADZUNA_MAX_PAGES_DEFAULT = 3
+# Paginate enough pages that the India search snapshot can include multi-week posting dates
+# (honest API rows only). Override with env JMI_ADZUNA_MAX_PAGES.
+ADZUNA_MAX_PAGES_DEFAULT = 25
 
 
 def _hash_id(parts: list[str]) -> str:

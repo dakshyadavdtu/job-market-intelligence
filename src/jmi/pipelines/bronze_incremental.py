@@ -4,15 +4,30 @@ Both Arbeitnow and Adzuna use the same storage shape (`state/source=<slug>/conne
 bootstrap via `load_connector_state`, client-side lookback when `incremental_strategy` is
 `fallback_lookback`, and advance `fetch_watermark_created_at` from the **full API fetch** (not
 only landed rows). Source-specific API calls stay in each ingest module.
+
+Optional env ``JMI_BRONZE_INCREMENTAL_CUTOFF_CAP_TS`` (Unix seconds): for ``fallback_lookback`` with a
+non-null watermark, the effective cutoff is ``min(wm - lookback_sec, cap_ts)``. **Lower** cap values
+include **more** jobs from the current API response (still not invented—only rows the API returned).
+Use e.g. ``0`` to land every job in the response with ``created_at > 0``, or set cap to just before
+the earliest calendar month you need (e.g. 2026-03-01) so March/April postings are not dropped
+when the default 48h lookback would exclude them.
 """
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 
 from src.jmi.config import AppConfig
 from src.jmi.utils.io import ensure_dir
 from src.jmi.utils.source_state import ConnectorState, load_connector_state, save_connector_state
+
+
+def _env_optional_int(name: str) -> int | None:
+    raw = os.getenv(name)
+    if raw is None or str(raw).strip() == "":
+        return None
+    return int(str(raw).strip())
 
 
 def ensure_connector_state_prefix(cfg: AppConfig) -> None:
@@ -67,8 +82,11 @@ def select_jobs_for_bronze(
         }
 
     cutoff = wm - lookback_sec
+    cap_ts = _env_optional_int("JMI_BRONZE_INCREMENTAL_CUTOFF_CAP_TS")
+    if cap_ts is not None:
+        cutoff = min(cutoff, cap_ts)
     selected = [j for j in raw_jobs if ts_fn(j) > cutoff]
-    return selected, {
+    diag: dict = {
         "filter_mode": "fallback_lookback",
         "api_job_count": len(raw_jobs),
         "landed_job_count": len(selected),
@@ -78,6 +96,9 @@ def select_jobs_for_bronze(
         "fetch_max_created_at_observed": max_ts,
         "fetch_min_created_at_observed": min_ts,
     }
+    if cap_ts is not None:
+        diag["incremental_cutoff_cap_ts"] = cap_ts
+    return selected, diag
 
 
 def next_fetch_watermark_epoch(
