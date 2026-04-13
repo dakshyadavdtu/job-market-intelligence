@@ -1,12 +1,8 @@
 name: JMI Lambda ECR deploy
 
+# Requires repo secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (or switch to OIDC).
+# Run manually from Actions after secrets are set; avoids failing checks on every push.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "infra/aws/lambda/**"
-      - ".github/workflows/jmi-lambda-ecr-deploy.yml"
   workflow_dispatch:
 
 env:
