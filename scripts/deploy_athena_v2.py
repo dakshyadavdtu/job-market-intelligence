@@ -172,6 +172,16 @@ def main() -> int:
         infra / "ddl_gold_location_demand_monthly.sql",
         infra / "ddl_gold_company_hiring_monthly.sql",
         infra / "ddl_gold_pipeline_run_summary.sql",
+        infra / "ddl_presentation_skill_demand_monthly.sql",
+        infra / "ddl_presentation_skill_demand_yearly.sql",
+        infra / "ddl_presentation_role_demand_monthly.sql",
+        infra / "ddl_presentation_role_demand_yearly.sql",
+        infra / "ddl_presentation_location_demand_monthly.sql",
+        infra / "ddl_presentation_location_demand_yearly.sql",
+        infra / "ddl_presentation_company_hiring_monthly.sql",
+        infra / "ddl_presentation_company_hiring_yearly.sql",
+        infra / "ddl_presentation_pipeline_run_summary_monthly.sql",
+        infra / "ddl_presentation_pipeline_run_summary_yearly.sql",
     ]
 
     steps: list[tuple[str, str | None]] = []
@@ -191,11 +201,13 @@ def main() -> int:
     steps.append(("CREATE DATABASE IF NOT EXISTS jmi_analytics_v2;", None))
     minimal_analytics = args.repo_root / "scripts" / "deploy_jmi_analytics_v2_minimal.py"
     steps.append(("__RUN_MINIMAL_ANALYTICS__", str(minimal_analytics)))
+    presentation_views = args.repo_root / "scripts" / "deploy_presentation_views_v2.py"
+    steps.append(("__RUN_PRESENTATION_VIEWS__", str(presentation_views)))
 
     print(f"Total statements: {len(steps)}", file=sys.stderr)
     if args.dry_run:
         for i, (sql, db) in enumerate(steps):
-            if sql == "__RUN_MINIMAL_ANALYTICS__":
+            if sql in ("__RUN_MINIMAL_ANALYTICS__", "__RUN_PRESENTATION_VIEWS__"):
                 print(f"--- {i+1} --- subprocess: {db}\n")
             else:
                 print(f"--- {i+1} db={db} ---\n{sql[:200]}...\n")
@@ -206,6 +218,11 @@ def main() -> int:
             print(f"Running {i+1}/{len(steps)} jmi_analytics_v2 (minimal v2_* views)...", file=sys.stderr)
             subprocess.check_call([sys.executable, db], env=os.environ)
             print("  OK deploy_jmi_analytics_v2_minimal.py", file=sys.stderr)
+            continue
+        if sql == "__RUN_PRESENTATION_VIEWS__":
+            print(f"Running {i+1}/{len(steps)} jmi_analytics_v2 (presentation pass-through views)...", file=sys.stderr)
+            subprocess.check_call([sys.executable, db], env=os.environ)
+            print("  OK deploy_presentation_views_v2.py", file=sys.stderr)
             continue
         print(f"Running {i+1}/{len(steps)} db={db}...", file=sys.stderr)
         qid = run_athena_sql(sql, region=args.region, workgroup=args.workgroup, database=db)

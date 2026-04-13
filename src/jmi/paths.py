@@ -13,7 +13,11 @@ Layout (examples):
   gold/source=<slug>/latest_run_metadata/part-00001.parquet
   gold_legacy/<table>/...  (archived ingest_month= partitions only; not written by current pipeline)
 
-Gold grouped / comparison outputs (materialized analytical rollups):
+Gold v2 presentation (teacher-friendly; same tree for both sources; truthful scope only):
+  gold_v2/presentation/<v2_fact>/monthly/source=<slug>/posted_month=YYYY-MM/part-00001.parquet
+  gold_v2/presentation/<v2_fact>/yearly/source=<slug>/year=YYYY/part-00001.parquet
+
+Gold grouped / comparison outputs (legacy cross-source rollups; prefer gold_v2/presentation for demos):
   gold/comparison_posted_month_source_totals/part-00001.parquet
   gold/comparison_strict_common_month/{manifest|month_totals|benchmark_summary|skill_mix|role_mix}/part-00001.parquet
   gold/comparison_yearly/{manifest|exploratory_source_year_totals}/part-00001.parquet
@@ -151,3 +155,40 @@ def derived_yearly_exploratory_source_year_totals_parquet(cfg: AppConfig) -> Dat
 
 def derived_yearly_manifest_parquet(cfg: AppConfig) -> DataPath:
     return derived_yearly_exploratory_root(cfg) / "manifest" / "part-00001.parquet"
+
+
+def gold_v2_presentation_monthly_parquet(
+    cfg: AppConfig,
+    presentation_fact: str,
+    *,
+    source_slug: str,
+    posted_month: str,
+) -> DataPath:
+    """e.g. presentation_fact=v2_skill_demand → gold_v2/presentation/v2_skill_demand/monthly/source=.../posted_month=..."""
+    return (
+        cfg.gold_v2_root
+        / "presentation"
+        / presentation_fact
+        / "monthly"
+        / f"source={source_slug}"
+        / f"posted_month={posted_month}"
+        / "part-00001.parquet"
+    )
+
+
+def gold_v2_presentation_yearly_parquet(
+    cfg: AppConfig,
+    presentation_fact: str,
+    *,
+    source_slug: str,
+    calendar_year: str,
+) -> DataPath:
+    return (
+        cfg.gold_v2_root
+        / "presentation"
+        / presentation_fact
+        / "yearly"
+        / f"source={source_slug}"
+        / f"year={calendar_year}"
+        / "part-00001.parquet"
+    )

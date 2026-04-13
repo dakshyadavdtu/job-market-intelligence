@@ -123,6 +123,11 @@ class AppConfig:
         return self.data_root / "gold"
 
     @property
+    def gold_v2_root(self) -> DataPath:
+        """Normalized presentation layer (yearly/monthly rollups); derived only from source-truth gold/."""
+        return self.data_root / "gold_v2"
+
+    @property
     def quality_root(self) -> DataPath:
         return self.data_root / "quality"
 

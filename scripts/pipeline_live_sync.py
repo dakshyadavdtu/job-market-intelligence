@@ -260,6 +260,11 @@ def main() -> int:
         action="store_true",
         help="After sync, do not delete remote gold/ orphans (ingest_month=, gold/latest_run_metadata/).",
     )
+    p.add_argument(
+        "--skip-presentation",
+        action="store_true",
+        help="Do not build gold_v2/presentation (normalized yearly/monthly rollups for both sources).",
+    )
     p.add_argument("--region", default=os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "ap-south-1")
     p.add_argument("--workgroup", default="primary")
     args = p.parse_args()
@@ -292,6 +297,12 @@ def main() -> int:
     print(f"silver merged file:     {silver.get('merged_silver_file')}", flush=True)
     print(f"posted_months_rebuilt:  {gold.get('posted_months_rebuilt')}", flush=True)
 
+    if not args.skip_presentation:
+        print("\n--- Gold v2 presentation (arbeitnow + adzuna_in) ---", flush=True)
+        pres = _run_module_json("src.jmi.pipelines.transform_gold_presentation", [], env=penv)
+        print(f"presentation_build_id: {pres.get('presentation_build_id')}", flush=True)
+        print(f"manifest: {pres.get('manifest')}", flush=True)
+
     run_id_csv = _merge_run_id_csv(deploy.RUN_ID_ENUM, prid, data_root / "gold")
 
     # 4–5 Purge legacy local paths (before S3 sync when enabled; ingest_month never valid in active gold)
@@ -319,6 +330,9 @@ def main() -> int:
         _aws_s3_sync(deploy, data_root / "bronze", "bronze", args.region)
         _aws_s3_sync(deploy, data_root / "silver", "silver", args.region, extra_sync_args=_SILVER_SYNC_EXCLUDES)
         _aws_s3_sync(deploy, data_root / "gold", "gold", args.region, extra_sync_args=_GOLD_SYNC_EXCLUDES)
+        gv2 = data_root / "gold_v2"
+        if gv2.is_dir() and any(gv2.rglob("*.parquet")):
+            _aws_s3_sync(deploy, gv2, "gold_v2", args.region)
         derived = data_root / "derived"
         if derived.is_dir() and any(derived.iterdir()):
             _aws_s3_sync(deploy, derived, "derived", args.region)
