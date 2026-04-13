@@ -16,6 +16,7 @@ Layout (examples):
 Derived / comparison outputs (not source-native facts):
   derived/comparison/posted_month_source_totals/part-00001.parquet
   derived/comparison/strict_common_month/{manifest|month_totals|benchmark_summary|skill_mix|role_mix}/part-00001.parquet
+  derived/comparison/yearly/exploratory_source_year_totals/part-00001.parquet
 """
 
 from __future__ import annotations
@@ -116,3 +117,16 @@ def derived_strict_common_skill_mix_parquet(cfg: AppConfig) -> DataPath:
 
 def derived_strict_common_role_mix_parquet(cfg: AppConfig) -> DataPath:
     return derived_strict_common_root(cfg) / "role_mix" / "part-00001.parquet"
+
+
+def derived_yearly_exploratory_root(cfg: AppConfig) -> DataPath:
+    """Exploratory calendar-year rollup from latest Gold runs (not strict-intersection filtered)."""
+    return derived_comparison_root(cfg) / "yearly"
+
+
+def derived_yearly_exploratory_source_year_totals_parquet(cfg: AppConfig) -> DataPath:
+    return derived_yearly_exploratory_root(cfg) / "exploratory_source_year_totals" / "part-00001.parquet"
+
+
+def derived_yearly_manifest_parquet(cfg: AppConfig) -> DataPath:
+    return derived_yearly_exploratory_root(cfg) / "manifest" / "part-00001.parquet"

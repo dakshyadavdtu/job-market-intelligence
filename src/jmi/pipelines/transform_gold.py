@@ -334,6 +334,12 @@ def run(
         payload["derived_strict_common"] = run_derived_strict_common(cfg)
     except Exception as exc:
         payload["derived_strict_common"] = {"status": "ERROR", "error": str(exc)}
+    try:
+        from src.jmi.pipelines.transform_derived_yearly import run_derived_yearly_exploratory
+
+        payload["derived_yearly_exploratory"] = run_derived_yearly_exploratory(cfg)
+    except Exception as exc:
+        payload["derived_yearly_exploratory"] = {"status": "ERROR", "error": str(exc)}
     (cfg.quality_root / f"gold_quality_{prid}.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return payload
 
