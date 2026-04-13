@@ -1,7 +1,7 @@
 {
   "Name": "jmi-ingest-10min",
   "GroupName": "default",
-  "ScheduleExpression": "rate(4 hours)",
+  "ScheduleExpression": "rate(10 minutes)",
   "FlexibleTimeWindow": {
     "Mode": "OFF"
   },
@@ -10,6 +10,6 @@
     "RoleArn": "arn:aws:iam::470441577506:role/jmi-eventbridge-invoke-lambda-role",
     "Input": "{\"trigger\":\"eventbridge\",\"source\":\"schedule\"}"
   },
-  "State": "DISABLED",
-  "Description": "JMI ingest scheduler every 4 hours (disabled until manual validation)"
+  "State": "ENABLED",
+  "Description": "JMI pipeline (ingest→silver→gold) every 10 minutes via EventBridge Scheduler"
 }
