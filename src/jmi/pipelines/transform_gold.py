@@ -322,30 +322,6 @@ def run(
         "latest_run_metadata_file": str(latest_meta_path),
         "latest_run_metadata_skipped": False,
     }
-    try:
-        from src.jmi.pipelines.transform_derived_comparison import run_derived_comparison
-
-        payload["derived_comparison"] = run_derived_comparison(cfg)
-    except Exception as exc:
-        payload["derived_comparison"] = {"status": "ERROR", "error": str(exc)}
-    try:
-        from src.jmi.pipelines.transform_derived_strict_common import run_derived_strict_common
-
-        payload["derived_strict_common"] = run_derived_strict_common(cfg)
-    except Exception as exc:
-        payload["derived_strict_common"] = {"status": "ERROR", "error": str(exc)}
-    try:
-        from src.jmi.pipelines.transform_derived_march_strict import run_derived_march_strict
-
-        payload["derived_march_strict"] = run_derived_march_strict(cfg)
-    except Exception as exc:
-        payload["derived_march_strict"] = {"status": "ERROR", "error": str(exc)}
-    try:
-        from src.jmi.pipelines.transform_derived_yearly import run_derived_yearly_exploratory
-
-        payload["derived_yearly_exploratory"] = run_derived_yearly_exploratory(cfg)
-    except Exception as exc:
-        payload["derived_yearly_exploratory"] = {"status": "ERROR", "error": str(exc)}
     (cfg.quality_root / f"gold_quality_{prid}.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return payload
 

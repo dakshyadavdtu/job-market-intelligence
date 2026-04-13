@@ -1,0 +1,11 @@
+Legacy / orphaned parquet prefixes (no longer materialized by the Gold pipeline; do not register as active Glue tables):
+  s3://<JMI_BUCKET>/gold/comparison_strict_common_month/
+  s3://<JMI_BUCKET>/gold/comparison_march_only/
+  s3://<JMI_BUCKET>/gold/comparison_yearly/
+
+Comparison analytics: use jmi_analytics_v2.comparison_* and v2_* views deployed via
+  scripts/deploy_athena_comparison_views_v2.py
+  scripts/deploy_comparison_v2_views.py
+
+Silver-merged comparison_posted_month_source_totals (local gold path) was removed from the pipeline
+as redundant; use jmi_analytics_v2.comparison_source_month_totals (Gold role_demand) for honest posting volume.

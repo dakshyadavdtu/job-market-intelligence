@@ -17,11 +17,11 @@ Gold v2 presentation (teacher-friendly; same tree for both sources; truthful sco
   gold_v2/presentation/<v2_fact>/monthly/source=<slug>/posted_month=YYYY-MM/part-00001.parquet
   gold_v2/presentation/<v2_fact>/yearly/source=<slug>/year=YYYY/part-00001.parquet
 
-Gold grouped / comparison outputs (legacy cross-source rollups; prefer gold_v2/presentation for demos):
-  gold/comparison_posted_month_source_totals/part-00001.parquet
-  gold/comparison_strict_common_month/{manifest|month_totals|benchmark_summary|skill_mix|role_mix}/part-00001.parquet
-  gold/comparison_yearly/{manifest|exploratory_source_year_totals}/part-00001.parquet
-  gold/comparison_march_only/{manifest|month_totals|benchmark_summary|skill_mix|role_mix}/part-00001.parquet
+Legacy comparison parquet prefixes (orphaned if present; not written by the pipeline — use Athena
+``jmi_analytics_v2.comparison_*`` and ``v2_*`` views; see ``infra/aws/athena/legacy_comparison_gold_parquet_paths.txt``):
+  gold/comparison_strict_common_month/…
+  gold/comparison_yearly/…
+  gold/comparison_march_only/…
 """
 
 from __future__ import annotations
@@ -87,74 +87,6 @@ def gold_latest_run_metadata_file(cfg: AppConfig) -> DataPath:
     if f"/{source_seg}/latest_run_metadata/" not in normalized:
         raise RuntimeError(f"refusing non-source-scoped latest_run_metadata path: {out}")
     return out
-
-
-def derived_comparison_totals_parquet(cfg: AppConfig) -> DataPath:
-    """Cross-source posted-month totals materialized in Gold-side grouped output."""
-    return cfg.gold_root / "comparison_posted_month_source_totals" / "part-00001.parquet"
-
-
-def derived_strict_common_root(cfg: AppConfig) -> DataPath:
-    """Physically materialized strict intersection layer in Gold grouped outputs."""
-    return cfg.gold_root / "comparison_strict_common_month"
-
-
-def derived_strict_common_manifest_parquet(cfg: AppConfig) -> DataPath:
-    return derived_strict_common_root(cfg) / "manifest" / "part-00001.parquet"
-
-
-def derived_strict_common_month_totals_parquet(cfg: AppConfig) -> DataPath:
-    return derived_strict_common_root(cfg) / "month_totals" / "part-00001.parquet"
-
-
-def derived_strict_common_benchmark_summary_parquet(cfg: AppConfig) -> DataPath:
-    return derived_strict_common_root(cfg) / "benchmark_summary" / "part-00001.parquet"
-
-
-def derived_strict_common_skill_mix_parquet(cfg: AppConfig) -> DataPath:
-    return derived_strict_common_root(cfg) / "skill_mix" / "part-00001.parquet"
-
-
-def derived_strict_common_role_mix_parquet(cfg: AppConfig) -> DataPath:
-    return derived_strict_common_root(cfg) / "role_mix" / "part-00001.parquet"
-
-
-def derived_march_strict_root(cfg: AppConfig) -> DataPath:
-    """March-only strict slice in Gold grouped outputs; written only when *-03 is common."""
-    return cfg.gold_root / "comparison_march_only"
-
-
-def derived_march_strict_manifest_parquet(cfg: AppConfig) -> DataPath:
-    return derived_march_strict_root(cfg) / "manifest" / "part-00001.parquet"
-
-
-def derived_march_strict_month_totals_parquet(cfg: AppConfig) -> DataPath:
-    return derived_march_strict_root(cfg) / "month_totals" / "part-00001.parquet"
-
-
-def derived_march_strict_benchmark_summary_parquet(cfg: AppConfig) -> DataPath:
-    return derived_march_strict_root(cfg) / "benchmark_summary" / "part-00001.parquet"
-
-
-def derived_march_strict_skill_mix_parquet(cfg: AppConfig) -> DataPath:
-    return derived_march_strict_root(cfg) / "skill_mix" / "part-00001.parquet"
-
-
-def derived_march_strict_role_mix_parquet(cfg: AppConfig) -> DataPath:
-    return derived_march_strict_root(cfg) / "role_mix" / "part-00001.parquet"
-
-
-def derived_yearly_exploratory_root(cfg: AppConfig) -> DataPath:
-    """Calendar-year grouped rollup materialized in Gold grouped outputs."""
-    return cfg.gold_root / "comparison_yearly"
-
-
-def derived_yearly_exploratory_source_year_totals_parquet(cfg: AppConfig) -> DataPath:
-    return derived_yearly_exploratory_root(cfg) / "exploratory_source_year_totals" / "part-00001.parquet"
-
-
-def derived_yearly_manifest_parquet(cfg: AppConfig) -> DataPath:
-    return derived_yearly_exploratory_root(cfg) / "manifest" / "part-00001.parquet"
 
 
 def gold_v2_presentation_monthly_parquet(

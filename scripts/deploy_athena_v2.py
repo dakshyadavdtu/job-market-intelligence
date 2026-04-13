@@ -203,11 +203,20 @@ def main() -> int:
     steps.append(("__RUN_MINIMAL_ANALYTICS__", str(minimal_analytics)))
     presentation_views = args.repo_root / "scripts" / "deploy_presentation_views_v2.py"
     steps.append(("__RUN_PRESENTATION_VIEWS__", str(presentation_views)))
+    comparison_views = args.repo_root / "scripts" / "deploy_athena_comparison_views_v2.py"
+    steps.append(("__RUN_COMPARISON_VIEWS_V2__", str(comparison_views)))
+    comparison_v2 = args.repo_root / "scripts" / "deploy_comparison_v2_views.py"
+    steps.append(("__RUN_COMPARISON_V2_VIEWS__", str(comparison_v2)))
 
     print(f"Total statements: {len(steps)}", file=sys.stderr)
     if args.dry_run:
         for i, (sql, db) in enumerate(steps):
-            if sql in ("__RUN_MINIMAL_ANALYTICS__", "__RUN_PRESENTATION_VIEWS__"):
+            if sql in (
+                "__RUN_MINIMAL_ANALYTICS__",
+                "__RUN_PRESENTATION_VIEWS__",
+                "__RUN_COMPARISON_VIEWS_V2__",
+                "__RUN_COMPARISON_V2_VIEWS__",
+            ):
                 print(f"--- {i+1} --- subprocess: {db}\n")
             else:
                 print(f"--- {i+1} db={db} ---\n{sql[:200]}...\n")
@@ -223,6 +232,16 @@ def main() -> int:
             print(f"Running {i+1}/{len(steps)} jmi_analytics_v2 (presentation pass-through views)...", file=sys.stderr)
             subprocess.check_call([sys.executable, db], env=os.environ)
             print("  OK deploy_presentation_views_v2.py", file=sys.stderr)
+            continue
+        if sql == "__RUN_COMPARISON_VIEWS_V2__":
+            print(f"Running {i+1}/{len(steps)} jmi_analytics_v2 (comparison_* views)...", file=sys.stderr)
+            subprocess.check_call([sys.executable, db], env=os.environ)
+            print("  OK deploy_athena_comparison_views_v2.py", file=sys.stderr)
+            continue
+        if sql == "__RUN_COMPARISON_V2_VIEWS__":
+            print(f"Running {i+1}/{len(steps)} comparison v2_* views + drop derived_* tables...", file=sys.stderr)
+            subprocess.check_call([sys.executable, db], env=os.environ)
+            print("  OK deploy_comparison_v2_views.py", file=sys.stderr)
             continue
         print(f"Running {i+1}/{len(steps)} db={db}...", file=sys.stderr)
         qid = run_athena_sql(sql, region=args.region, workgroup=args.workgroup, database=db)

@@ -387,16 +387,18 @@ analysis_mode = st.sidebar.radio(
 st.markdown("## Job Market Intelligence")
 st.caption(
     "Local analytics: **posted_month** = job posting month (from Silver `posted_at`). "
-    "Comparison totals live under `data/derived/comparison/`."
+    "Production comparison uses Athena `jmi_analytics_v2.comparison_*` / `v2_*` (see deploy scripts)."
 )
 
 if analysis_mode == "comparison":
-    st.markdown("### Cross-source comparison (derived)")
-    st.caption(f"Source file: `{COMPARISON_TOTALS}` — job counts by **posted_month** × **source** from merged Silver.")
+    st.markdown("### Cross-source comparison (local sample)")
+    st.caption(
+        f"Optional local file `{COMPARISON_TOTALS}` — legacy demo path; "
+        "authoritative comparison is `jmi_analytics_v2.comparison_source_month_totals` in Athena."
+    )
     if not COMPARISON_TOTALS.exists():
         st.warning(
-            "No comparison file yet. Run **Gold** (it refreshes `derived/comparison/`) or "
-            "`python -m src.jmi.pipelines.transform_derived_comparison`."
+            "No local comparison parquet. Use Athena comparison views, or add a parquet at the path above for offline demos."
         )
         st.stop()
     df_cmp = _read_parquet(COMPARISON_TOTALS)
