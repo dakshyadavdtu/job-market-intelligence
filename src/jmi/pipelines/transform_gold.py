@@ -335,6 +335,12 @@ def run(
     except Exception as exc:
         payload["derived_strict_common"] = {"status": "ERROR", "error": str(exc)}
     try:
+        from src.jmi.pipelines.transform_derived_march_strict import run_derived_march_strict
+
+        payload["derived_march_strict"] = run_derived_march_strict(cfg)
+    except Exception as exc:
+        payload["derived_march_strict"] = {"status": "ERROR", "error": str(exc)}
+    try:
         from src.jmi.pipelines.transform_derived_yearly import run_derived_yearly_exploratory
 
         payload["derived_yearly_exploratory"] = run_derived_yearly_exploratory(cfg)

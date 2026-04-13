@@ -119,6 +119,31 @@ def derived_strict_common_role_mix_parquet(cfg: AppConfig) -> DataPath:
     return derived_strict_common_root(cfg) / "role_mix" / "part-00001.parquet"
 
 
+def derived_march_strict_root(cfg: AppConfig) -> DataPath:
+    """March-only slice of strict intersection; written only when *-03 months are common."""
+    return derived_comparison_root(cfg) / "march_strict"
+
+
+def derived_march_strict_manifest_parquet(cfg: AppConfig) -> DataPath:
+    return derived_march_strict_root(cfg) / "manifest" / "part-00001.parquet"
+
+
+def derived_march_strict_month_totals_parquet(cfg: AppConfig) -> DataPath:
+    return derived_march_strict_root(cfg) / "month_totals" / "part-00001.parquet"
+
+
+def derived_march_strict_benchmark_summary_parquet(cfg: AppConfig) -> DataPath:
+    return derived_march_strict_root(cfg) / "benchmark_summary" / "part-00001.parquet"
+
+
+def derived_march_strict_skill_mix_parquet(cfg: AppConfig) -> DataPath:
+    return derived_march_strict_root(cfg) / "skill_mix" / "part-00001.parquet"
+
+
+def derived_march_strict_role_mix_parquet(cfg: AppConfig) -> DataPath:
+    return derived_march_strict_root(cfg) / "role_mix" / "part-00001.parquet"
+
+
 def derived_yearly_exploratory_root(cfg: AppConfig) -> DataPath:
     """Exploratory calendar-year rollup from latest Gold runs (not strict-intersection filtered)."""
     return derived_comparison_root(cfg) / "yearly"
