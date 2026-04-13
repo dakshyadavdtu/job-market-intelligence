@@ -140,6 +140,12 @@ class AppConfig:
             return "true_api_filter"
         return "fallback_lookback"
 
+    def incremental_strategy_effective(self) -> str:
+        """Strategy for Bronze incremental filter. Non-Arbeitnow sources always use client lookback."""
+        if self.source_name == "arbeitnow":
+            return self.incremental_strategy_default
+        return "fallback_lookback"
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)

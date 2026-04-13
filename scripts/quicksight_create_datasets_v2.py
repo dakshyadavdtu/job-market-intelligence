@@ -2,6 +2,9 @@
 """
 Create QuickSight datasets pointing at jmi_analytics_v2 views.
 Requires: aws glue get-table, aws quicksight create-data-set, same region as Athena/Glue.
+
+After creation, rename dataset display names in QuickSight to domain-first names
+(v2_eu_kpis, v2_in_skills, …) per docs/dashboard_implementation/QUICKSIGHT_V2_DATASET_STRATEGY.md
 """
 from __future__ import annotations
 
@@ -21,24 +24,19 @@ DATA_SOURCE_ARN = (
 )
 
 # (QuickSight display name, Glue view name)
+# Convention: v2 - <EU|IN|CMP> - <view> — see docs/dashboard_implementation/QUICKSIGHT_V1_V2_NAMING.md
 V2_DATASETS: list[tuple[str, str]] = [
-    # Europe / Arbeitnow (distinct prefix)
-    ("JMI v2 EU — sheet1_kpis", "sheet1_kpis"),
-    ("JMI v2 EU — skill_demand_monthly_latest", "skill_demand_monthly_latest"),
-    ("JMI v2 EU — location_top15_other", "location_top15_other"),
-    ("JMI v2 EU — role_pareto", "role_pareto"),
-    ("JMI v2 EU — role_top20", "role_top20"),
-    ("JMI v2 EU — company_top12_other", "company_top12_other"),
-    ("JMI v2 EU — pipeline_run_summary_latest", "pipeline_run_summary_latest"),
-    # India / Adzuna (distinct prefix)
-    ("JMI v2 IN — skill_demand_monthly_adzuna_latest", "skill_demand_monthly_adzuna_latest"),
-    ("JMI v2 IN — pipeline_run_summary_adzuna_latest", "pipeline_run_summary_adzuna_latest"),
-    ("JMI v2 IN — location_top15_other_adzuna", "location_top15_other_adzuna"),
-    ("JMI v2 IN — role_group_pareto_adzuna", "role_group_pareto_adzuna"),
-    ("JMI v2 IN — role_group_top20_adzuna", "role_group_top20_adzuna"),
-    ("JMI v2 IN — company_top15_other_clean_adzuna", "company_top15_other_clean_adzuna"),
-    ("JMI v2 IN — role_group_demand_monthly_adzuna", "role_group_demand_monthly_adzuna"),
-    ("JMI v2 IN — role_title_classified_adzuna", "role_title_classified_adzuna"),
+    # Europe / Arbeitnow — analytics views only (use jmi_gold_v2.* + filters for raw facts).
+    ("v2 - EU - sheet1_kpis", "sheet1_kpis"),
+    ("v2 - EU - location_top15_other", "location_top15_other"),
+    ("v2 - EU - role_pareto", "role_pareto"),
+    # India / Adzuna
+    ("v2 - IN - location_top15_other_adzuna", "location_top15_other_adzuna"),
+    ("v2 - IN - role_group_pareto_adzuna", "role_group_pareto_adzuna"),
+    ("v2 - IN - company_top15_other_clean_adzuna", "company_top15_other_clean_adzuna"),
+    ("v2 - IN - role_group_demand_monthly_adzuna", "role_group_demand_monthly_adzuna"),
+    ("v2 - IN - role_title_classified_adzuna", "role_title_classified_adzuna"),
+    ("v2_in_kpis", "sheet1_kpis_adzuna"),
 ]
 
 

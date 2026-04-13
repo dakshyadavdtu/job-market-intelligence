@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
-"""Register derived/comparison/yearly exploratory Parquet tables in Athena."""
+"""Deploy jmi_analytics_v2.v2_in_silver_data_coverage_funnel_monthly."""
 from __future__ import annotations
 
 import json
-import os
-import re
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-DDL = ROOT / "infra" / "aws" / "athena" / "ddl_derived_yearly_exploratory.sql"
-BUCKET = os.environ.get("JMI_BUCKET", "jmi-dakshyadav-job-market-intelligence").strip() or "jmi-dakshyadav-job-market-intelligence"
+REGION = "ap-south-1"
+WORKGROUP = "primary"
+BUCKET = "jmi-dakshyadav-job-market-intelligence"
 OUTPUT = f"s3://{BUCKET}/athena-results/"
-REGION = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "ap-south-1"
-WORKGROUP = os.environ.get("ATHENA_WORKGROUP", "primary")
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def run_sql(sql: str) -> str:
@@ -31,13 +28,15 @@ def run_sql(sql: str) -> str:
         f"OutputLocation={OUTPUT}",
         "--query-string",
         sql,
+        "--query-execution-context",
+        "Database=jmi_analytics_v2",
     ]
     out = subprocess.check_output(cmd, text=True)
     return json.loads(out)["QueryExecutionId"]
 
 
-def wait_done(qid: str) -> None:
-    for _ in range(120):
+def wait(qid: str) -> None:
+    for _ in range(300):
         raw = subprocess.check_output(
             ["aws", "athena", "get-query-execution", "--region", REGION, "--query-execution-id", qid],
             text=True,
@@ -52,26 +51,19 @@ def wait_done(qid: str) -> None:
     raise TimeoutError(qid)
 
 
-def split_sql(sql: str) -> list[str]:
-    parts = re.split(r";\s*\n", sql.strip())
-    out: list[str] = []
-    for p in parts:
-        p = p.strip()
-        if not p or p.startswith("--"):
-            continue
-        out.append(p.rstrip(";") + ";")
-    return out
-
-
 def main() -> int:
-    body = DDL.read_text(encoding="utf-8").replace("BUCKET", BUCKET)
-    stmts = split_sql(body)
-    for i, s in enumerate(stmts, 1):
-        print(f"Running {i}/{len(stmts)}...", flush=True)
-        qid = run_sql(s)
-        wait_done(qid)
-        print(f"  OK {qid}", flush=True)
-    print("ALL_OK", flush=True)
+    path = ROOT / "infra" / "aws" / "athena" / "analytics_v2_adzuna_funnel_helper.sql"
+    sql = path.read_text(encoding="utf-8")
+    lines = []
+    for line in sql.splitlines():
+        if lines or line.strip().startswith("CREATE"):
+            lines.append(line)
+    stmt = "\n".join(lines).strip()
+    print("Deploying funnel view...", file=sys.stderr)
+    qid = run_sql(stmt)
+    wait(qid)
+    print(f"  OK {qid}", file=sys.stderr)
+    print("ALL_OK", file=sys.stderr)
     return 0
 
 

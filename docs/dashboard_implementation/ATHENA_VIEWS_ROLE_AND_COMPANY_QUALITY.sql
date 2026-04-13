@@ -1,7 +1,7 @@
 -- =============================================================================
 -- ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql
 -- Additive views for Sheet 1 readability (does NOT replace existing jmi_analytics views).
--- Run in same region/account as jmi_gold after base ATHENA_VIEWS.sql (needs latest_pipeline_run).
+-- Run in same region/account as jmi_gold after base ATHENA_VIEWS.sql (uses jmi_gold.latest_run_metadata for run_id).
 -- Engine: Athena engine 3 (Trino SQL).
 -- Gold partition projection: every scan on projected tables must filter `posted_month`
 -- within `projection.posted_month.range` (see infra/aws/athena/ddl_gold_*.sql), same as ATHENA_VIEWS.sql.
@@ -13,7 +13,7 @@
 
 CREATE OR REPLACE VIEW jmi_analytics.role_title_classified AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+    SELECT run_id FROM jmi_gold.latest_run_metadata LIMIT 1
 ),
 base AS (
     SELECT
@@ -123,7 +123,7 @@ SELECT
 FROM classified;
 
 -- -----------------------------------------------------------------------------
--- 1) role_group_demand_monthly — Postings by role family
+-- role_group_demand_monthly — Postings by role family
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.role_group_demand_monthly AS
@@ -136,53 +136,12 @@ FROM jmi_analytics.role_title_classified
 GROUP BY posted_month, run_id, normalized_role_group;
 
 -- -----------------------------------------------------------------------------
--- 2) role_group_top20 — Top 20 families by postings
---     One row per (run_id, role_group): sums all posted_month for latest run only.
---     (Partitioning only by month+run duplicated the same family across months.)
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW jmi_analytics.role_group_top20 AS
-WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
-),
-agg AS (
-    SELECT
-        r.run_id,
-        r.role_group,
-        SUM(r.job_count) AS job_count,
-        MAX(r.posted_month) AS posted_month
-    FROM jmi_analytics.role_group_demand_monthly r
-    INNER JOIN lr ON r.run_id = lr.run_id
-    GROUP BY r.run_id, r.role_group
-),
-ranked AS (
-    SELECT
-        posted_month,
-        run_id,
-        role_group,
-        job_count,
-        ROW_NUMBER() OVER (
-            PARTITION BY run_id
-            ORDER BY job_count DESC, role_group ASC
-        ) AS pareto_rank
-    FROM agg
-)
-SELECT
-    posted_month,
-    run_id,
-    role_group,
-    job_count,
-    pareto_rank
-FROM ranked
-WHERE pareto_rank <= 20;
-
--- -----------------------------------------------------------------------------
--- 3) role_group_pareto — Pareto over role families (latest run; all months summed)
+-- role_group_pareto — Pareto over role families (latest run; all months summed)
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.role_group_pareto AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+    SELECT run_id FROM jmi_gold.latest_run_metadata LIMIT 1
 ),
 agg AS (
     SELECT
@@ -235,7 +194,7 @@ INNER JOIN totals t ON g.run_id = t.run_id;
 
 CREATE OR REPLACE VIEW jmi_analytics.company_top15_other_clean AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+    SELECT run_id FROM jmi_gold.latest_run_metadata LIMIT 1
 ),
 cleaned AS (
     SELECT

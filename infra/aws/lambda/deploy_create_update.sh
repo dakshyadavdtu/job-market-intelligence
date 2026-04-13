@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Zip-based Lambda deploy. Use ONLY when functions use PackageType Zip.
+# Current production functions are container images — use deploy_ecr_create_update.sh instead.
 set -euo pipefail
 
 AWS_REGION="ap-south-1"
@@ -11,6 +13,16 @@ ZIP_PATH="infra/aws/lambda/dist/jmi-lambda.zip"
 INGEST_FN="jmi-ingest-live"
 SILVER_FN="jmi-transform-silver"
 GOLD_FN="jmi-transform-gold"
+
+for fn in "$INGEST_FN" "$SILVER_FN" "$GOLD_FN"; do
+  pkg=$(aws lambda get-function-configuration --function-name "$fn" --region "$AWS_REGION" --query 'PackageType' --output text 2>/dev/null || echo "Missing")
+  if [[ "$pkg" == "Image" ]]; then
+    echo "ERROR: $fn uses PackageType Image. Zip deploy is invalid for this function." >&2
+    echo "Build and deploy with: ./infra/aws/lambda/deploy_ecr_create_update.sh <tag>" >&2
+    echo "See infra/aws/lambda/README.md" >&2
+    exit 1
+  fi
+done
 
 create_or_update_function () {
   local fn_name="$1"

@@ -15,26 +15,27 @@ from datetime import datetime, timezone
 
 from src.jmi.config import AppConfig, new_run_id
 from src.jmi.connectors import adzuna
-from src.jmi.pipelines.ingest_live import _select_jobs_for_bronze
+from src.jmi.pipelines.bronze_incremental import (
+    load_incremental_connector_state,
+    next_fetch_watermark_epoch,
+    persist_incremental_connector_ok,
+    select_jobs_for_bronze,
+)
 from src.jmi.utils.io import ensure_dir, write_jsonl_gz
-from src.jmi.utils.source_state import ConnectorState, load_connector_state, save_connector_state
 
 
 def run() -> dict:
     adzuna._bootstrap_env()
     cfg = replace(AppConfig(), source_name=adzuna.ADZUNA_SOURCE_SLUG)
-    ensure_dir(cfg.state_root / f"source={cfg.source_name}")
-
-    state = load_connector_state(cfg)
+    state = load_incremental_connector_state(cfg)
     run_id = new_run_id()
     ingest_date = datetime.now(timezone.utc).date().isoformat()
     batch_created_at = datetime.now(timezone.utc).isoformat()
 
-    # India: incremental via client-side watermark on ISO `created` (no Arbeitnow min_created_at API).
-    incremental_strategy = "fallback_lookback"
+    incremental_strategy = cfg.incremental_strategy_effective()
 
     raw_jobs, fetch_meta = adzuna.fetch_all_jobs_india()
-    jobs_to_land, filter_diag = _select_jobs_for_bronze(
+    jobs_to_land, filter_diag = select_jobs_for_bronze(
         cfg, state, raw_jobs, incremental_strategy, adzuna.job_created_at_ts
     )
 
@@ -55,8 +56,7 @@ def run() -> dict:
     )
     write_jsonl_gz(out_path, bronze_records)
 
-    ts_list = [adzuna.job_created_at_ts(j) for j in raw_jobs]
-    new_watermark = max(ts_list) if ts_list else 0
+    new_watermark = next_fetch_watermark_epoch(raw_jobs, adzuna.job_created_at_ts)
 
     manifest = {
         "source": cfg.source_name,
@@ -93,16 +93,13 @@ def run() -> dict:
         encoding="utf-8",
     )
 
-    updated = ConnectorState(
-        source_name=cfg.source_name,
-        last_successful_run_id=run_id,
-        last_successful_run_at=batch_created_at,
-        fetch_watermark_created_at=new_watermark,
-        fallback_lookback_hours=cfg.incremental_lookback_hours,
-        last_status="ok",
+    state_path = persist_incremental_connector_ok(
+        cfg,
+        run_id=run_id,
+        batch_created_at=batch_created_at,
         incremental_strategy=incremental_strategy,
+        fetch_watermark_created_at=new_watermark,
     )
-    state_path = save_connector_state(cfg, updated)
 
     return {
         "run_id": run_id,

@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 DATA_GOLD = Path("data/gold")
+DATA_GOLD_LEGACY = Path("data/gold_legacy")
 COMPARISON_TOTALS = Path("data/derived/comparison/posted_month_source_totals/part-00001.parquet")
 HEALTH_ARBEITNOW = Path("data/health/latest_ingest.json")
 HEALTH_ADZUNA = Path("data/health/latest_ingest_adzuna_in.json")
@@ -47,23 +48,38 @@ def _month_key_from_path(path: Path) -> str | None:
     return None
 
 
-def _list_fact_paths(table: str, source: str, run_id: str | None) -> tuple[list[Path], str]:
-    """Return (paths, grain_label) where grain is posted_month or ingest_month (legacy)."""
-    root = _gold_source_root(table, source)
+def _glob_posted_month_parts(root: Path, run_id: str | None) -> list[Path]:
     if not root.exists():
-        return [], "posted_month"
+        return []
     if run_id:
         pm = sorted(root.glob(f"posted_month=*/run_id={run_id}/part-*.parquet"))
         if pm:
-            return pm, "posted_month"
+            return pm
+    return sorted(root.glob("posted_month=*/run_id=*/part-*.parquet"))
+
+
+def _glob_legacy_ingest_parts(table: str, source: str, run_id: str | None) -> list[Path]:
+    """Local mirror of archived s3 gold_legacy/<table>/... ingest_month=... (optional)."""
+    root = DATA_GOLD_LEGACY / table / f"source={source}"
+    if not root.exists():
+        return []
+    if run_id:
         im = sorted(root.glob(f"ingest_month=*/run_id={run_id}/part-*.parquet"))
         if im:
-            return im, "ingest_month"
-    pm2 = sorted(root.glob("posted_month=*/run_id=*/part-*.parquet"))
-    if pm2:
-        return pm2, "posted_month"
-    im2 = sorted(root.glob("ingest_month=*/run_id=*/part-*.parquet"))
-    return im2, "ingest_month"
+            return im
+    return sorted(root.glob("ingest_month=*/run_id=*/part-*.parquet"))
+
+
+def _list_fact_paths(table: str, source: str, run_id: str | None) -> tuple[list[Path], str]:
+    """Active Gold uses posted_month= under data/gold/...; ingest_month only under data/gold_legacy/..."""
+    root = _gold_source_root(table, source)
+    paths = _glob_posted_month_parts(root, run_id)
+    if paths:
+        return paths, "posted_month"
+    leg = _glob_legacy_ingest_parts(table, source, run_id)
+    if leg:
+        return leg, "ingest_month (gold_legacy)"
+    return [], "posted_month"
 
 
 def _pick_parquet_for_month(paths: list[Path], posted_month: str) -> Path | None:
@@ -413,7 +429,7 @@ posted_month_sel = st.sidebar.selectbox(
     index=0,
     help="Counts are aggregated by the calendar month of **posted_at** in Silver (not pipeline ingest date).",
 )
-st.sidebar.caption(f"Partition key in paths: **{grain}** (legacy layouts may still use ingest_month).")
+st.sidebar.caption(f"Partition key in paths: **{grain}**.")
 
 path_skill = _pick_parquet_for_month(paths_skill, posted_month_sel)
 paths_role, _ = _list_fact_paths("role_demand_monthly", analysis_mode, rid)

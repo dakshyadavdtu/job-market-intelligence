@@ -117,6 +117,16 @@ def main() -> int:
         qid = run_athena_sql(sql, region=args.region, workgroup=args.workgroup, database=db)
         wait_done(qid, args.region)
         print(f"  OK {qid}", file=sys.stderr)
+    obsolete_cmp = [
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_source_skill_mix",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_radar_profile_dual",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_waterfall_benchmark_proxy",
+    ]
+    for j, stmt in enumerate(obsolete_cmp):
+        print(f"Running obsolete comparison drop {j+1}/{len(obsolete_cmp)}...", file=sys.stderr)
+        qid = run_athena_sql(stmt, region=args.region, workgroup=args.workgroup, database="jmi_analytics_v2")
+        wait_done(qid, args.region)
+        print(f"  OK {qid}", file=sys.stderr)
     print("ALL_OK", file=sys.stderr)
     return 0
 

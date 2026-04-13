@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke tests for jmi_analytics_v2 comparison helper views only."""
+"""Smoke tests for jmi_analytics_v2 comparison helper view (minimal v2_cmp_* only)."""
 from __future__ import annotations
 
 import json
@@ -13,21 +13,10 @@ OUTPUT = "s3://jmi-dakshyadav-job-market-intelligence/athena-results/"
 DB = "jmi_analytics_v2"
 
 QUERIES: list[tuple[str, str]] = [
-    ("cmp_src_month_ct", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_month_totals"),
-    ("cmp_src_mix_ct", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_skill_mix"),
-    ("cmp_src_hhi_ct", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_month_skill_tag_hhi"),
-    ("cmp_src_top20_ct", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_skill_mix_aligned_top20"),
+    ("cmp_mix_ct", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_cmp_skill_mix_aligned_top20"),
     (
-        "cmp_src_month_sample",
-        "SELECT source, ingest_month, total_postings FROM jmi_analytics_v2.comparison_source_month_totals ORDER BY source, ingest_month LIMIT 6",
-    ),
-    (
-        "cmp_benchmark",
-        "SELECT * FROM jmi_analytics_v2.comparison_benchmark_aligned_month",
-    ),
-    (
-        "cmp_hhi_sample",
-        "SELECT source, ingest_month, skill_tag_hhi FROM jmi_analytics_v2.comparison_source_month_skill_tag_hhi ORDER BY source, ingest_month LIMIT 4",
+        "cmp_mix_sample",
+        "SELECT source, skill, posted_month, skill_tag_count FROM jmi_analytics_v2.v2_cmp_skill_mix_aligned_top20 ORDER BY source, skill LIMIT 8",
     ),
 ]
 

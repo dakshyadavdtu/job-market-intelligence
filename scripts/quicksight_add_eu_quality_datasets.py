@@ -21,7 +21,6 @@ DATA_SOURCE_ARN = (
 
 EXTRA = [
     ("JMI v2 EU — role_group_pareto", "role_group_pareto"),
-    ("JMI v2 EU — role_group_top20", "role_group_top20"),
     ("JMI v2 EU — company_top15_other_clean", "company_top15_other_clean"),
 ]
 

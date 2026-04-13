@@ -1,59 +1,12 @@
 -- =============================================================================
--- ATHENA_VIEWS_ADZUNA.sql — Adzuna-only analytics slice (separate from Arbeitnow latest_pipeline_run)
+-- ATHENA_VIEWS_ADZUNA.sql — Adzuna-only analytics slice (India / Adzuna run_id via latest_run_metadata_adzuna)
 -- Prerequisites: jmi_gold tables + Adzuna run_ids in Glue projection.run_id.values
--- Engine: Athena engine 3. Do not alter jmi_analytics.latest_pipeline_run or jmi_gold.latest_run_metadata.
+-- Engine: Athena engine 3.
 -- =============================================================================
 
 CREATE DATABASE IF NOT EXISTS jmi_analytics;
 
--- -----------------------------------------------------------------------------
--- 0) latest_pipeline_run_adzuna — Newest Adzuna pipeline run (by posted_month, run_id)
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW jmi_analytics.latest_pipeline_run_adzuna AS
-SELECT run_id FROM jmi_gold.latest_run_metadata_adzuna LIMIT 1;
-
-
--- -----------------------------------------------------------------------------
--- Raw-grain + summary — latest Adzuna run only
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW jmi_analytics.skill_demand_monthly_adzuna_latest AS
-WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
-)
-SELECT
-    s.skill,
-    s.job_count,
-    s.source,
-    s.bronze_ingest_date,
-    s.bronze_run_id,
-    s.posted_month,
-    s.run_id
-FROM jmi_gold.skill_demand_monthly s
-INNER JOIN lr ON s.run_id = lr.run_id
-WHERE s.source = 'adzuna_in'
-  AND s.posted_month BETWEEN '2018-01' AND '2035-12';
-
-CREATE OR REPLACE VIEW jmi_analytics.pipeline_run_summary_adzuna_latest AS
-WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
-)
-SELECT
-    p.source,
-    p.bronze_ingest_date,
-    p.bronze_run_id,
-    p.skill_row_count,
-    p.role_row_count,
-    p.location_row_count,
-    p.company_row_count,
-    p.status,
-    p.posted_month,
-    p.run_id
-FROM jmi_gold.pipeline_run_summary p
-INNER JOIN lr ON p.run_id = lr.run_id
-WHERE p.source = 'adzuna_in'
-  AND p.posted_month BETWEEN '2018-01' AND '2035-12';
+-- Raw facts: filter jmi_gold.* by run_id = (SELECT run_id FROM jmi_gold.latest_run_metadata_adzuna LIMIT 1).
 
 -- -----------------------------------------------------------------------------
 -- location_top15_other_adzuna
@@ -61,7 +14,7 @@ WHERE p.source = 'adzuna_in'
 
 CREATE OR REPLACE VIEW jmi_analytics.location_top15_other_adzuna AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
+    SELECT run_id FROM jmi_gold.latest_run_metadata_adzuna LIMIT 1
 ),
 base AS (
     SELECT
@@ -122,7 +75,7 @@ WHERE job_count > 0;
 
 CREATE OR REPLACE VIEW jmi_analytics.role_title_classified_adzuna AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
+    SELECT run_id FROM jmi_gold.latest_run_metadata_adzuna LIMIT 1
 ),
 base AS (
     SELECT
@@ -245,53 +198,12 @@ FROM jmi_analytics.role_title_classified_adzuna
 GROUP BY posted_month, run_id, normalized_role_group;
 
 -- -----------------------------------------------------------------------------
--- 2) role_group_top20_adzuna — Top 20 families by postings
---     One row per (run_id, role_group): sums all posted_month for latest run only.
---     (Partitioning only by month+run duplicated the same family across months.)
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW jmi_analytics.role_group_top20_adzuna AS
-WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
-),
-agg AS (
-    SELECT
-        r.run_id,
-        r.role_group,
-        SUM(r.job_count) AS job_count,
-        MAX(r.posted_month) AS posted_month
-    FROM jmi_analytics.role_group_demand_monthly_adzuna r
-    INNER JOIN lr ON r.run_id = lr.run_id
-    GROUP BY r.run_id, r.role_group
-),
-ranked AS (
-    SELECT
-        posted_month,
-        run_id,
-        role_group,
-        job_count,
-        ROW_NUMBER() OVER (
-            PARTITION BY run_id
-            ORDER BY job_count DESC, role_group ASC
-        ) AS pareto_rank
-    FROM agg
-)
-SELECT
-    posted_month,
-    run_id,
-    role_group,
-    job_count,
-    pareto_rank
-FROM ranked
-WHERE pareto_rank <= 20;
-
--- -----------------------------------------------------------------------------
--- 3) role_group_pareto_adzuna — Pareto over role families (latest run; all months summed)
+-- 2) role_group_pareto_adzuna — Pareto over role families (latest run; all months summed)
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.role_group_pareto_adzuna AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
+    SELECT run_id FROM jmi_gold.latest_run_metadata_adzuna LIMIT 1
 ),
 agg AS (
     SELECT
@@ -344,7 +256,7 @@ INNER JOIN totals t ON g.run_id = t.run_id;
 
 CREATE OR REPLACE VIEW jmi_analytics.company_top15_other_clean_adzuna AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run_adzuna
+    SELECT run_id FROM jmi_gold.latest_run_metadata_adzuna LIMIT 1
 ),
 cleaned AS (
     SELECT
@@ -499,3 +411,283 @@ SELECT
     job_count
 FROM labeled
 WHERE job_count > 0;
+
+-- -----------------------------------------------------------------------------
+-- sheet1_kpis_adzuna — India (adzuna_in) KPI row per (posted_month, run_id)
+--     Latest Adzuna pipeline run only. Mirrors EU sheet1_kpis: totals, location
+--     top-3 share, location HHI, company HHI, top-1 role share.
+--     Also: active_posted_months (distinct months in run), top1_location_share,
+--     distinct_location_buckets, distinct_role_title_buckets, distinct_role_groups.
+--     Plus: distinct_skill_tags, skill_tag_hhi (tag-demand concentration),
+--     unknown_role_group_share (classified titles still in unknown_other).
+--     Remote/hybrid: NOT included — not in Gold; use structural KPIs above instead.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE VIEW jmi_analytics.sheet1_kpis_adzuna AS
+WITH
+lr AS (
+    SELECT run_id FROM jmi_gold.latest_run_metadata_adzuna LIMIT 1
+),
+run_months AS (
+    SELECT
+        r.run_id,
+        CAST(COUNT(DISTINCT r.posted_month) AS BIGINT) AS active_posted_months
+    FROM jmi_gold.role_demand_monthly r
+    INNER JOIN lr ON r.run_id = lr.run_id
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY r.run_id
+),
+role_totals AS (
+    SELECT
+        r.posted_month,
+        r.run_id,
+        SUM(r.job_count) AS total_postings,
+        MAX(r.job_count) AS max_role_job_count
+    FROM jmi_gold.role_demand_monthly r
+    INNER JOIN lr ON r.run_id = lr.run_id
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY r.posted_month, r.run_id
+),
+loc_totals AS (
+    SELECT
+        l.posted_month,
+        l.run_id,
+        SUM(l.job_count) AS located_postings
+    FROM jmi_gold.location_demand_monthly l
+    INNER JOIN lr ON l.run_id = lr.run_id
+    WHERE l.source = 'adzuna_in'
+      AND l.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY l.posted_month, l.run_id
+),
+loc_top3 AS (
+    SELECT
+        posted_month,
+        run_id,
+        SUM(job_count) AS top3_location_job_sum
+    FROM (
+        SELECT
+            l.posted_month,
+            l.run_id,
+            l.job_count,
+            ROW_NUMBER() OVER (
+                PARTITION BY l.posted_month, l.run_id
+                ORDER BY l.job_count DESC, l.location ASC
+            ) AS rn
+        FROM jmi_gold.location_demand_monthly l
+        INNER JOIN lr ON l.run_id = lr.run_id
+        WHERE l.source = 'adzuna_in'
+          AND l.posted_month BETWEEN '2018-01' AND '2035-12'
+    ) x
+    WHERE rn <= 3
+    GROUP BY posted_month, run_id
+),
+loc_max AS (
+    SELECT
+        l.posted_month,
+        l.run_id,
+        MAX(l.job_count) AS max_location_job_count
+    FROM jmi_gold.location_demand_monthly l
+    INNER JOIN lr ON l.run_id = lr.run_id
+    WHERE l.source = 'adzuna_in'
+      AND l.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY l.posted_month, l.run_id
+),
+loc_hhi_calc AS (
+    SELECT
+        l.posted_month,
+        l.run_id,
+        SUM(
+            POWER(
+                CAST(l.job_count AS DOUBLE) / CAST(lt.located_postings AS DOUBLE),
+                2
+            )
+        ) AS location_hhi
+    FROM jmi_gold.location_demand_monthly l
+    INNER JOIN lr ON l.run_id = lr.run_id
+    INNER JOIN loc_totals lt
+        ON l.posted_month = lt.posted_month
+        AND l.run_id = lt.run_id
+    WHERE lt.located_postings > 0
+        AND l.source = 'adzuna_in'
+        AND l.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY l.posted_month, l.run_id
+),
+comp_totals AS (
+    SELECT
+        c.posted_month,
+        c.run_id,
+        SUM(c.job_count) AS company_postings_sum
+    FROM jmi_gold.company_hiring_monthly c
+    INNER JOIN lr ON c.run_id = lr.run_id
+    WHERE c.source = 'adzuna_in'
+      AND c.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY c.posted_month, c.run_id
+),
+comp_hhi_calc AS (
+    SELECT
+        c.posted_month,
+        c.run_id,
+        SUM(
+            POWER(
+                CAST(c.job_count AS DOUBLE) / CAST(ct.company_postings_sum AS DOUBLE),
+                2
+            )
+        ) AS company_hhi
+    FROM jmi_gold.company_hiring_monthly c
+    INNER JOIN lr ON c.run_id = lr.run_id
+    INNER JOIN comp_totals ct
+        ON c.posted_month = ct.posted_month
+        AND c.run_id = ct.run_id
+    WHERE ct.company_postings_sum > 0
+        AND c.source = 'adzuna_in'
+        AND c.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY c.posted_month, c.run_id
+),
+loc_buckets AS (
+    SELECT
+        l.posted_month,
+        l.run_id,
+        CAST(COUNT(*) AS BIGINT) AS distinct_location_buckets
+    FROM jmi_gold.location_demand_monthly l
+    INNER JOIN lr ON l.run_id = lr.run_id
+    WHERE l.source = 'adzuna_in'
+      AND l.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY l.posted_month, l.run_id
+),
+role_title_buckets AS (
+    SELECT
+        r.posted_month,
+        r.run_id,
+        CAST(COUNT(*) AS BIGINT) AS distinct_role_title_buckets
+    FROM jmi_gold.role_demand_monthly r
+    INNER JOIN lr ON r.run_id = lr.run_id
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY r.posted_month, r.run_id
+),
+rg_distinct AS (
+    SELECT
+        rg.posted_month,
+        rg.run_id,
+        CAST(COUNT(DISTINCT rg.role_group) AS BIGINT) AS distinct_role_groups
+    FROM jmi_analytics.role_group_demand_monthly_adzuna rg
+    INNER JOIN lr ON rg.run_id = lr.run_id
+    WHERE rg.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY rg.posted_month, rg.run_id
+),
+skill_tag_totals AS (
+    SELECT
+        s.posted_month,
+        s.run_id,
+        SUM(s.job_count) AS tag_sum_total
+    FROM jmi_gold.skill_demand_monthly s
+    INNER JOIN lr ON s.run_id = lr.run_id
+    WHERE s.source = 'adzuna_in'
+      AND s.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY s.posted_month, s.run_id
+),
+skill_distinct AS (
+    SELECT
+        s.posted_month,
+        s.run_id,
+        CAST(COUNT(DISTINCT s.skill) AS BIGINT) AS distinct_skill_tags
+    FROM jmi_gold.skill_demand_monthly s
+    INNER JOIN lr ON s.run_id = lr.run_id
+    WHERE s.source = 'adzuna_in'
+      AND s.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY s.posted_month, s.run_id
+),
+skill_hhi_calc AS (
+    SELECT
+        s.posted_month,
+        s.run_id,
+        SUM(
+            POWER(
+                CAST(s.job_count AS DOUBLE) / CAST(NULLIF(t.tag_sum_total, 0) AS DOUBLE),
+                2
+            )
+        ) AS skill_tag_hhi
+    FROM jmi_gold.skill_demand_monthly s
+    INNER JOIN lr ON s.run_id = lr.run_id
+    INNER JOIN skill_tag_totals t
+        ON s.posted_month = t.posted_month
+        AND s.run_id = t.run_id
+    WHERE s.source = 'adzuna_in'
+      AND s.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY s.posted_month, s.run_id
+),
+unknown_role AS (
+    SELECT
+        rg.posted_month,
+        rg.run_id,
+        SUM(
+            CASE
+                WHEN rg.role_group = 'unknown_other' THEN rg.job_count
+                ELSE CAST(0 AS BIGINT)
+            END
+        ) AS unknown_role_jobs,
+        SUM(rg.job_count) AS role_group_postings
+    FROM jmi_analytics.role_group_demand_monthly_adzuna rg
+    INNER JOIN lr ON rg.run_id = lr.run_id
+    WHERE rg.posted_month BETWEEN '2018-01' AND '2035-12'
+    GROUP BY rg.posted_month, rg.run_id
+)
+SELECT
+    r.posted_month,
+    r.run_id,
+    rm.active_posted_months,
+    r.total_postings,
+    COALESCE(l.located_postings, CAST(0 AS BIGINT)) AS located_postings,
+    CASE
+        WHEN COALESCE(l.located_postings, 0) > 0
+            THEN CAST(COALESCE(t3.top3_location_job_sum, 0) AS DOUBLE)
+                / CAST(l.located_postings AS DOUBLE)
+        ELSE NULL
+    END AS top3_location_share,
+    CASE
+        WHEN COALESCE(l.located_postings, 0) > 0 AND lm.max_location_job_count IS NOT NULL
+            THEN CAST(lm.max_location_job_count AS DOUBLE) / CAST(l.located_postings AS DOUBLE)
+        ELSE NULL
+    END AS top1_location_share,
+    lh.location_hhi AS location_hhi,
+    ch.company_hhi AS company_hhi,
+    CASE
+        WHEN r.total_postings > 0
+            THEN CAST(r.max_role_job_count AS DOUBLE) / CAST(r.total_postings AS DOUBLE)
+        ELSE NULL
+    END AS top1_role_share,
+    lb.distinct_location_buckets,
+    rtb.distinct_role_title_buckets,
+    rg.distinct_role_groups,
+    sd.distinct_skill_tags,
+    sh.skill_tag_hhi,
+    CASE
+        WHEN COALESCE(ur.role_group_postings, 0) > 0
+            THEN CAST(ur.unknown_role_jobs AS DOUBLE) / CAST(ur.role_group_postings AS DOUBLE)
+        ELSE NULL
+    END AS unknown_role_group_share
+FROM role_totals r
+INNER JOIN run_months rm ON r.run_id = rm.run_id
+LEFT JOIN loc_totals l
+    ON r.posted_month = l.posted_month AND r.run_id = l.run_id
+LEFT JOIN loc_top3 t3
+    ON r.posted_month = t3.posted_month AND r.run_id = t3.run_id
+LEFT JOIN loc_max lm
+    ON r.posted_month = lm.posted_month AND r.run_id = lm.run_id
+LEFT JOIN loc_hhi_calc lh
+    ON r.posted_month = lh.posted_month AND r.run_id = lh.run_id
+LEFT JOIN comp_hhi_calc ch
+    ON r.posted_month = ch.posted_month AND r.run_id = ch.run_id
+LEFT JOIN loc_buckets lb
+    ON r.posted_month = lb.posted_month AND r.run_id = lb.run_id
+LEFT JOIN role_title_buckets rtb
+    ON r.posted_month = rtb.posted_month AND r.run_id = rtb.run_id
+LEFT JOIN rg_distinct rg
+    ON r.posted_month = rg.posted_month AND r.run_id = rg.run_id
+LEFT JOIN skill_distinct sd
+    ON r.posted_month = sd.posted_month AND r.run_id = sd.run_id
+LEFT JOIN skill_hhi_calc sh
+    ON r.posted_month = sh.posted_month AND r.run_id = sh.run_id
+LEFT JOIN unknown_role ur
+    ON r.posted_month = ur.posted_month AND r.run_id = ur.run_id;

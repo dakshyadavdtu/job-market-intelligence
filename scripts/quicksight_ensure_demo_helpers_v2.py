@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Create QuickSight datasets for jmi_analytics_v2 comparison helper views (idempotent by name skip).
-
-Rename in QuickSight to v2_cmp_monthly, v2_cmp_skills, v2_cmp_benchmark — see
-docs/dashboard_implementation/QUICKSIGHT_V2_DATASET_STRATEGY.md
-"""
+"""Create QuickSight datasets for India demo helpers + KPI latest (skip if name exists)."""
 from __future__ import annotations
 
 import json
@@ -15,32 +11,13 @@ from pathlib import Path
 ACCOUNT = "470441577506"
 REGION = "ap-south-1"
 DATABASE = "jmi_analytics_v2"
-# jmi-athena — required for create-data-set in this account (jmi_analytics DS may reject).
 DATA_SOURCE_ARN = (
     "arn:aws:quicksight:ap-south-1:470441577506:datasource/"
-    "6ce05f07-8388-4694-a2bc-af4924dc4700"
+    "5fe598b5-11bf-482b-91ec-cd4be52f4eb4"
 )
 
-# Display name -> Glue view name (must match ATHENA_VIEWS_COMPARISON_V2.sql)
-# Convention: v2 - CMP - <view> — see docs/dashboard_implementation/QUICKSIGHT_V1_V2_NAMING.md
-DATASETS: list[tuple[str, str]] = [
-    ("v2 - CMP - comparison_source_month_totals", "comparison_source_month_totals"),
-    (
-        "v2 - CMP - comparison_strict_intersection_month_totals",
-        "comparison_strict_intersection_month_totals",
-    ),
-    ("v2 - CMP - comparison_time_window_policy", "comparison_time_window_policy"),
-    ("v2 - CMP - comparison_march_strict_status", "comparison_march_strict_status"),
-    (
-        "v2 - CMP - comparison_source_skill_mix_aligned_top20",
-        "comparison_source_skill_mix_aligned_top20",
-    ),
-    (
-        "v2 - CMP - comparison_benchmark_aligned_month",
-        "comparison_benchmark_aligned_month",
-    ),
-    ("v2_cmp_hhi_timeseries", "comparison_source_month_skill_tag_hhi"),
-]
+# Demo helper views removed from Athena; use jmi_gold_v2 + sheet1_kpis_adzuna in QS instead.
+DATASETS: list[tuple[str, str]] = []
 
 
 def glue_to_qs_type(glue_type: str) -> str:
@@ -124,7 +101,7 @@ def create_dataset(display_name: str, view: str) -> dict:
         },
         "ImportMode": "DIRECT_QUERY",
     }
-    path = f"/tmp/qs_cmp_{view}.json"
+    path = f"/tmp/qs_demo_{view}.json"
     Path(path).write_text(json.dumps(payload), encoding="utf-8")
     subprocess.check_call(
         [
@@ -167,13 +144,14 @@ def main() -> int:
             print(f"SKIP exists: {display_name}", file=sys.stderr)
             results.append({"Name": display_name, "View": view, "Arn": ex, "skipped": True})
             continue
-        print(f"Creating {display_name}...", file=sys.stderr)
-        r = create_dataset(display_name, view)
+        print(f"Creating {display_name} -> {view}...", file=sys.stderr)
+        try:
+            r = create_dataset(display_name, view)
+        except subprocess.CalledProcessError as e:
+            print(f"FAIL {display_name}: {e}", file=sys.stderr)
+            return 1
         results.append(r)
         print(json.dumps(r), file=sys.stderr)
-    Path("/tmp/quicksight_comparison_v2_datasets.json").write_text(
-        json.dumps(results, indent=2), encoding="utf-8"
-    )
     print(json.dumps(results, indent=2))
     return 0
 

@@ -138,7 +138,7 @@ def _replace_stale_catalog_strings(obj: Any) -> int:
                 if "jmi_analytics.role_group_top20" in v:
                     obj[k] = v.replace(
                         "jmi_analytics.role_group_top20",
-                        "jmi_analytics_v2.role_group_top20",
+                        "jmi_analytics_v2.role_group_pareto",
                     )
                     n += 1
             else:

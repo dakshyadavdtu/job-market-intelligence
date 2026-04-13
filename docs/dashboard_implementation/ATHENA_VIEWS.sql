@@ -23,54 +23,8 @@
 
 CREATE DATABASE IF NOT EXISTS jmi_analytics;
 
--- -----------------------------------------------------------------------------
--- 0) latest_pipeline_run — Single-row helper (newest Gold pipeline run_id)
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW jmi_analytics.latest_pipeline_run AS
-SELECT run_id FROM jmi_gold.latest_run_metadata LIMIT 1;
-
--- -----------------------------------------------------------------------------
--- 0b) Raw-grain helpers — Same columns as jmi_gold tables, latest run_id only
---      (use for QuickSight datasets that previously pointed at jmi_gold.* directly.)
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW jmi_analytics.skill_demand_monthly_latest AS
-WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
-)
-SELECT
-    s.skill,
-    s.job_count,
-    s.source,
-    s.bronze_ingest_date,
-    s.bronze_run_id,
-    s.posted_month,
-    s.run_id
-FROM jmi_gold.skill_demand_monthly s
-INNER JOIN lr ON s.run_id = lr.run_id
-WHERE s.source = 'arbeitnow'
-  AND s.posted_month BETWEEN '2018-01' AND '2035-12';
-
-CREATE OR REPLACE VIEW jmi_analytics.pipeline_run_summary_latest AS
-WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
-)
-SELECT
-    p.source,
-    p.bronze_ingest_date,
-    p.bronze_run_id,
-    p.skill_row_count,
-    p.role_row_count,
-    p.location_row_count,
-    p.company_row_count,
-    p.status,
-    p.posted_month,
-    p.run_id
-FROM jmi_gold.pipeline_run_summary p
-INNER JOIN lr ON p.run_id = lr.run_id
-WHERE p.source = 'arbeitnow'
-  AND p.posted_month BETWEEN '2018-01' AND '2035-12';
+-- Latest EU run_id: use jmi_gold.latest_run_metadata directly (no thin wrapper view).
+-- Raw-grain facts: query jmi_gold.* with WHERE run_id = (SELECT run_id FROM jmi_gold.latest_run_metadata LIMIT 1).
 
 -- -----------------------------------------------------------------------------
 -- 1) sheet1_kpis — One row per (posted_month, run_id) with all six KPI fields
@@ -80,7 +34,7 @@ WHERE p.source = 'arbeitnow'
 CREATE OR REPLACE VIEW jmi_analytics.sheet1_kpis AS
 WITH
 lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+    SELECT run_id FROM jmi_gold.latest_run_metadata LIMIT 1
 ),
 role_totals AS (
     SELECT
@@ -215,7 +169,7 @@ LEFT JOIN comp_hhi_calc ch
 
 CREATE OR REPLACE VIEW jmi_analytics.location_top15_other AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+    SELECT run_id FROM jmi_gold.latest_run_metadata LIMIT 1
 ),
 base AS (
     SELECT
@@ -275,61 +229,12 @@ FROM rolled
 WHERE job_count > 0;
 
 -- -----------------------------------------------------------------------------
--- 3) company_top12_other — Top 12 companies + Other
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW jmi_analytics.company_top12_other AS
-WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
-),
-ranked AS (
-    SELECT
-        c.posted_month,
-        c.run_id,
-        c.company_name,
-        c.job_count,
-        ROW_NUMBER() OVER (
-            PARTITION BY c.posted_month, c.run_id
-            ORDER BY c.job_count DESC, c.company_name ASC
-        ) AS rn
-    FROM jmi_gold.company_hiring_monthly c
-    INNER JOIN lr ON c.run_id = lr.run_id
-    WHERE c.source = 'arbeitnow'
-      AND c.posted_month BETWEEN '2018-01' AND '2035-12'
-),
-rolled AS (
-    SELECT
-        posted_month,
-        run_id,
-        CASE
-            WHEN rn <= 12 THEN company_name
-            ELSE 'Other'
-        END AS company_label,
-        SUM(job_count) AS job_count
-    FROM ranked
-    GROUP BY
-        posted_month,
-        run_id,
-        CASE
-            WHEN rn <= 12 THEN company_name
-            ELSE 'Other'
-        END
-)
-SELECT
-    posted_month,
-    run_id,
-    company_label,
-    job_count
-FROM rolled
-WHERE job_count > 0;
-
--- -----------------------------------------------------------------------------
--- 4) role_pareto — Full role set with pareto_rank, share, cumulative %
+-- 3) role_pareto — Full role set with pareto_rank, share, cumulative %
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics.role_pareto AS
 WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
+    SELECT run_id FROM jmi_gold.latest_run_metadata LIMIT 1
 ),
 totals AS (
     SELECT
@@ -373,48 +278,16 @@ INNER JOIN totals t
 WHERE r.source = 'arbeitnow'
       AND r.posted_month BETWEEN '2018-01' AND '2035-12';
 
--- -----------------------------------------------------------------------------
--- 5) role_top20 — Support table for Sheet 1 (top 20 by postings)
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW jmi_analytics.role_top20 AS
-WITH lr AS (
-    SELECT run_id FROM jmi_analytics.latest_pipeline_run
-),
-ranked AS (
-    SELECT
-        r.posted_month,
-        r.run_id,
-        r.role,
-        r.job_count,
-        ROW_NUMBER() OVER (
-            PARTITION BY r.posted_month, r.run_id
-            ORDER BY r.job_count DESC, r.role ASC
-        ) AS pareto_rank
-    FROM jmi_gold.role_demand_monthly r
-    INNER JOIN lr ON r.run_id = lr.run_id
-    WHERE r.source = 'arbeitnow'
-      AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-)
-SELECT
-    posted_month,
-    run_id,
-    role,
-    job_count,
-    pareto_rank
-FROM ranked
-WHERE pareto_rank <= 20;
-
 -- =============================================================================
 -- NOTES (schema assumptions)
 -- =============================================================================
 -- 1) If your Glue/Athena table names differ, replace `jmi_gold` prefix only.
 -- 2) Gold tables use partition projection in repo DDL; queries must filter both
---    `run_id` (via latest_pipeline_run join) and `posted_month` within the DDL
+--    `run_id` (via latest_run_metadata or explicit run_id filter) and `posted_month` within the DDL
 --    projection range — otherwise Athena may scan no paths. New S3 prefixes under
 --    the configured month/run_id template are visible without MSCK REPAIR.
 -- 3) latest_run_metadata is a single overwritten Parquet file; no MSCK. Run the Gold
---    transform so the file exists before relying on latest_pipeline_run.
+--    transform so the file exists before relying on latest_run_metadata.
 -- 4) `location_hhi` / `company_hhi`: when located_postings = 0 or
 --    company_postings_sum = 0, the INNER JOIN in loc_hhi_calc / comp_hhi_calc
 --    yields no row; sheet1_kpis LEFT JOINs those CTEs so KPI columns are NULL.

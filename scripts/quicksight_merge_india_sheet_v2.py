@@ -190,10 +190,10 @@ def merge_india_sheet(defn: Dict[str, Any]) -> Dict[str, Any]:
     v_role = _clone_visual(
         role_t,
         k_role,
-        {"role_group_top20": "in_role_top20"},
+        {"role_group_top20": "in_role_pareto"},
         vid_role,
         "<visual-title>Top role families (India)</visual-title>",
-        "<visual-subtitle>Grouped role categories from classified titles (Adzuna India).</visual-subtitle>",
+        "<visual-subtitle>Grouped role categories from classified titles (Adzuna India). Filter pareto_rank ≤ 20 if needed.</visual-subtitle>",
     )
 
     # Company: clone location bar → company_label on in_company
