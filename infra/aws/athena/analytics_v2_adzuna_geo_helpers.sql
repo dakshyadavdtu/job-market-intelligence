@@ -117,21 +117,33 @@ st AS (
 SELECT * FROM st;
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_in_geo_state_monthly AS
+WITH agg AS (
+  SELECT
+    source,
+    posted_month,
+    max(bronze_run_id) AS latest_bronze_run_id,
+    india_state_name AS state_name,
+    array_join(
+      transform(
+        split(replace(india_state_name, '_', ' '), ' '),
+        w -> concat(upper(substr(w, 1, 1)), substr(w, 2))
+      ),
+      ' '
+    ) AS state_name_display,
+    CAST(COUNT(*) AS bigint) AS job_count
+  FROM jmi_analytics_v2.v2_in_geo_location_rules
+  GROUP BY source, posted_month, india_state_name
+)
 SELECT
   source,
   posted_month,
-  max(bronze_run_id) AS latest_bronze_run_id,
-  india_state_name AS state_name,
-  array_join(
-    transform(
-      split(replace(india_state_name, '_', ' '), ' '),
-      w -> concat(upper(substr(w, 1, 1)), substr(w, 2))
-    ),
-    ' '
-  ) AS state_name_display,
-  COUNT(*) AS job_count
-FROM jmi_analytics_v2.v2_in_geo_location_rules
-GROUP BY source, posted_month, india_state_name;
+  latest_bronze_run_id,
+  CAST(state_name AS varchar) AS state_name,
+  CAST(state_name_display AS varchar) AS state_name_display,
+  CAST(TRIM(state_name_display) AS varchar) AS state_geo,
+  CAST('India' AS varchar) AS country,
+  job_count
+FROM agg;
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_in_geo_city_points_monthly AS
 WITH ruled AS (
@@ -225,10 +237,10 @@ SELECT
   lower(trim(city_label)) AS city_key,
   trim(city_label) AS city_label_display,
   india_state_name AS state_name,
-  approx_lat,
-  approx_lon,
+  CAST(approx_lat AS double) AS latitude,
+  CAST(approx_lon AS double) AS longitude,
   max(CAST('approximate_centroid_2dp' AS varchar)) AS geocode_method,
-  COUNT(*) AS job_count
+  CAST(COUNT(*) AS bigint) AS job_count
 FROM latlon
 WHERE city_label IS NOT NULL
   AND approx_lat IS NOT NULL
