@@ -1,9 +1,16 @@
 name: JMI Lambda ECR deploy
 
-# Requires repo secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (or switch to OIDC).
-# Run manually from Actions after secrets are set; avoids failing checks on every push.
+# Cloud path for Docker/ECR when local Docker is unavailable (ubuntu runner has working Docker).
+# Requires repo secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (IAM: ecr push + lambda update).
+# AWS CloudShell does not support Docker — use this workflow or AWS CodeBuild (infra/aws/lambda/codebuild/buildspec.yml).
+
 on:
   workflow_dispatch:
+    inputs:
+      image_tag_suffix:
+        description: "Optional extra suffix for the ECR tag (appended after SHA)"
+        required: false
+        default: ""
 
 env:
   AWS_REGION: ap-south-1
@@ -29,57 +36,17 @@ jobs:
 
       - name: Build image, push, update Lambdas
         env:
-          TAG: v20-${{ github.sha }}
+          SUFFIX: ${{ github.event.inputs.image_tag_suffix }}
         run: |
           set -euo pipefail
           REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          TAG="v20-${GITHUB_SHA}"
+          if [ -n "${SUFFIX:-}" ]; then TAG="${TAG}-${SUFFIX}"; fi
           IMAGE_URI="${REGISTRY}/${ECR_REPO}:${TAG}"
           docker build --platform linux/amd64 -f infra/aws/lambda/Dockerfile -t "${ECR_REPO}:${TAG}" .
           docker tag "${ECR_REPO}:${TAG}" "$IMAGE_URI"
           docker push "$IMAGE_URI"
-
-          wait_ready() {
-            local fn="$1"
-            local i
-            for i in $(seq 1 60); do
-              st=$(aws lambda get-function-configuration --function-name "$fn" --region "$AWS_REGION" --query 'LastUpdateStatus' --output text 2>/dev/null || echo Unknown)
-              if [ "$st" = "Successful" ]; then return 0; fi
-              sleep 2
-            done
-            echo "Timeout waiting for $fn" >&2
-            return 1
-          }
-
-          update_fn() {
-            local fn="$1" cmd="$2" timeout="$3" memory="$4"
-            aws lambda update-function-code --function-name "$fn" --image-uri "$IMAGE_URI" --region "$AWS_REGION" >/dev/null
-            wait_ready "$fn"
-            local ic
-            ic=$(printf '{"Command":["%s"]}' "$cmd")
-            aws lambda update-function-configuration --function-name "$fn" \
-              --image-config "$ic" \
-              --timeout "$timeout" --memory-size "$memory" \
-              --region "$AWS_REGION" >/dev/null
-            wait_ready "$fn"
-          }
-
-          update_fn jmi-ingest-live handlers.ingest_handler.handler 120 512
-          update_fn jmi-transform-silver handlers.silver_handler.handler 180 1024
-          update_fn jmi-transform-gold handlers.gold_handler.handler 180 1024
-
-          aws lambda update-function-configuration --function-name jmi-ingest-live \
-            --environment "Variables={JMI_DATA_ROOT=s3://${BUCKET},JMI_BUCKET=${BUCKET},JMI_SILVER_FUNCTION_NAME=jmi-transform-silver}" \
-            --region "$AWS_REGION" >/dev/null
-          wait_ready jmi-ingest-live
-
-          aws lambda update-function-configuration --function-name jmi-transform-silver \
-            --environment "Variables={JMI_DATA_ROOT=s3://${BUCKET},JMI_BUCKET=${BUCKET},JMI_GOLD_FUNCTION_NAME=jmi-transform-gold}" \
-            --region "$AWS_REGION" >/dev/null
-          wait_ready jmi-transform-silver
-
-          aws lambda update-function-configuration --function-name jmi-transform-gold \
-            --environment "Variables={JMI_DATA_ROOT=s3://${BUCKET},JMI_BUCKET=${BUCKET}}" \
-            --region "$AWS_REGION" >/dev/null
-          wait_ready jmi-transform-gold
-
+          chmod +x infra/aws/lambda/update_lambdas_from_image_uri.sh
+          export BUCKET_NAME="${BUCKET}"
+          ./infra/aws/lambda/update_lambdas_from_image_uri.sh "$IMAGE_URI"
           echo "IMAGE_URI=$IMAGE_URI"

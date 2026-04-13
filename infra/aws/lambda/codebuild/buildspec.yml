@@ -1,0 +1,33 @@
+# AWS CodeBuild: build/push ECR image and update Lambdas (Docker runs in CodeBuild, not on your laptop).
+# Create a CodeBuild project with:
+#   - Source: this GitHub repo (or S3 zip)
+#   - Environment: aws/codebuild/standard:7.0, privileged=true (required for docker build)
+#   - Env vars: ACCOUNT_ID=470441577506, ECR_REPO=jmi-lambda, IMAGE_TAG=v20-codebuild (or unique)
+#   - Buildspec: infra/aws/lambda/codebuild/buildspec.yml
+# AWS CloudShell does not support Docker; use CodeBuild or GitHub Actions instead.
+
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  pre_build:
+    commands:
+      - echo "ECR login $ACCOUNT_ID"
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
+  build:
+    commands:
+      - export IMAGE_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
+      - docker build --platform linux/amd64 -f infra/aws/lambda/Dockerfile -t "${ECR_REPO}:${IMAGE_TAG}" .
+      - docker tag "${ECR_REPO}:${IMAGE_TAG}" "$IMAGE_URI"
+      - docker push "$IMAGE_URI"
+  post_build:
+    commands:
+      - export IMAGE_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
+      - chmod +x infra/aws/lambda/update_lambdas_from_image_uri.sh
+      - export BUCKET_NAME="${BUCKET_NAME:-jmi-dakshyadav-job-market-intelligence}"
+      - ./infra/aws/lambda/update_lambdas_from_image_uri.sh "$IMAGE_URI"
+
+artifacts:
+  files: []
