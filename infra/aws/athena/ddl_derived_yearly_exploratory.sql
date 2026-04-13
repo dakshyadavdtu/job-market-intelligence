@@ -1,9 +1,9 @@
--- Exploratory calendar-year rollup (latest Gold run per source; not strict-intersection aligned).
--- Replace BUCKET with JMI_BUCKET when deploying.
+-- Materialized yearly exploratory rollup: EXTERNAL TABLEs in jmi_gold_v2 (Gold-level).
+-- VIEWs in jmi_analytics_v2 for dashboard access (analytics stays view-only).
 
-CREATE DATABASE IF NOT EXISTS jmi_analytics_v2;
+CREATE DATABASE IF NOT EXISTS jmi_gold_v2;
 
-CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_yearly_exploratory_manifest (
+CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_yearly_exploratory_manifest (
   layer_scope string,
   exploratory_only boolean,
   distinct_calendar_years_union_csv string,
@@ -16,7 +16,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_yearly_exploratory_
 STORED AS PARQUET
 LOCATION 's3://BUCKET/derived/comparison/yearly/manifest/';
 
-CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_yearly_exploratory_source_year_totals (
+CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_yearly_exploratory_source_year_totals (
   source string,
   calendar_year bigint,
   total_postings bigint,
@@ -29,3 +29,13 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_yearly_exploratory_
 )
 STORED AS PARQUET
 LOCATION 's3://BUCKET/derived/comparison/yearly/exploratory_source_year_totals/';
+
+-- Analytics views (jmi_analytics_v2 = views only)
+
+CREATE DATABASE IF NOT EXISTS jmi_analytics_v2;
+
+CREATE OR REPLACE VIEW jmi_analytics_v2.v2_yearly_exploratory_manifest AS
+SELECT * FROM jmi_gold_v2.derived_yearly_exploratory_manifest;
+
+CREATE OR REPLACE VIEW jmi_analytics_v2.v2_yearly_exploratory_source_year_totals AS
+SELECT * FROM jmi_gold_v2.derived_yearly_exploratory_source_year_totals;

@@ -134,7 +134,7 @@ def run_derived_march_strict(cfg: AppConfig | None = None) -> dict:
     paths_written: dict[str, str] = {}
     for label, df, dest_fn in (
         ("manifest", manifest, derived_march_strict_manifest_parquet),
-        ("month_totals", month_totals, derived_march_strict_month_totals),
+        ("month_totals", month_totals, derived_march_strict_month_totals_parquet),
         ("benchmark_summary", bench, derived_march_strict_benchmark_summary_parquet),
         ("skill_mix", skill_out, derived_march_strict_skill_mix_parquet),
         ("role_mix", role_out, derived_march_strict_role_mix_parquet),

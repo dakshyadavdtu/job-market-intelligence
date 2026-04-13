@@ -1,9 +1,9 @@
--- Physical materialized strict common month layer (Parquet under derived/comparison/strict_common_month/).
--- Replace BUCKET placeholder or set JMI_BUCKET when deploying.
+-- Materialized strict common month layer: EXTERNAL TABLEs in jmi_gold_v2 (Gold-level).
+-- VIEWs in jmi_analytics_v2 for dashboard access (analytics stays view-only).
 
-CREATE DATABASE IF NOT EXISTS jmi_analytics_v2;
+CREATE DATABASE IF NOT EXISTS jmi_gold_v2;
 
-CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_strict_common_manifest (
+CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_manifest (
   layer_scope string,
   run_id_arbeitnow string,
   run_id_adzuna_in string,
@@ -16,7 +16,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_strict_common_manif
 STORED AS PARQUET
 LOCATION 's3://BUCKET/derived/comparison/strict_common_month/manifest/';
 
-CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_strict_common_month_totals (
+CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_month_totals (
   source string,
   posted_month string,
   run_id string,
@@ -26,7 +26,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_strict_common_month
 STORED AS PARQUET
 LOCATION 's3://BUCKET/derived/comparison/strict_common_month/month_totals/';
 
-CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_strict_common_benchmark_summary (
+CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_benchmark_summary (
   layer_scope string,
   strict_intersection_latest_month string,
   strict_intersection_month_count bigint,
@@ -38,7 +38,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_strict_common_bench
 STORED AS PARQUET
 LOCATION 's3://BUCKET/derived/comparison/strict_common_month/benchmark_summary/';
 
-CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_strict_common_skill_mix (
+CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_skill_mix (
   skill string,
   job_count bigint,
   bronze_ingest_date string,
@@ -52,7 +52,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_strict_common_skill
 STORED AS PARQUET
 LOCATION 's3://BUCKET/derived/comparison/strict_common_month/skill_mix/';
 
-CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_strict_common_role_mix (
+CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold_v2.derived_strict_common_role_mix (
   role string,
   job_count bigint,
   bronze_ingest_date string,
@@ -65,3 +65,22 @@ CREATE EXTERNAL TABLE IF NOT EXISTS jmi_analytics_v2.derived_strict_common_role_
 )
 STORED AS PARQUET
 LOCATION 's3://BUCKET/derived/comparison/strict_common_month/role_mix/';
+
+-- Analytics views (jmi_analytics_v2 = views only)
+
+CREATE DATABASE IF NOT EXISTS jmi_analytics_v2;
+
+CREATE OR REPLACE VIEW jmi_analytics_v2.v2_strict_common_manifest AS
+SELECT * FROM jmi_gold_v2.derived_strict_common_manifest;
+
+CREATE OR REPLACE VIEW jmi_analytics_v2.v2_strict_common_month_totals AS
+SELECT * FROM jmi_gold_v2.derived_strict_common_month_totals;
+
+CREATE OR REPLACE VIEW jmi_analytics_v2.v2_strict_common_benchmark_summary AS
+SELECT * FROM jmi_gold_v2.derived_strict_common_benchmark_summary;
+
+CREATE OR REPLACE VIEW jmi_analytics_v2.v2_strict_common_skill_mix AS
+SELECT * FROM jmi_gold_v2.derived_strict_common_skill_mix;
+
+CREATE OR REPLACE VIEW jmi_analytics_v2.v2_strict_common_role_mix AS
+SELECT * FROM jmi_gold_v2.derived_strict_common_role_mix;

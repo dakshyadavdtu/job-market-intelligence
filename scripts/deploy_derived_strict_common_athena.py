@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Register materialized derived/comparison/strict_common_month Parquet in Athena (jmi_analytics_v2)."""
+"""Register materialized strict_common_month in jmi_gold_v2, add analytics views in jmi_analytics_v2."""
 from __future__ import annotations
 
 import json

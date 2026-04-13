@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Register materialized yearly exploratory in jmi_gold_v2, add analytics views in jmi_analytics_v2."""
+"""Register materialized march_strict in jmi_gold_v2, add analytics views in jmi_analytics_v2."""
 from __future__ import annotations
 
 import json
@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DDL = ROOT / "infra" / "aws" / "athena" / "ddl_derived_yearly_exploratory.sql"
+DDL = ROOT / "infra" / "aws" / "athena" / "ddl_derived_march_strict.sql"
 BUCKET = os.environ.get("JMI_BUCKET", "jmi-dakshyadav-job-market-intelligence").strip() or "jmi-dakshyadav-job-market-intelligence"
 OUTPUT = f"s3://{BUCKET}/athena-results/"
 REGION = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "ap-south-1"
@@ -20,17 +20,10 @@ WORKGROUP = os.environ.get("ATHENA_WORKGROUP", "primary")
 
 def run_sql(sql: str) -> str:
     cmd = [
-        "aws",
-        "athena",
-        "start-query-execution",
-        "--region",
-        REGION,
-        "--work-group",
-        WORKGROUP,
-        "--result-configuration",
-        f"OutputLocation={OUTPUT}",
-        "--query-string",
-        sql,
+        "aws", "athena", "start-query-execution",
+        "--region", REGION, "--work-group", WORKGROUP,
+        "--result-configuration", f"OutputLocation={OUTPUT}",
+        "--query-string", sql,
     ]
     out = subprocess.check_output(cmd, text=True)
     return json.loads(out)["QueryExecutionId"]
