@@ -34,25 +34,26 @@ def _latest_silver_file(cfg: AppConfig) -> Path:
     return files[-1]
 
 
+def _silver_month_span_metrics(df: pd.DataFrame | None) -> tuple[int, int]:
+    if df is None or df.empty:
+        return (0, 0)
+    d = assign_posted_month_and_time_axis(df.copy())
+    d = d[d["posted_month"].astype(str).str.match(r"^\d{4}-\d{2}$", na=False)]
+    if d.empty:
+        return (0, 0)
+    return (int(d["posted_month"].nunique()), int(len(d)))
+
+
 def _resolve_silver_dataframe(
     cfg: AppConfig,
     silver_file: str | None,
     merged_silver_file: str | None,
 ) -> tuple[pd.DataFrame, str]:
-    candidates: list[str] = []
-    if merged_silver_file:
-        candidates.append(merged_silver_file)
-    env_m = os.environ.get("JMI_MERGED_SILVER_FILE")
-    if env_m:
-        candidates.append(env_m)
-    candidates.append(str(_merged_silver_path(cfg)))
-    if silver_file:
-        candidates.append(silver_file)
-    if not cfg.silver_root.is_s3:
-        candidates.append(str(_latest_silver_file(cfg)))
+    """Prefer the broadest Silver snapshot by valid posted_month span (fixes truncated merged/latest)."""
+    from src.jmi.pipelines.transform_silver import load_silver_jobs_history_union
 
     seen: set[str] = set()
-    for c in candidates:
+    for c in (merged_silver_file, os.environ.get("JMI_MERGED_SILVER_FILE")):
         if not c or c in seen:
             continue
         seen.add(c)
@@ -62,6 +63,44 @@ def _resolve_silver_dataframe(
                 return frame, c
         except Exception:
             continue
+
+    merged_path = str(_merged_silver_path(cfg))
+    df_merged: pd.DataFrame | None = None
+    if merged_path not in seen:
+        seen.add(merged_path)
+        try:
+            df_merged = pd.read_parquet(merged_path)
+            if df_merged is None or df_merged.empty:
+                df_merged = None
+        except Exception:
+            df_merged = None
+
+    df_union = load_silver_jobs_history_union(cfg)
+    mm, rm = _silver_month_span_metrics(df_merged)
+    mu, ru = _silver_month_span_metrics(df_union)
+
+    if df_union is not None and not df_union.empty:
+        if df_merged is None or mu > mm or (mu == mm and ru > rm):
+            return df_union, f"<silver_jobs_history_union source={cfg.source_name}>"
+    if df_merged is not None and not df_merged.empty:
+        return df_merged, merged_path
+
+    if silver_file and silver_file not in seen:
+        seen.add(silver_file)
+        try:
+            frame = pd.read_parquet(silver_file)
+            if frame is not None and not frame.empty:
+                return frame, silver_file
+        except Exception:
+            pass
+
+    if not cfg.silver_root.is_s3:
+        latest = str(_latest_silver_file(cfg))
+        if latest not in seen:
+            frame = pd.read_parquet(latest)
+            if frame is not None and not frame.empty:
+                return frame, latest
+
     raise FileNotFoundError("No readable non-empty silver parquet found.")
 
 
@@ -263,8 +302,7 @@ def run(
             }
         )
 
-    # Per-source pointer: gold/source=arbeitnow/latest_run_metadata/ vs gold/source=adzuna_in/latest_run_metadata/
-    # Athena: jmi_gold.latest_run_metadata (EU) and jmi_gold.latest_run_metadata_adzuna (India).
+    # One pointer per source run (paths: gold/source=<slug>/latest_run_metadata/); sources do not overwrite each other.
     latest_meta_path = gold_latest_run_metadata_file(cfg)
     write_parquet(latest_meta_path, pd.DataFrame([{"run_id": prid}]))
 

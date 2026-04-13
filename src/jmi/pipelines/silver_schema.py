@@ -265,19 +265,27 @@ def remote_type_from_arbeitnow_payload(payload: dict[str, Any]) -> str:
 
 
 def posted_at_iso_utc(payload: dict[str, Any]) -> str | None:
+    """Arbeitnow `created_at`: Unix seconds (int/str) or occasional ISO-8601 strings."""
     ts = payload.get("created_at")
     if ts is None:
         return None
     try:
         if isinstance(ts, (int, float)):
             sec = int(ts)
-        else:
-            s = str(ts).strip()
-            if not s or not s.isdigit():
-                return None
+            return datetime.fromtimestamp(sec, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        s = str(ts).strip()
+        if not s:
+            return None
+        if s.isdigit():
             sec = int(s)
-        return datetime.fromtimestamp(sec, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    except (OSError, ValueError, OverflowError):
+            return datetime.fromtimestamp(sec, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    except (OSError, ValueError, OverflowError, TypeError):
         return None
 
 

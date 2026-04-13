@@ -9,9 +9,10 @@ from pathlib import Path
 import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath, split_s3_uri
-from src.jmi.paths import silver_jobs_batch_part, silver_jobs_merged_latest
+from src.jmi.paths import silver_jobs_batch_part, silver_jobs_merged_latest, silver_legacy_flat_jobs_root
 from src.jmi.connectors.adzuna import ADZUNA_SOURCE_SLUG
 from src.jmi.connectors.skill_extract import adzuna_enrich_weak_skills, extract_silver_skills
+from src.jmi.pipelines.gold_time import assign_posted_month_and_time_axis
 from src.jmi.pipelines.silver_schema import (
     adzuna_location_for_silver,
     adzuna_skill_blob_context,
@@ -27,6 +28,17 @@ from src.jmi.pipelines.silver_schema import (
 )
 from src.jmi.utils.io import read_jsonl_gz, write_parquet
 from src.jmi.utils.quality import run_silver_checks
+
+
+def _silver_month_span_metrics(df: pd.DataFrame | None) -> tuple[int, int]:
+    """(n_distinct_valid_posted_month, n_rows_with_valid_posted_month)."""
+    if df is None or df.empty:
+        return (0, 0)
+    d = assign_posted_month_and_time_axis(df.copy())
+    d = d[d["posted_month"].astype(str).str.match(r"^\d{4}-\d{2}$", na=False)]
+    if d.empty:
+        return (0, 0)
+    return (int(d["posted_month"].nunique()), int(len(d)))
 
 
 def _latest_bronze_file(cfg: AppConfig) -> Path:
@@ -96,35 +108,54 @@ def _flat_payload_fields(source: str, payload: dict) -> tuple[str, str, str, obj
     return title, company, location, payload.get("tags")
 
 
-def _prior_partition_silver_frames(cfg: AppConfig) -> pd.DataFrame | None:
-    """When merged/latest.parquet is missing, rebuild prior state from historical per-run partitions."""
+def load_silver_jobs_history_union(cfg: AppConfig) -> pd.DataFrame | None:
+    """All per-run Silver batch Parquet files for this source (excludes merged/), deduped by job_id."""
     jobs_root = cfg.silver_root / "jobs"
     paths: list[str] = []
     if jobs_root.is_s3:
         import boto3  # type: ignore
 
-        bucket, prefix = split_s3_uri(str(jobs_root).rstrip("/") + "/")
         client = boto3.client("s3")
-        paginator = client.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-            for obj in page.get("Contents") or []:
-                k = obj["Key"]
-                if "/merged/" in k:
-                    continue
-                if not (k.endswith(".parquet") and "part-" in k):
-                    continue
-                if f"/source={cfg.source_name}/" in k:
+
+        def collect_parts(bucket: str, pfx: str, require_source: str | None) -> None:
+            paginator = client.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=bucket, Prefix=pfx):
+                for obj in page.get("Contents") or []:
+                    k = obj["Key"]
+                    if "/merged/" in k:
+                        continue
+                    if not (k.endswith(".parquet") and "part-" in k):
+                        continue
+                    if require_source:
+                        if f"/source={require_source}/" not in k:
+                            continue
                     paths.append(f"s3://{bucket}/{k}")
-                elif cfg.source_name == "arbeitnow" and "/source=" not in k and "/ingest_date=" in k:
-                    # Legacy flat keys under jobs/ (pre–source-prefix migration)
-                    paths.append(f"s3://{bucket}/{k}")
+
+        bucket, prefix = split_s3_uri(str(jobs_root).rstrip("/") + "/")
+        collect_parts(bucket, prefix, require_source=cfg.source_name)
+
+        if cfg.source_name == "arbeitnow":
+            leg = silver_legacy_flat_jobs_root(cfg)
+            if leg.is_s3:
+                lb, lp = split_s3_uri(str(leg).rstrip("/") + "/")
+                collect_parts(lb, lp, require_source=None)
+                paths = [
+                    u
+                    for u in paths
+                    if "/source=arbeitnow/" in u
+                    or ("/silver_legacy/jobs/" in u and "/ingest_date=" in u and "/source=" not in u)
+                ]
+            else:
+                paths = [u for u in paths if "/source=arbeitnow/" in u]
     else:
         base = jobs_root.as_path()
         sub = base / f"source={cfg.source_name}"
         paths = sorted(str(p) for p in sub.glob("ingest_date=*/run_id=*/part-*.parquet"))
-        if not paths and cfg.source_name == "arbeitnow":
-            # Legacy flat layout (pre–source-prefix migration): silver/jobs/ingest_date=.../run_id=.../
-            paths = sorted(str(p) for p in base.glob("ingest_date=*/run_id=*/part-*.parquet"))
+        if cfg.source_name == "arbeitnow":
+            leg = silver_legacy_flat_jobs_root(cfg).as_path()
+            if leg.exists():
+                paths.extend(sorted(str(p) for p in leg.glob("ingest_date=*/run_id=*/part-*.parquet")))
+        paths = sorted(set(paths))
     if not paths:
         return None
     frames = [align_silver_dataframe_to_canonical(pd.read_parquet(p)) for p in paths]
@@ -138,13 +169,29 @@ def _prior_partition_silver_frames(cfg: AppConfig) -> pd.DataFrame | None:
     return project_silver_to_contract(combined)
 
 
+def _prior_partition_silver_frames(cfg: AppConfig) -> pd.DataFrame | None:
+    """Backward-compatible name for Gold / merge repair."""
+    return load_silver_jobs_history_union(cfg)
+
+
 def _merge_with_prior_silver(cfg: AppConfig, df_batch: pd.DataFrame) -> pd.DataFrame:
     merged_path = _merged_silver_path(cfg)
     path_str = str(merged_path)
+    df_old: pd.DataFrame | None = None
     try:
         df_old = align_silver_dataframe_to_canonical(pd.read_parquet(path_str))
+        if df_old.empty:
+            df_old = None
     except Exception:
-        df_old = _prior_partition_silver_frames(cfg)
+        df_old = None
+
+    df_union = load_silver_jobs_history_union(cfg)
+    mu, ru = _silver_month_span_metrics(df_union)
+    mm, rm = _silver_month_span_metrics(df_old)
+    if df_union is not None and not df_union.empty:
+        if df_old is None or mu > mm or (mu == mm and ru > rm):
+            df_old = df_union
+
     if df_old is None or df_old.empty:
         return df_batch
     combined = pd.concat([df_old, df_batch], ignore_index=True)
