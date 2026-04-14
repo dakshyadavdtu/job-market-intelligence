@@ -55,9 +55,9 @@ QUERIES: list[tuple[str, str | None, str]] = [
         "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_employers_top_clean",
     ),
     (
-        "vw_v2_cmp_mix",
+        "vw_cmp_skill_mix_aligned_top20",
         "jmi_analytics_v2",
-        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_cmp_skill_mix_aligned_top20",
+        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_skill_mix_aligned_top20",
     ),
     (
         "cmp_time_policy",

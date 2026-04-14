@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke tests for jmi_analytics_v2 comparison helper view (minimal v2_cmp_* only)."""
+"""Smoke tests for jmi_analytics_v2 comparison helpers (canonical comparison_* views)."""
 from __future__ import annotations
 
 import json
@@ -13,10 +13,10 @@ OUTPUT = "s3://jmi-dakshyadav-job-market-intelligence/athena-results/"
 DB = "jmi_analytics_v2"
 
 QUERIES: list[tuple[str, str]] = [
-    ("cmp_mix_ct", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_cmp_skill_mix_aligned_top20"),
+    ("cmp_mix_ct", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_skill_mix_aligned_top20"),
     (
         "cmp_mix_sample",
-        "SELECT source, skill, posted_month, skill_tag_count FROM jmi_analytics_v2.v2_cmp_skill_mix_aligned_top20 ORDER BY source, skill LIMIT 8",
+        "SELECT source, skill, posted_month, skill_tag_count FROM jmi_analytics_v2.comparison_source_skill_mix_aligned_top20 ORDER BY source, skill LIMIT 8",
     ),
     (
         "cmp_spj_april_group",

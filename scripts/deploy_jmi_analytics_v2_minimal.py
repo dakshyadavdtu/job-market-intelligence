@@ -74,9 +74,15 @@ def patch_gold_v2(body: str) -> str:
 
 
 def main() -> int:
+    # Canonical skill-mix comparison view is comparison_source_skill_mix_aligned_top20
+    # (deployed by deploy_athena_comparison_views_v2.py). Drop legacy duplicate alias only.
+    print("Dropping redundant alias v2_cmp_skill_mix_aligned_top20...", file=sys.stderr)
+    qid_drop = run_sql("DROP VIEW IF EXISTS jmi_analytics_v2.v2_cmp_skill_mix_aligned_top20")
+    wait(qid_drop)
+    print(f"  OK {qid_drop}", file=sys.stderr)
+
     role_file = (DOCS / "ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql").read_text(encoding="utf-8")
     adzuna_file = (DOCS / "ATHENA_VIEWS_ADZUNA.sql").read_text(encoding="utf-8")
-    cmp_file = (DOCS / "ATHENA_VIEWS_COMPARISON_V2.sql").read_text(encoding="utf-8")
 
     eu_rc = (ROOT / "infra" / "aws" / "athena" / "analytics_v2_eu_role_company_classified.sql").read_text(
         encoding="utf-8"
@@ -107,28 +113,18 @@ def main() -> int:
         "WHERE job_count > 0;",
     )
 
-    cmp_mix = cut_at_phrase(
-        between(
-            cmp_file,
-            "CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_source_skill_mix_aligned_top20 AS\n",
-            "CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_benchmark_aligned_month AS",
-        ),
-        "FROM filt;",
-    )
-
     statements: list[str] = [
         eu_role_stmt,
         eu_co_stmt,
         f"CREATE OR REPLACE VIEW jmi_analytics_v2.v2_in_role_titles_classified AS\n{patch_gold_v2(in_role)}",
         f"CREATE OR REPLACE VIEW jmi_analytics_v2.v2_in_employers_top_clean AS\n{patch_gold_v2(in_co)}",
-        f"CREATE OR REPLACE VIEW jmi_analytics_v2.v2_cmp_skill_mix_aligned_top20 AS\n{cmp_mix}",
     ]
 
-    print("Creating 5 v2_* views...", file=sys.stderr)
+    print("Creating 4 v2_* views...", file=sys.stderr)
     for i, stmt in enumerate(statements, 1):
         qid = run_sql(stmt)
         wait(qid)
-        print(f"  OK {i}/5 {qid}", file=sys.stderr)
+        print(f"  OK {i}/4 {qid}", file=sys.stderr)
 
     legacy = [
         "company_top15_other_clean",
