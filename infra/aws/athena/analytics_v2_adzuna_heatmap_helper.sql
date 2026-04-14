@@ -1,4 +1,5 @@
 -- Adzuna cross-dimension heatmap — jmi_analytics_v2 only.
+-- Uses UNNEST skills_long + geo: heavy for Direct Query — prefer SPICE or Gold skill rows for lighter paths.
 -- dim_x = India state (from geo rules, excludes unmapped_* buckets)
 -- dim_y = skill token bucket: top 15 skills by mention count per posted_month + Other
 -- job_count = distinct job_id per cell (jobs that have at least one skill in that bucket for that state)

@@ -1,4 +1,5 @@
 -- Adzuna (India) funnel helper — jmi_analytics_v2 only.
+-- Silver aggregation per month: usually OK after v2_in_silver_jobs_base is narrowed to latest Gold months.
 -- Depends on: jmi_analytics_v2.v2_in_silver_jobs_base
 --
 -- This is NOT a hiring / recruitment process funnel. It is a **data coverage** funnel:

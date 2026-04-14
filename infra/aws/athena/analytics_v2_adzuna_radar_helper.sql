@@ -1,4 +1,5 @@
 -- Adzuna radar profile — jmi_analytics_v2 only.
+-- Multiple passes over Silver base + geo: if Direct Query times out, use SPICE.
 -- Long format: one row per (posted_month, axis). Values are rates in [0, 1] (comparable on a radar).
 -- Depends on: v2_in_silver_jobs_base, v2_in_geo_location_rules
 

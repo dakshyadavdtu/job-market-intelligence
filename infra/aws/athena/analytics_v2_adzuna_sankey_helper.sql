@@ -1,4 +1,5 @@
 -- Adzuna Sankey helper — jmi_analytics_v2 only.
+-- Row-level Silver + geo join + window ranks: expensive for QuickSight Direct Query — prefer SPICE.
 -- Design: state (India, from geo rules) -> company bucket (top 10 employers per posted_month + Other).
 -- Joins row-level geo rules to Silver base for company_norm. Excludes unmapped states and empty employers.
 

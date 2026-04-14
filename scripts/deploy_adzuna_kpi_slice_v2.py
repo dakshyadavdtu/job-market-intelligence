@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Deploy jmi_analytics_v2.v2_in_kpi_slice_monthly."""
+"""Deploy jmi_analytics_v2 India KPI slice + lightweight DQ helper views."""
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import time
@@ -51,18 +52,30 @@ def wait(qid: str) -> None:
     raise TimeoutError(qid)
 
 
-def main() -> int:
-    path = ROOT / "infra" / "aws" / "athena" / "analytics_v2_adzuna_kpi_slice.sql"
+def split_create_statements(sql_text: str) -> list[str]:
+    """Split file on ';' before CREATE OR REPLACE (multiple views per file)."""
+    text = sql_text.strip()
+    if not text:
+        return []
+    parts = re.split(r";\s*(?=CREATE\s+OR\s+REPLACE\s+VIEW)", text, flags=re.IGNORECASE | re.DOTALL)
+    return [p.strip().rstrip(";").strip() + ";" for p in parts if p.strip()]
+
+
+def deploy_file(path: Path, label: str) -> None:
     raw = path.read_text(encoding="utf-8")
-    lines = []
-    for line in raw.splitlines():
-        if lines or line.strip().startswith("CREATE"):
-            lines.append(line)
-    stmt = "\n".join(lines).strip()
-    print("Deploying v2_in_kpi_slice_monthly...", file=sys.stderr)
-    qid = run_sql(stmt)
-    wait(qid)
-    print(f"  OK {qid}", file=sys.stderr)
+    stmts = split_create_statements(raw)
+    if len(stmts) == 1 and not re.search(r"CREATE\s+OR\s+REPLACE", raw, re.I):
+        stmts = [raw.strip().rstrip(";").strip() + ";"]
+    print(f"Deploying {label} ({len(stmts)} statement(s))...", file=sys.stderr)
+    for i, stmt in enumerate(stmts, 1):
+        qid = run_sql(stmt)
+        wait(qid)
+        print(f"  OK {i}/{len(stmts)} {qid}", file=sys.stderr)
+
+
+def main() -> int:
+    deploy_file(ROOT / "infra" / "aws" / "athena" / "analytics_v2_adzuna_kpi_slice.sql", "v2_in_kpi_slice_monthly")
+    deploy_file(ROOT / "infra" / "aws" / "athena" / "analytics_v2_adzuna_dq_helpers.sql", "IN DQ helpers")
     print("ALL_OK", file=sys.stderr)
     return 0
 
