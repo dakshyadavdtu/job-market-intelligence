@@ -18,6 +18,10 @@ QUERIES: list[tuple[str, str]] = [
         "cmp_mix_sample",
         "SELECT source, skill, posted_month, skill_tag_count FROM jmi_analytics_v2.v2_cmp_skill_mix_aligned_top20 ORDER BY source, skill LIMIT 8",
     ),
+    (
+        "cmp_spj_april_group",
+        "SELECT posted_month, source, COUNT(*) AS n FROM jmi_analytics_v2.v2_cmp_skills_per_job_april_2026 GROUP BY 1,2 ORDER BY 1,2",
+    ),
 ]
 
 
