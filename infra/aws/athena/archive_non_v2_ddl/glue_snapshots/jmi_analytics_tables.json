@@ -1,0 +1,1416 @@
+{
+    "TableList": [
+        {
+            "Name": "company_top12_other",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-04T08:27:41+05:30",
+            "UpdateTime": "2026-04-12T12:12:16+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "company_name",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgYmFzZSBBUyAoXG4gICBTRUxFQ1RcbiAgICAgY29tcGFueV9uYW1lXG4gICAsIGpvYl9jb3VudFxuICAgRlJPTVxuICAgICBqbWlfZ29sZC5jb21wYW55X2hpcmluZ19tb250aGx5XG4gICBXSEVSRSAoKHJ1bl9pZCA9ICcyMDI2MDQxMlQwMjQ2MzJaLWE5NTEyNjFiJykgQU5EIChpbmdlc3RfbW9udGggPSAnMjAyNi0wNCcpKVxuKSBcbiwgcmFua2VkIEFTIChcbiAgIFNFTEVDVFxuICAgICBjb21wYW55X25hbWVcbiAgICwgam9iX2NvdW50XG4gICAsIFJPV19OVU1CRVIoKSBPVkVSIChPUkRFUiBCWSBqb2JfY291bnQgREVTQywgY29tcGFueV9uYW1lIEFTQykgcm5cbiAgIEZST01cbiAgICAgYmFzZVxuKSBcblNFTEVDVFxuICBjb21wYW55X25hbWVcbiwgam9iX2NvdW50XG5GUk9NXG4gIHJhbmtlZFxuV0hFUkUgKHJuIDw9IDEyKVxuVU5JT04gQUxMIFNFTEVDVFxuICAnT3RoZXInIGNvbXBhbnlfbmFtZVxuLCBDT0FMRVNDRShTVU0oam9iX2NvdW50KSwgMCkgam9iX2NvdW50XG5GUk9NXG4gIHJhbmtlZFxuV0hFUkUgKHJuID4gMTIpXG4iLCJjYXRhbG9nIjoiYXdzZGF0YWNhdGFsb2ciLCJzY2hlbWEiOiJqbWlfYW5hbHl0aWNzIiwiY29sdW1ucyI6W3sibmFtZSI6ImNvbXBhbnlfbmFtZSIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiam9iX2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "2",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "company_top15_other_clean",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-04T18:10:43+05:30",
+            "UpdateTime": "2026-04-12T15:13:38+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "company_label",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5cbikgXG4sIGNsZWFuZWQgQVMgKFxuICAgU0VMRUNUXG4gICAgIGMuaW5nZXN0X21vbnRoXG4gICAsIGMucnVuX2lkXG4gICAsIGMuam9iX2NvdW50XG4gICAsIHRyaW0oQk9USCBGUk9NIHJlZ2V4cF9yZXBsYWNlKHJlZ2V4cF9yZXBsYWNlKHJlZ2V4cF9yZXBsYWNlKHJlZ2V4cF9yZXBsYWNlKGxvd2VyKHRyaW0oQk9USCBGUk9NIGMuY29tcGFueV9uYW1lKSksICcoP2kpXFxcXHMrKGdtYmh8Z1xcXFwubVxcXFwuYlxcXFwuaFxcXFwufGFnfHVnfGx0ZFxcXFwuP3xsbGN8aW5jXFxcXC4/fGNvcnBcXFxcLj98Y29ycG9yYXRpb258c1xcXFwuYVxcXFwufHNcXFxcLmxcXFxcLnxidnxwbGN8a2d8b2hnfGdicnxtYmh8Y29cXFxcLnxjb21wYW55KVxcXFwuP1xcXFxzKiQnLCAnJyksICcoP2kpXnRoZVxcXFxzKycsICcnKSwgJ1xcXFxzKycsICcgJyksICdeWywgLjs6fFxcXFxcXFxcLy1dK3xbLCAuOzp8XFxcXFxcXFwvLV0rJCcsICcnKSkgY29tcGFueV9rZXlcbiAgIEZST01cbiAgICAgKGptaV9nb2xkLmNvbXBhbnlfaGlyaW5nX21vbnRobHkgY1xuICAgSU5ORVIgSk9JTiBsciBPTiAoYy5ydW5faWQgPSBsci5ydW5faWQpKVxuICAgV0hFUkUgKGMuaW5nZXN0X21vbnRoIEJFVFdFRU4gJzIwMTgtMDEnIEFORCAnMjAzNS0xMicpXG4pIFxuLCBub3JtYWxpemVkIEFTIChcbiAgIFNFTEVDVFxuICAgICBpbmdlc3RfbW9udGhcbiAgICwgcnVuX2lkXG4gICAsIChDQVNFIFdIRU4gKChjb21wYW55X2tleSA9ICcnKSBPUiAoY29tcGFueV9rZXkgSVMgTlVMTCkpIFRIRU4gJyh1bmtub3duIGVtcGxveWVyKScgRUxTRSBjb21wYW55X2tleSBFTkQpIGNvbXBhbnlfa2V5XG4gICAsIGpvYl9jb3VudFxuICAgRlJPTVxuICAgICBjbGVhbmVkXG4pIFxuLCBhZ2cgQVMgKFxuICAgU0VMRUNUXG4gICAgIHJ1bl9pZFxuICAgLCBjb21wYW55X2tleVxuICAgLCBTVU0oam9iX2NvdW50KSBqb2JfY291bnRcbiAgICwgTUFYKGluZ2VzdF9tb250aCkgaW5nZXN0X21vbnRoXG4gICBGUk9NXG4gICAgIG5vcm1hbGl6ZWRcbiAgIEdST1VQIEJZIHJ1bl9pZCwgY29tcGFueV9rZXlcbikgXG4sIHJhbmtlZCBBUyAoXG4gICBTRUxFQ1RcbiAgICAgaW5nZXN0X21vbnRoXG4gICAsIHJ1bl9pZFxuICAgLCBjb21wYW55X2tleVxuICAgLCBqb2JfY291bnRcbiAgICwgUk9XX05VTUJFUigpIE9WRVIgKFBBUlRJVElPTiBCWSBydW5faWQgT1JERVIgQlkgam9iX2NvdW50IERFU0MsIGNvbXBhbnlfa2V5IEFTQykgcm5cbiAgIEZST01cbiAgICAgYWdnXG4pIFxuLCByb2xsZWQgQVMgKFxuICAgU0VMRUNUXG4gICAgIHJ1bl9pZFxuICAgLCBNQVgoaW5nZXN0X21vbnRoKSBpbmdlc3RfbW9udGhcbiAgICwgKENBU0UgV0hFTiAocm4gPD0gNTApIFRIRU4gY29tcGFueV9rZXkgRUxTRSAnX19MT05HX1RBSUxfXycgRU5EKSBjb21wYW55X2xhYmVsXG4gICAsIFNVTShqb2JfY291bnQpIGpvYl9jb3VudFxuICAgRlJPTVxuICAgICByYW5rZWRcbiAgIEdST1VQIEJZIHJ1bl9pZCwgKENBU0UgV0hFTiAocm4gPD0gNTApIFRIRU4gY29tcGFueV9rZXkgRUxTRSAnX19MT05HX1RBSUxfXycgRU5EKVxuKSBcbiwgbGFiZWxlZCBBUyAoXG4gICBTRUxFQ1RcbiAgICAgaW5nZXN0X21vbnRoXG4gICAsIHJ1bl9pZFxuICAgLCBjb21wYW55X2xhYmVsXG4gICAsIGpvYl9jb3VudFxuICAgLCAoQ0FTRSBXSEVOIChjb21wYW55X2xhYmVsID0gJ19fTE9OR19UQUlMX18nKSBUSEVOICdSZW1haW5pbmcgZW1wbG95ZXJzIChjb21iaW5lZCknIFdIRU4gKGNvbXBhbnlfbGFiZWwgPSAnKHVua25vd24gZW1wbG95ZXIpJykgVEhFTiAnVW5rbm93biBlbXBsb3llcicgRUxTRSByZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShhcnJheV9qb2luKHRyYW5zZm9ybShzcGxpdChjb21wYW55X2xhYmVsLCAnICcpLCAodykgLT4gY29uY2F0KHVwcGVyKHN1YnN0cih3LCAxLCAxKSksIGxvd2VyKHN1YnN0cih3LCAyKSkpKSwgJyAnKSwgJyg/aSlcXC5haSQnLCAnLmFpJyksICcoP2kpXFwuaW8kJywgJy5pbycpLCAnKD9pKUdtYmgnLCAnR21iSCcpLCAnKD9pKSBTZSQnLCAnIFNFJyksICcoP2kpIEFnJCcsICcgQUcnKSwgJyg/aSlcXHMqRVxcLnZcXC4/JCcsICcgZS5WLicpLCAnKD9pKUtnXFxiJywgJ0tHJyksICcoP2kpVWdcXGInLCAnVUcnKSBFTkQpIGRpc3BsYXlfbGFiZWxfcmF3XG4gICBGUk9NXG4gICAgIHJvbGxlZFxuKSBcblNFTEVDVFxuICBpbmdlc3RfbW9udGhcbiwgcnVuX2lkXG4sIChDQVNFIGRpc3BsYXlfbGFiZWxfcmF3IFdIRU4gJ015IEh1bWFuY2FwaXRhbCBHbWJIJyBUSEVOICdNeSBIdW1hbmNhcGl0YWwnIFdIRU4gJ1N1bXVwJyBUSEVOICdTdW1VcCcgV0hFTiAnQWNlbWF0ZS5haScgVEhFTiAnQWNlbWF0ZScgV0hFTiAnVW5pdGVkIE1lZGlhJyBUSEVOICdVbml0ZWQgTWVkaWEnIFdIRU4gVSYnTWF0Y2hpbmdjb21wYW55XFwwMEFFJyBUSEVOICdNYXRjaGluZ0NvbXBhbnknIFdIRU4gJ01hbW1hbHknIFRIRU4gJ01hbW1hbHknIFdIRU4gJ1dvbHQgLSBFbmdsaXNoJyBUSEVOICdXb2x0JyBXSEVOICdBY2NlbnR1cmUnIFRIRU4gJ0FjY2VudHVyZScgV0hFTiAnRWZseSBNYXJrZXRwbGFjZSBTZXJ2aWNlcyBHbWJIJyBUSEVOICdFZmx5IE1hcmtldHBsYWNlIFNlcnZpY2VzJyBXSEVOICdGbGl4JyBUSEVOICdGbGl4JyBXSEVOICdTY2h3ZXJ0ZmVscyBDb25zdWx0aW5nIEdtYkgnIFRIRU4gJ1NjaHdlcnRmZWxzIENvbnN1bHRpbmcnIFdIRU4gJ1RoaW5rIEFib3V0IEl0IEdtYkgnIFRIRU4gJ1RoaW5rIEFib3V0IEl0JyBXSEVOICdBdWRpdXMgU0UnIFRIRU4gJ0F1ZGl1cycgV0hFTiAnR2Vub3NzZW5zY2hhZnRzdmVyYmFuZCBCYXllcm4gZS5WLicgVEhFTiAnR2Vub3NzZW5zY2hhZnRzdmVyYmFuZCBCYXllcm4nIFdIRU4gJ1NvbGFyZWRnZScgVEhFTiAnU29sYXJFZGdlJyBXSEVOICdBdXRvbWF0LWl0JyBUSEVOICdBdXRvbWF0JyBXSEVOICdJbnRlcmNvbiBTb2x1dGlvbnMgR21iSCcgVEhFTiAnSW50ZXJjb24gU29sdXRpb25zJyBXSEVOIFUmJ1ByaW1lIEhyIEFnZW50dXJcXDAwQUUnIFRIRU4gJ1ByaW1lIEhSIEFnZW50dXInIFdIRU4gJ1JlbW1lcnQgR21iSCcgVEhFTiAnUmVtbWVydCcgV0hFTiAnV2F2ZXN0b25lIEdlcm1hbnkgQUcnIFRIRU4gJ1dhdmVzdG9uZSBHZXJtYW55JyBXSEVOICdIbSBNYW5hZ2VtZW50IFNlcnZpY2VzIEdtYkgnIFRIRU4gJ0hNIE1hbmFnZW1lbnQgU2VydmljZXMnIFdIRU4gJ1RheHRhbGVudGUuZGUnIFRIRU4gJ1RheHRhbGVudGUnIFdIRU4gJ1ZlbnR1cmEgVHJhdmVsJyBUSEVOICdWZW50dXJhIFRyYXZlbCcgRUxTRSBkaXNwbGF5X2xhYmVsX3JhdyBFTkQpIGNvbXBhbnlfbGFiZWxcbiwgam9iX2NvdW50XG5GUk9NXG4gIGxhYmVsZWRcbldIRVJFIChqb2JfY291bnQgPiAwKVxuIiwiY2F0YWxvZyI6ImF3c2RhdGFjYXRhbG9nIiwic2NoZW1hIjoiam1pX2FuYWx5dGljcyIsImNvbHVtbnMiOlt7Im5hbWUiOiJpbmdlc3RfbW9udGgiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6InJ1bl9pZCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiY29tcGFueV9sYWJlbCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiam9iX2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "10",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "company_top15_other_clean_adzuna",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:11:09+05:30",
+            "UpdateTime": "2026-04-12T17:11:09+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "company_label",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4pIFxuLCBjbGVhbmVkIEFTIChcbiAgIFNFTEVDVFxuICAgICBjLmluZ2VzdF9tb250aFxuICAgLCBjLnJ1bl9pZFxuICAgLCBjLmpvYl9jb3VudFxuICAgLCB0cmltKEJPVEggRlJPTSByZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShsb3dlcih0cmltKEJPVEggRlJPTSBjLmNvbXBhbnlfbmFtZSkpLCAnKD9pKVxcXFxzKyhnbWJofGdcXFxcLm1cXFxcLmJcXFxcLmhcXFxcLnxhZ3x1Z3xsdGRcXFxcLj98bGxjfGluY1xcXFwuP3xjb3JwXFxcXC4/fGNvcnBvcmF0aW9ufHNcXFxcLmFcXFxcLnxzXFxcXC5sXFxcXC58YnZ8cGxjfGtnfG9oZ3xnYnJ8bWJofGNvXFxcXC58Y29tcGFueSlcXFxcLj9cXFxccyokJywgJycpLCAnKD9pKV50aGVcXFxccysnLCAnJyksICdcXFxccysnLCAnICcpLCAnXlssIC47OnxcXFxcXFxcXC8tXSt8WywgLjs6fFxcXFxcXFxcLy1dKyQnLCAnJykpIGNvbXBhbnlfa2V5XG4gICBGUk9NXG4gICAgIChqbWlfZ29sZC5jb21wYW55X2hpcmluZ19tb250aGx5IGNcbiAgIElOTkVSIEpPSU4gbHIgT04gKGMucnVuX2lkID0gbHIucnVuX2lkKSlcbiAgIFdIRVJFIChjLmluZ2VzdF9tb250aCBCRVRXRUVOICcyMDE4LTAxJyBBTkQgJzIwMzUtMTInKVxuKSBcbiwgbm9ybWFsaXplZCBBUyAoXG4gICBTRUxFQ1RcbiAgICAgaW5nZXN0X21vbnRoXG4gICAsIHJ1bl9pZFxuICAgLCAoQ0FTRSBXSEVOICgoY29tcGFueV9rZXkgPSAnJykgT1IgKGNvbXBhbnlfa2V5IElTIE5VTEwpKSBUSEVOICcodW5rbm93biBlbXBsb3llciknIEVMU0UgY29tcGFueV9rZXkgRU5EKSBjb21wYW55X2tleVxuICAgLCBqb2JfY291bnRcbiAgIEZST01cbiAgICAgY2xlYW5lZFxuKSBcbiwgYWdnIEFTIChcbiAgIFNFTEVDVFxuICAgICBydW5faWRcbiAgICwgY29tcGFueV9rZXlcbiAgICwgU1VNKGpvYl9jb3VudCkgam9iX2NvdW50XG4gICAsIE1BWChpbmdlc3RfbW9udGgpIGluZ2VzdF9tb250aFxuICAgRlJPTVxuICAgICBub3JtYWxpemVkXG4gICBHUk9VUCBCWSBydW5faWQsIGNvbXBhbnlfa2V5XG4pIFxuLCByYW5rZWQgQVMgKFxuICAgU0VMRUNUXG4gICAgIGluZ2VzdF9tb250aFxuICAgLCBydW5faWRcbiAgICwgY29tcGFueV9rZXlcbiAgICwgam9iX2NvdW50XG4gICAsIFJPV19OVU1CRVIoKSBPVkVSIChQQVJUSVRJT04gQlkgcnVuX2lkIE9SREVSIEJZIGpvYl9jb3VudCBERVNDLCBjb21wYW55X2tleSBBU0MpIHJuXG4gICBGUk9NXG4gICAgIGFnZ1xuKSBcbiwgcm9sbGVkIEFTIChcbiAgIFNFTEVDVFxuICAgICBydW5faWRcbiAgICwgTUFYKGluZ2VzdF9tb250aCkgaW5nZXN0X21vbnRoXG4gICAsIChDQVNFIFdIRU4gKHJuIDw9IDUwKSBUSEVOIGNvbXBhbnlfa2V5IEVMU0UgJ19fTE9OR19UQUlMX18nIEVORCkgY29tcGFueV9sYWJlbFxuICAgLCBTVU0oam9iX2NvdW50KSBqb2JfY291bnRcbiAgIEZST01cbiAgICAgcmFua2VkXG4gICBHUk9VUCBCWSBydW5faWQsIChDQVNFIFdIRU4gKHJuIDw9IDUwKSBUSEVOIGNvbXBhbnlfa2V5IEVMU0UgJ19fTE9OR19UQUlMX18nIEVORClcbikgXG4sIGxhYmVsZWQgQVMgKFxuICAgU0VMRUNUXG4gICAgIGluZ2VzdF9tb250aFxuICAgLCBydW5faWRcbiAgICwgY29tcGFueV9sYWJlbFxuICAgLCBqb2JfY291bnRcbiAgICwgKENBU0UgV0hFTiAoY29tcGFueV9sYWJlbCA9ICdfX0xPTkdfVEFJTF9fJykgVEhFTiAnUmVtYWluaW5nIGVtcGxveWVycyAoY29tYmluZWQpJyBXSEVOIChjb21wYW55X2xhYmVsID0gJyh1bmtub3duIGVtcGxveWVyKScpIFRIRU4gJ1Vua25vd24gZW1wbG95ZXInIEVMU0UgcmVnZXhwX3JlcGxhY2UocmVnZXhwX3JlcGxhY2UocmVnZXhwX3JlcGxhY2UocmVnZXhwX3JlcGxhY2UocmVnZXhwX3JlcGxhY2UocmVnZXhwX3JlcGxhY2UocmVnZXhwX3JlcGxhY2UocmVnZXhwX3JlcGxhY2UoYXJyYXlfam9pbih0cmFuc2Zvcm0oc3BsaXQoY29tcGFueV9sYWJlbCwgJyAnKSwgKHcpIC0+IGNvbmNhdCh1cHBlcihzdWJzdHIodywgMSwgMSkpLCBsb3dlcihzdWJzdHIodywgMikpKSksICcgJyksICcoP2kpXFwuYWkkJywgJy5haScpLCAnKD9pKVxcLmlvJCcsICcuaW8nKSwgJyg/aSlHbWJoJywgJ0dtYkgnKSwgJyg/aSkgU2UkJywgJyBTRScpLCAnKD9pKSBBZyQnLCAnIEFHJyksICcoP2kpXFxzKkVcXC52XFwuPyQnLCAnIGUuVi4nKSwgJyg/aSlLZ1xcYicsICdLRycpLCAnKD9pKVVnXFxiJywgJ1VHJykgRU5EKSBkaXNwbGF5X2xhYmVsX3Jhd1xuICAgRlJPTVxuICAgICByb2xsZWRcbikgXG5TRUxFQ1RcbiAgaW5nZXN0X21vbnRoXG4sIHJ1bl9pZFxuLCAoQ0FTRSBkaXNwbGF5X2xhYmVsX3JhdyBXSEVOICdNeSBIdW1hbmNhcGl0YWwgR21iSCcgVEhFTiAnTXkgSHVtYW5jYXBpdGFsJyBXSEVOICdTdW11cCcgVEhFTiAnU3VtVXAnIFdIRU4gJ0FjZW1hdGUuYWknIFRIRU4gJ0FjZW1hdGUnIFdIRU4gJ1VuaXRlZCBNZWRpYScgVEhFTiAnVW5pdGVkIE1lZGlhJyBXSEVOIFUmJ01hdGNoaW5nY29tcGFueVxcMDBBRScgVEhFTiAnTWF0Y2hpbmdDb21wYW55JyBXSEVOICdNYW1tYWx5JyBUSEVOICdNYW1tYWx5JyBXSEVOICdXb2x0IC0gRW5nbGlzaCcgVEhFTiAnV29sdCcgV0hFTiAnQWNjZW50dXJlJyBUSEVOICdBY2NlbnR1cmUnIFdIRU4gJ0VmbHkgTWFya2V0cGxhY2UgU2VydmljZXMgR21iSCcgVEhFTiAnRWZseSBNYXJrZXRwbGFjZSBTZXJ2aWNlcycgV0hFTiAnRmxpeCcgVEhFTiAnRmxpeCcgV0hFTiAnU2Nod2VydGZlbHMgQ29uc3VsdGluZyBHbWJIJyBUSEVOICdTY2h3ZXJ0ZmVscyBDb25zdWx0aW5nJyBXSEVOICdUaGluayBBYm91dCBJdCBHbWJIJyBUSEVOICdUaGluayBBYm91dCBJdCcgV0hFTiAnQXVkaXVzIFNFJyBUSEVOICdBdWRpdXMnIFdIRU4gJ0dlbm9zc2Vuc2NoYWZ0c3ZlcmJhbmQgQmF5ZXJuIGUuVi4nIFRIRU4gJ0dlbm9zc2Vuc2NoYWZ0c3ZlcmJhbmQgQmF5ZXJuJyBXSEVOICdTb2xhcmVkZ2UnIFRIRU4gJ1NvbGFyRWRnZScgV0hFTiAnQXV0b21hdC1pdCcgVEhFTiAnQXV0b21hdCcgV0hFTiAnSW50ZXJjb24gU29sdXRpb25zIEdtYkgnIFRIRU4gJ0ludGVyY29uIFNvbHV0aW9ucycgV0hFTiBVJidQcmltZSBIciBBZ2VudHVyXFwwMEFFJyBUSEVOICdQcmltZSBIUiBBZ2VudHVyJyBXSEVOICdSZW1tZXJ0IEdtYkgnIFRIRU4gJ1JlbW1lcnQnIFdIRU4gJ1dhdmVzdG9uZSBHZXJtYW55IEFHJyBUSEVOICdXYXZlc3RvbmUgR2VybWFueScgV0hFTiAnSG0gTWFuYWdlbWVudCBTZXJ2aWNlcyBHbWJIJyBUSEVOICdITSBNYW5hZ2VtZW50IFNlcnZpY2VzJyBXSEVOICdUYXh0YWxlbnRlLmRlJyBUSEVOICdUYXh0YWxlbnRlJyBXSEVOICdWZW50dXJhIFRyYXZlbCcgVEhFTiAnVmVudHVyYSBUcmF2ZWwnIEVMU0UgZGlzcGxheV9sYWJlbF9yYXcgRU5EKSBjb21wYW55X2xhYmVsXG4sIGpvYl9jb3VudFxuRlJPTVxuICBsYWJlbGVkXG5XSEVSRSAoam9iX2NvdW50ID4gMClcbiIsImNhdGFsb2ciOiJhd3NkYXRhY2F0YWxvZyIsInNjaGVtYSI6ImptaV9hbmFseXRpY3MiLCJjb2x1bW5zIjpbeyJuYW1lIjoiaW5nZXN0X21vbnRoIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6ImNvbXBhbnlfbGFiZWwiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6ImpvYl9jb3VudCIsInR5cGUiOiJiaWdpbnQifV0sIm93bmVyIjoiNDcwNDQxNTc3NTA2IiwicnVuQXNJbnZva2VyIjpmYWxzZSwicHJvcGVydGllcyI6e30sImlzUHJvdGVjdGVkIjpmYWxzZSwiaXNNdWx0aURpYWxlY3QiOmZhbHNlfQ== */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "comparison_region_month_totals",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:44:16+05:30",
+            "UpdateTime": "2026-04-12T17:44:16+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "region_label",
+                        "Type": "varchar(2)"
+                    },
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "total_postings",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IlNFTEVDVFxuICAnRVUnIHJlZ2lvbl9sYWJlbFxuLCByLmluZ2VzdF9tb250aFxuLCByLnJ1bl9pZFxuLCBTVU0oci5qb2JfY291bnQpIHRvdGFsX3Bvc3RpbmdzXG5GUk9NXG4gIChqbWlfZ29sZC5yb2xlX2RlbWFuZF9tb250aGx5IHJcbklOTkVSIEpPSU4gKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5cbikgIGxyIE9OIChyLnJ1bl9pZCA9IGxyLnJ1bl9pZCkpXG5XSEVSRSAoci5pbmdlc3RfbW9udGggQkVUV0VFTiAnMjAxOC0wMScgQU5EICcyMDM1LTEyJylcbkdST1VQIEJZIHIuaW5nZXN0X21vbnRoLCByLnJ1bl9pZFxuVU5JT04gQUxMIFNFTEVDVFxuICAnSU4nIHJlZ2lvbl9sYWJlbFxuLCByLmluZ2VzdF9tb250aFxuLCByLnJ1bl9pZFxuLCBTVU0oci5qb2JfY291bnQpIHRvdGFsX3Bvc3RpbmdzXG5GUk9NXG4gIChqbWlfZ29sZC5yb2xlX2RlbWFuZF9tb250aGx5IHJcbklOTkVSIEpPSU4gKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4pICBsciBPTiAoci5ydW5faWQgPSBsci5ydW5faWQpKVxuV0hFUkUgKHIuaW5nZXN0X21vbnRoIEJFVFdFRU4gJzIwMTgtMDEnIEFORCAnMjAzNS0xMicpXG5HUk9VUCBCWSByLmluZ2VzdF9tb250aCwgci5ydW5faWRcbiIsImNhdGFsb2ciOiJhd3NkYXRhY2F0YWxvZyIsInNjaGVtYSI6ImptaV9hbmFseXRpY3MiLCJjb2x1bW5zIjpbeyJuYW1lIjoicmVnaW9uX2xhYmVsIiwidHlwZSI6InZhcmNoYXIoMikifSx7Im5hbWUiOiJpbmdlc3RfbW9udGgiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6InJ1bl9pZCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoidG90YWxfcG9zdGluZ3MiLCJ0eXBlIjoiYmlnaW50In1dLCJvd25lciI6IjQ3MDQ0MTU3NzUwNiIsInJ1bkFzSW52b2tlciI6ZmFsc2UsInByb3BlcnRpZXMiOnt9LCJpc1Byb3RlY3RlZCI6ZmFsc2UsImlzTXVsdGlEaWFsZWN0IjpmYWxzZX0= */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "comparison_region_skill_mix",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:44:19+05:30",
+            "UpdateTime": "2026-04-12T17:44:19+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "region_label",
+                        "Type": "varchar(2)"
+                    },
+                    {
+                        "Name": "skill",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "skill_tag_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "share_within_region_skill_tags",
+                        "Type": "double"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgZXUgQVMgKFxuICAgU0VMRUNUXG4gICAgIHMuc2tpbGxcbiAgICwgcy5qb2JfY291bnRcbiAgICwgcy5pbmdlc3RfbW9udGhcbiAgICwgcy5ydW5faWRcbiAgIEZST01cbiAgICAgKGptaV9nb2xkLnNraWxsX2RlbWFuZF9tb250aGx5IHNcbiAgIElOTkVSIEpPSU4gKFxuICAgICAgU0VMRUNUIHJ1bl9pZFxuICAgICAgRlJPTVxuICAgICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5cbiAgICkgIGxyIE9OIChzLnJ1bl9pZCA9IGxyLnJ1bl9pZCkpXG4gICBXSEVSRSAocy5pbmdlc3RfbW9udGggQkVUV0VFTiAnMjAxOC0wMScgQU5EICcyMDM1LTEyJylcbikgXG4sIGV1X3RvdCBBUyAoXG4gICBTRUxFQ1RcbiAgICAgaW5nZXN0X21vbnRoXG4gICAsIHJ1bl9pZFxuICAgLCBTVU0oam9iX2NvdW50KSB0YWdfc3VtXG4gICBGUk9NXG4gICAgIGV1XG4gICBHUk9VUCBCWSBpbmdlc3RfbW9udGgsIHJ1bl9pZFxuKSBcbiwgZXVfc2hhcmVzIEFTIChcbiAgIFNFTEVDVFxuICAgICAnRVUnIHJlZ2lvbl9sYWJlbFxuICAgLCBlLnNraWxsXG4gICAsIGUuaW5nZXN0X21vbnRoXG4gICAsIGUucnVuX2lkXG4gICAsIGUuam9iX2NvdW50IHNraWxsX3RhZ19jb3VudFxuICAgLCAoQ0FTVChlLmpvYl9jb3VudCBBUyBET1VCTEUpIC8gQ0FTVChOVUxMSUYodC50YWdfc3VtLCAwKSBBUyBET1VCTEUpKSBzaGFyZV93aXRoaW5fcmVnaW9uX3NraWxsX3RhZ3NcbiAgIEZST01cbiAgICAgKGV1IGVcbiAgIElOTkVSIEpPSU4gZXVfdG90IHQgT04gKChlLmluZ2VzdF9tb250aCA9IHQuaW5nZXN0X21vbnRoKSBBTkQgKGUucnVuX2lkID0gdC5ydW5faWQpKSlcbikgXG4sIGFkenVuYV9za2lsbHMgQVMgKFxuICAgU0VMRUNUXG4gICAgIHMuc2tpbGxcbiAgICwgcy5qb2JfY291bnRcbiAgICwgcy5pbmdlc3RfbW9udGhcbiAgICwgcy5ydW5faWRcbiAgIEZST01cbiAgICAgKGptaV9nb2xkLnNraWxsX2RlbWFuZF9tb250aGx5IHNcbiAgIElOTkVSIEpPSU4gKFxuICAgICAgU0VMRUNUIHJ1bl9pZFxuICAgICAgRlJPTVxuICAgICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4gICApICBsciBPTiAocy5ydW5faWQgPSBsci5ydW5faWQpKVxuICAgV0hFUkUgKHMuaW5nZXN0X21vbnRoIEJFVFdFRU4gJzIwMTgtMDEnIEFORCAnMjAzNS0xMicpXG4pIFxuLCBhZHp1bmFfc2tpbGxfdG90IEFTIChcbiAgIFNFTEVDVFxuICAgICBpbmdlc3RfbW9udGhcbiAgICwgcnVuX2lkXG4gICAsIFNVTShqb2JfY291bnQpIHRhZ19zdW1cbiAgIEZST01cbiAgICAgYWR6dW5hX3NraWxsc1xuICAgR1JPVVAgQlkgaW5nZXN0X21vbnRoLCBydW5faWRcbikgXG4sIGluX3NoYXJlcyBBUyAoXG4gICBTRUxFQ1RcbiAgICAgJ0lOJyByZWdpb25fbGFiZWxcbiAgICwgaS5za2lsbFxuICAgLCBpLmluZ2VzdF9tb250aFxuICAgLCBpLnJ1bl9pZFxuICAgLCBpLmpvYl9jb3VudCBza2lsbF90YWdfY291bnRcbiAgICwgKENBU1QoaS5qb2JfY291bnQgQVMgRE9VQkxFKSAvIENBU1QoTlVMTElGKHQudGFnX3N1bSwgMCkgQVMgRE9VQkxFKSkgc2hhcmVfd2l0aGluX3JlZ2lvbl9za2lsbF90YWdzXG4gICBGUk9NXG4gICAgIChhZHp1bmFfc2tpbGxzIGlcbiAgIElOTkVSIEpPSU4gYWR6dW5hX3NraWxsX3RvdCB0IE9OICgoaS5pbmdlc3RfbW9udGggPSB0LmluZ2VzdF9tb250aCkgQU5EIChpLnJ1bl9pZCA9IHQucnVuX2lkKSkpXG4pIFxuU0VMRUNUICpcbkZST01cbiAgZXVfc2hhcmVzXG5VTklPTiBBTEwgU0VMRUNUICpcbkZST01cbiAgaW5fc2hhcmVzXG4iLCJjYXRhbG9nIjoiYXdzZGF0YWNhdGFsb2ciLCJzY2hlbWEiOiJqbWlfYW5hbHl0aWNzIiwiY29sdW1ucyI6W3sibmFtZSI6InJlZ2lvbl9sYWJlbCIsInR5cGUiOiJ2YXJjaGFyKDIpIn0seyJuYW1lIjoic2tpbGwiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6ImluZ2VzdF9tb250aCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoicnVuX2lkIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJza2lsbF90YWdfY291bnQiLCJ0eXBlIjoiYmlnaW50In0seyJuYW1lIjoic2hhcmVfd2l0aGluX3JlZ2lvbl9za2lsbF90YWdzIiwidHlwZSI6ImRvdWJsZSJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "europe_company_hiring_latest_grain",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:44:00+05:30",
+            "UpdateTime": "2026-04-12T17:44:00+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "company_name",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "source",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5cbikgXG5TRUxFQ1RcbiAgYy5jb21wYW55X25hbWVcbiwgYy5qb2JfY291bnRcbiwgYy5zb3VyY2VcbiwgYy5pbmdlc3RfbW9udGhcbiwgYy5ydW5faWRcbkZST01cbiAgKGptaV9nb2xkLmNvbXBhbnlfaGlyaW5nX21vbnRobHkgY1xuSU5ORVIgSk9JTiBsciBPTiAoYy5ydW5faWQgPSBsci5ydW5faWQpKVxuV0hFUkUgKGMuaW5nZXN0X21vbnRoIEJFVFdFRU4gJzIwMTgtMDEnIEFORCAnMjAzNS0xMicpXG4iLCJjYXRhbG9nIjoiYXdzZGF0YWNhdGFsb2ciLCJzY2hlbWEiOiJqbWlfYW5hbHl0aWNzIiwiY29sdW1ucyI6W3sibmFtZSI6ImNvbXBhbnlfbmFtZSIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiam9iX2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9LHsibmFtZSI6InNvdXJjZSIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiaW5nZXN0X21vbnRoIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhciJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "india_city_scatter_metrics",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:44:08+05:30",
+            "UpdateTime": "2026-04-12T17:44:08+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "location_label",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "city_job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "city_share_of_national",
+                        "Type": "double"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4pIFxuLCBiYXNlIEFTIChcbiAgIFNFTEVDVFxuICAgICBsLmxvY2F0aW9uIGxvY2F0aW9uX2xhYmVsXG4gICAsIGwuaW5nZXN0X21vbnRoXG4gICAsIGwuam9iX2NvdW50XG4gICAsIGwucnVuX2lkXG4gICBGUk9NXG4gICAgIChqbWlfZ29sZC5sb2NhdGlvbl9kZW1hbmRfbW9udGhseSBsXG4gICBJTk5FUiBKT0lOIGxyIE9OIChsLnJ1bl9pZCA9IGxyLnJ1bl9pZCkpXG4gICBXSEVSRSAobC5pbmdlc3RfbW9udGggQkVUV0VFTiAnMjAxOC0wMScgQU5EICcyMDM1LTEyJylcbikgXG4sIHRvdCBBUyAoXG4gICBTRUxFQ1RcbiAgICAgcnVuX2lkXG4gICAsIGluZ2VzdF9tb250aFxuICAgLCBTVU0oam9iX2NvdW50KSBuYXRpb25hbF90b3RhbFxuICAgRlJPTVxuICAgICBiYXNlXG4gICBHUk9VUCBCWSBydW5faWQsIGluZ2VzdF9tb250aFxuKSBcblNFTEVDVFxuICBiLmxvY2F0aW9uX2xhYmVsXG4sIGIuaW5nZXN0X21vbnRoXG4sIGIuam9iX2NvdW50IGNpdHlfam9iX2NvdW50XG4sIGIucnVuX2lkXG4sIChDQVNUKGIuam9iX2NvdW50IEFTIERPVUJMRSkgLyBDQVNUKE5VTExJRih0Lm5hdGlvbmFsX3RvdGFsLCAwKSBBUyBET1VCTEUpKSBjaXR5X3NoYXJlX29mX25hdGlvbmFsXG5GUk9NXG4gIChiYXNlIGJcbklOTkVSIEpPSU4gdG90IHQgT04gKChiLnJ1bl9pZCA9IHQucnVuX2lkKSBBTkQgKGIuaW5nZXN0X21vbnRoID0gdC5pbmdlc3RfbW9udGgpKSlcbiIsImNhdGFsb2ciOiJhd3NkYXRhY2F0YWxvZyIsInNjaGVtYSI6ImptaV9hbmFseXRpY3MiLCJjb2x1bW5zIjpbeyJuYW1lIjoibG9jYXRpb25fbGFiZWwiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6ImluZ2VzdF9tb250aCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiY2l0eV9qb2JfY291bnQiLCJ0eXBlIjoiYmlnaW50In0seyJuYW1lIjoicnVuX2lkIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJjaXR5X3NoYXJlX29mX25hdGlvbmFsIiwidHlwZSI6ImRvdWJsZSJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "india_location_month_heatmap",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:44:04+05:30",
+            "UpdateTime": "2026-04-12T17:44:04+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "location_label",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "source",
+                        "Type": "string"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4pIFxuU0VMRUNUXG4gIGwubG9jYXRpb24gbG9jYXRpb25fbGFiZWxcbiwgbC5pbmdlc3RfbW9udGhcbiwgbC5qb2JfY291bnRcbiwgbC5ydW5faWRcbiwgbC5zb3VyY2VcbkZST01cbiAgKGptaV9nb2xkLmxvY2F0aW9uX2RlbWFuZF9tb250aGx5IGxcbklOTkVSIEpPSU4gbHIgT04gKGwucnVuX2lkID0gbHIucnVuX2lkKSlcbldIRVJFIChsLmluZ2VzdF9tb250aCBCRVRXRUVOICcyMDE4LTAxJyBBTkQgJzIwMzUtMTInKVxuIiwiY2F0YWxvZyI6ImF3c2RhdGFjYXRhbG9nIiwic2NoZW1hIjoiam1pX2FuYWx5dGljcyIsImNvbHVtbnMiOlt7Im5hbWUiOiJsb2NhdGlvbl9sYWJlbCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiaW5nZXN0X21vbnRoIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJqb2JfY291bnQiLCJ0eXBlIjoiYmlnaW50In0seyJuYW1lIjoicnVuX2lkIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJzb3VyY2UiLCJ0eXBlIjoidmFyY2hhciJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "india_skill_job_count_boxplot_grain",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:44:12+05:30",
+            "UpdateTime": "2026-04-12T17:44:12+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "skill",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "source",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IlNFTEVDVFxuICBza2lsbFxuLCBqb2JfY291bnRcbiwgc291cmNlXG4sIGluZ2VzdF9tb250aFxuLCBydW5faWRcbkZST01cbiAgam1pX2FuYWx5dGljcy5za2lsbF9kZW1hbmRfbW9udGhseV9hZHp1bmFfbGF0ZXN0XG4iLCJjYXRhbG9nIjoiYXdzZGF0YWNhdGFsb2ciLCJzY2hlbWEiOiJqbWlfYW5hbHl0aWNzIiwiY29sdW1ucyI6W3sibmFtZSI6InNraWxsIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJqb2JfY291bnQiLCJ0eXBlIjoiYmlnaW50In0seyJuYW1lIjoic291cmNlIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJpbmdlc3RfbW9udGgiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6InJ1bl9pZCIsInR5cGUiOiJ2YXJjaGFyIn1dLCJvd25lciI6IjQ3MDQ0MTU3NzUwNiIsInJ1bkFzSW52b2tlciI6ZmFsc2UsInByb3BlcnRpZXMiOnt9LCJpc1Byb3RlY3RlZCI6ZmFsc2UsImlzTXVsdGlEaWFsZWN0IjpmYWxzZX0= */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "latest_pipeline_run",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-11T22:02:55+05:30",
+            "UpdateTime": "2026-04-12T09:57:01+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IlNFTEVDVCBydW5faWRcbkZST01cbiAgam1pX2dvbGQubGF0ZXN0X3J1bl9tZXRhZGF0YVxuTElNSVQgMVxuIiwiY2F0YWxvZyI6ImF3c2RhdGFjYXRhbG9nIiwic2NoZW1hIjoiam1pX2FuYWx5dGljcyIsImNvbHVtbnMiOlt7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhciJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:root",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "2",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "latest_pipeline_run_adzuna",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:10:30+05:30",
+            "UpdateTime": "2026-04-12T17:10:30+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IlNFTEVDVCBydW5faWRcbkZST01cbiAgKFxuICAgU0VMRUNUXG4gICAgIHJ1bl9pZFxuICAgLCBST1dfTlVNQkVSKCkgT1ZFUiAoT1JERVIgQlkgaW5nZXN0X21vbnRoIERFU0MsIHJ1bl9pZCBERVNDKSByblxuICAgRlJPTVxuICAgICBqbWlfZ29sZC5waXBlbGluZV9ydW5fc3VtbWFyeVxuICAgV0hFUkUgKChzb3VyY2UgPSAnYWR6dW5hX2luJykgQU5EIChpbmdlc3RfbW9udGggQkVUV0VFTiAnMjAxOC0wMScgQU5EICcyMDM1LTEyJykpXG4pICB4XG5XSEVSRSAocm4gPSAxKVxuIiwiY2F0YWxvZyI6ImF3c2RhdGFjYXRhbG9nIiwic2NoZW1hIjoiam1pX2FuYWx5dGljcyIsImNvbHVtbnMiOlt7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhciJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "location_top15_other",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-04T08:27:38+05:30",
+            "UpdateTime": "2026-04-12T14:29:22+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "location_label",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5cbikgXG4sIGJhc2UgQVMgKFxuICAgU0VMRUNUXG4gICAgIGwuaW5nZXN0X21vbnRoXG4gICAsIGwucnVuX2lkXG4gICAsIGwubG9jYXRpb25cbiAgICwgbC5qb2JfY291bnRcbiAgIEZST01cbiAgICAgKGptaV9nb2xkLmxvY2F0aW9uX2RlbWFuZF9tb250aGx5IGxcbiAgIElOTkVSIEpPSU4gbHIgT04gKGwucnVuX2lkID0gbHIucnVuX2lkKSlcbiAgIFdIRVJFIChsLmluZ2VzdF9tb250aCBCRVRXRUVOICcyMDE4LTAxJyBBTkQgJzIwMzUtMTInKVxuKSBcbiwgYWdnIEFTIChcbiAgIFNFTEVDVFxuICAgICBydW5faWRcbiAgICwgbG9jYXRpb25cbiAgICwgU1VNKGpvYl9jb3VudCkgam9iX2NvdW50XG4gICAsIE1BWChpbmdlc3RfbW9udGgpIGluZ2VzdF9tb250aFxuICAgRlJPTVxuICAgICBiYXNlXG4gICBHUk9VUCBCWSBydW5faWQsIGxvY2F0aW9uXG4pIFxuLCByYW5rZWQgQVMgKFxuICAgU0VMRUNUXG4gICAgIGluZ2VzdF9tb250aFxuICAgLCBydW5faWRcbiAgICwgbG9jYXRpb25cbiAgICwgam9iX2NvdW50XG4gICAsIFJPV19OVU1CRVIoKSBPVkVSIChQQVJUSVRJT04gQlkgcnVuX2lkIE9SREVSIEJZIGpvYl9jb3VudCBERVNDLCBsb2NhdGlvbiBBU0MpIHJuXG4gICBGUk9NXG4gICAgIGFnZ1xuKSBcbiwgcm9sbGVkIEFTIChcbiAgIFNFTEVDVFxuICAgICBydW5faWRcbiAgICwgTUFYKGluZ2VzdF9tb250aCkgaW5nZXN0X21vbnRoXG4gICAsIChDQVNFIFdIRU4gKHJuIDw9IDE1KSBUSEVOIGxvY2F0aW9uIEVMU0UgJ090aGVyJyBFTkQpIGxvY2F0aW9uX2xhYmVsXG4gICAsIFNVTShqb2JfY291bnQpIGpvYl9jb3VudFxuICAgRlJPTVxuICAgICByYW5rZWRcbiAgIEdST1VQIEJZIHJ1bl9pZCwgKENBU0UgV0hFTiAocm4gPD0gMTUpIFRIRU4gbG9jYXRpb24gRUxTRSAnT3RoZXInIEVORClcbikgXG5TRUxFQ1RcbiAgaW5nZXN0X21vbnRoXG4sIHJ1bl9pZFxuLCBsb2NhdGlvbl9sYWJlbFxuLCBqb2JfY291bnRcbkZST01cbiAgcm9sbGVkXG5XSEVSRSAoam9iX2NvdW50ID4gMClcbiIsImNhdGFsb2ciOiJhd3NkYXRhY2F0YWxvZyIsInNjaGVtYSI6ImptaV9hbmFseXRpY3MiLCJjb2x1bW5zIjpbeyJuYW1lIjoiaW5nZXN0X21vbnRoIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6ImxvY2F0aW9uX2xhYmVsIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJqb2JfY291bnQiLCJ0eXBlIjoiYmlnaW50In1dLCJvd25lciI6IjQ3MDQ0MTU3NzUwNiIsInJ1bkFzSW52b2tlciI6ZmFsc2UsInByb3BlcnRpZXMiOnt9LCJpc1Byb3RlY3RlZCI6ZmFsc2UsImlzTXVsdGlEaWFsZWN0IjpmYWxzZX0= */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "4",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "location_top15_other_adzuna",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:10:40+05:30",
+            "UpdateTime": "2026-04-12T17:10:40+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "location_label",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4pIFxuLCBiYXNlIEFTIChcbiAgIFNFTEVDVFxuICAgICBsLmluZ2VzdF9tb250aFxuICAgLCBsLnJ1bl9pZFxuICAgLCBsLmxvY2F0aW9uXG4gICAsIGwuam9iX2NvdW50XG4gICBGUk9NXG4gICAgIChqbWlfZ29sZC5sb2NhdGlvbl9kZW1hbmRfbW9udGhseSBsXG4gICBJTk5FUiBKT0lOIGxyIE9OIChsLnJ1bl9pZCA9IGxyLnJ1bl9pZCkpXG4gICBXSEVSRSAobC5pbmdlc3RfbW9udGggQkVUV0VFTiAnMjAxOC0wMScgQU5EICcyMDM1LTEyJylcbikgXG4sIGFnZyBBUyAoXG4gICBTRUxFQ1RcbiAgICAgcnVuX2lkXG4gICAsIGxvY2F0aW9uXG4gICAsIFNVTShqb2JfY291bnQpIGpvYl9jb3VudFxuICAgLCBNQVgoaW5nZXN0X21vbnRoKSBpbmdlc3RfbW9udGhcbiAgIEZST01cbiAgICAgYmFzZVxuICAgR1JPVVAgQlkgcnVuX2lkLCBsb2NhdGlvblxuKSBcbiwgcmFua2VkIEFTIChcbiAgIFNFTEVDVFxuICAgICBpbmdlc3RfbW9udGhcbiAgICwgcnVuX2lkXG4gICAsIGxvY2F0aW9uXG4gICAsIGpvYl9jb3VudFxuICAgLCBST1dfTlVNQkVSKCkgT1ZFUiAoUEFSVElUSU9OIEJZIHJ1bl9pZCBPUkRFUiBCWSBqb2JfY291bnQgREVTQywgbG9jYXRpb24gQVNDKSByblxuICAgRlJPTVxuICAgICBhZ2dcbikgXG4sIHJvbGxlZCBBUyAoXG4gICBTRUxFQ1RcbiAgICAgcnVuX2lkXG4gICAsIE1BWChpbmdlc3RfbW9udGgpIGluZ2VzdF9tb250aFxuICAgLCAoQ0FTRSBXSEVOIChybiA8PSAxNSkgVEhFTiBsb2NhdGlvbiBFTFNFICdPdGhlcicgRU5EKSBsb2NhdGlvbl9sYWJlbFxuICAgLCBTVU0oam9iX2NvdW50KSBqb2JfY291bnRcbiAgIEZST01cbiAgICAgcmFua2VkXG4gICBHUk9VUCBCWSBydW5faWQsIChDQVNFIFdIRU4gKHJuIDw9IDE1KSBUSEVOIGxvY2F0aW9uIEVMU0UgJ090aGVyJyBFTkQpXG4pIFxuU0VMRUNUXG4gIGluZ2VzdF9tb250aFxuLCBydW5faWRcbiwgbG9jYXRpb25fbGFiZWxcbiwgam9iX2NvdW50XG5GUk9NXG4gIHJvbGxlZFxuV0hFUkUgKGpvYl9jb3VudCA+IDApXG4iLCJjYXRhbG9nIjoiYXdzZGF0YWNhdGFsb2ciLCJzY2hlbWEiOiJqbWlfYW5hbHl0aWNzIiwiY29sdW1ucyI6W3sibmFtZSI6ImluZ2VzdF9tb250aCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoicnVuX2lkIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJsb2NhdGlvbl9sYWJlbCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiam9iX2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "pipeline_run_summary_adzuna_latest",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:10:37+05:30",
+            "UpdateTime": "2026-04-12T17:10:37+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "source",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "bronze_ingest_date",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "bronze_run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "skill_row_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "role_row_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "location_row_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "company_row_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "status",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4pIFxuU0VMRUNUXG4gIHAuc291cmNlXG4sIHAuYnJvbnplX2luZ2VzdF9kYXRlXG4sIHAuYnJvbnplX3J1bl9pZFxuLCBwLnNraWxsX3Jvd19jb3VudFxuLCBwLnJvbGVfcm93X2NvdW50XG4sIHAubG9jYXRpb25fcm93X2NvdW50XG4sIHAuY29tcGFueV9yb3dfY291bnRcbiwgcC5zdGF0dXNcbiwgcC5pbmdlc3RfbW9udGhcbiwgcC5ydW5faWRcbkZST01cbiAgKGptaV9nb2xkLnBpcGVsaW5lX3J1bl9zdW1tYXJ5IHBcbklOTkVSIEpPSU4gbHIgT04gKHAucnVuX2lkID0gbHIucnVuX2lkKSlcbldIRVJFIChwLmluZ2VzdF9tb250aCBCRVRXRUVOICcyMDE4LTAxJyBBTkQgJzIwMzUtMTInKVxuIiwiY2F0YWxvZyI6ImF3c2RhdGFjYXRhbG9nIiwic2NoZW1hIjoiam1pX2FuYWx5dGljcyIsImNvbHVtbnMiOlt7Im5hbWUiOiJzb3VyY2UiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6ImJyb256ZV9pbmdlc3RfZGF0ZSIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiYnJvbnplX3J1bl9pZCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoic2tpbGxfcm93X2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9LHsibmFtZSI6InJvbGVfcm93X2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9LHsibmFtZSI6ImxvY2F0aW9uX3Jvd19jb3VudCIsInR5cGUiOiJiaWdpbnQifSx7Im5hbWUiOiJjb21wYW55X3Jvd19jb3VudCIsInR5cGUiOiJiaWdpbnQifSx7Im5hbWUiOiJzdGF0dXMiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6ImluZ2VzdF9tb250aCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoicnVuX2lkIiwidHlwZSI6InZhcmNoYXIifV0sIm93bmVyIjoiNDcwNDQxNTc3NTA2IiwicnVuQXNJbnZva2VyIjpmYWxzZSwicHJvcGVydGllcyI6e30sImlzUHJvdGVjdGVkIjpmYWxzZSwiaXNNdWx0aURpYWxlY3QiOmZhbHNlfQ== */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "pipeline_run_summary_latest",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-11T22:03:28+05:30",
+            "UpdateTime": "2026-04-12T09:57:28+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "source",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "bronze_ingest_date",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "bronze_run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "skill_row_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "role_row_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "location_row_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "company_row_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "status",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5cbikgXG5TRUxFQ1RcbiAgcC5zb3VyY2VcbiwgcC5icm9uemVfaW5nZXN0X2RhdGVcbiwgcC5icm9uemVfcnVuX2lkXG4sIHAuc2tpbGxfcm93X2NvdW50XG4sIHAucm9sZV9yb3dfY291bnRcbiwgcC5sb2NhdGlvbl9yb3dfY291bnRcbiwgcC5jb21wYW55X3Jvd19jb3VudFxuLCBwLnN0YXR1c1xuLCBwLmluZ2VzdF9tb250aFxuLCBwLnJ1bl9pZFxuRlJPTVxuICAoam1pX2dvbGQucGlwZWxpbmVfcnVuX3N1bW1hcnkgcFxuSU5ORVIgSk9JTiBsciBPTiAocC5ydW5faWQgPSBsci5ydW5faWQpKVxuV0hFUkUgKHAuaW5nZXN0X21vbnRoIEJFVFdFRU4gJzIwMTgtMDEnIEFORCAnMjAzNS0xMicpXG4iLCJjYXRhbG9nIjoiYXdzZGF0YWNhdGFsb2ciLCJzY2hlbWEiOiJqbWlfYW5hbHl0aWNzIiwiY29sdW1ucyI6W3sibmFtZSI6InNvdXJjZSIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiYnJvbnplX2luZ2VzdF9kYXRlIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJicm9uemVfcnVuX2lkIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJza2lsbF9yb3dfY291bnQiLCJ0eXBlIjoiYmlnaW50In0seyJuYW1lIjoicm9sZV9yb3dfY291bnQiLCJ0eXBlIjoiYmlnaW50In0seyJuYW1lIjoibG9jYXRpb25fcm93X2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9LHsibmFtZSI6ImNvbXBhbnlfcm93X2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9LHsibmFtZSI6InN0YXR1cyIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiaW5nZXN0X21vbnRoIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhciJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:root",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "1",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "role_group_demand_monthly",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-04T18:10:32+05:30",
+            "UpdateTime": "2026-04-04T18:10:32+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "role_group",
+                        "Type": "varchar(29)"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IlNFTEVDVFxuICBpbmdlc3RfbW9udGhcbiwgcnVuX2lkXG4sIG5vcm1hbGl6ZWRfcm9sZV9ncm91cCByb2xlX2dyb3VwXG4sIFNVTShqb2JfY291bnQpIGpvYl9jb3VudFxuRlJPTVxuICBqbWlfYW5hbHl0aWNzLnJvbGVfdGl0bGVfY2xhc3NpZmllZFxuR1JPVVAgQlkgaW5nZXN0X21vbnRoLCBydW5faWQsIG5vcm1hbGl6ZWRfcm9sZV9ncm91cFxuIiwiY2F0YWxvZyI6ImF3c2RhdGFjYXRhbG9nIiwic2NoZW1hIjoiam1pX2FuYWx5dGljcyIsImNvbHVtbnMiOlt7Im5hbWUiOiJpbmdlc3RfbW9udGgiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6InJ1bl9pZCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoicm9sZV9ncm91cCIsInR5cGUiOiJ2YXJjaGFyKDI5KSJ9LHsibmFtZSI6ImpvYl9jb3VudCIsInR5cGUiOiJiaWdpbnQifV0sIm93bmVyIjoiNDcwNDQxNTc3NTA2IiwicnVuQXNJbnZva2VyIjpmYWxzZSwicHJvcGVydGllcyI6e30sImlzUHJvdGVjdGVkIjpmYWxzZSwiaXNNdWx0aURpYWxlY3QiOmZhbHNlfQ== */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "role_group_demand_monthly_adzuna",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:10:47+05:30",
+            "UpdateTime": "2026-04-12T17:10:47+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "role_group",
+                        "Type": "varchar(29)"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IlNFTEVDVFxuICBpbmdlc3RfbW9udGhcbiwgcnVuX2lkXG4sIG5vcm1hbGl6ZWRfcm9sZV9ncm91cCByb2xlX2dyb3VwXG4sIFNVTShqb2JfY291bnQpIGpvYl9jb3VudFxuRlJPTVxuICBqbWlfYW5hbHl0aWNzLnJvbGVfdGl0bGVfY2xhc3NpZmllZF9hZHp1bmFcbkdST1VQIEJZIGluZ2VzdF9tb250aCwgcnVuX2lkLCBub3JtYWxpemVkX3JvbGVfZ3JvdXBcbiIsImNhdGFsb2ciOiJhd3NkYXRhY2F0YWxvZyIsInNjaGVtYSI6ImptaV9hbmFseXRpY3MiLCJjb2x1bW5zIjpbeyJuYW1lIjoiaW5nZXN0X21vbnRoIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6InJvbGVfZ3JvdXAiLCJ0eXBlIjoidmFyY2hhcigyOSkifSx7Im5hbWUiOiJqb2JfY291bnQiLCJ0eXBlIjoiYmlnaW50In1dLCJvd25lciI6IjQ3MDQ0MTU3NzUwNiIsInJ1bkFzSW52b2tlciI6ZmFsc2UsInByb3BlcnRpZXMiOnt9LCJpc1Byb3RlY3RlZCI6ZmFsc2UsImlzTXVsdGlEaWFsZWN0IjpmYWxzZX0= */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "role_group_pareto",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-04T18:10:39+05:30",
+            "UpdateTime": "2026-04-12T14:27:52+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "role_group",
+                        "Type": "varchar(29)"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "pareto_rank",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "share_of_total",
+                        "Type": "double"
+                    },
+                    {
+                        "Name": "cumulative_job_pct",
+                        "Type": "double"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5cbikgXG4sIGFnZyBBUyAoXG4gICBTRUxFQ1RcbiAgICAgci5ydW5faWRcbiAgICwgci5yb2xlX2dyb3VwXG4gICAsIFNVTShyLmpvYl9jb3VudCkgam9iX2NvdW50XG4gICAsIE1BWChyLmluZ2VzdF9tb250aCkgaW5nZXN0X21vbnRoXG4gICBGUk9NXG4gICAgIChqbWlfYW5hbHl0aWNzLnJvbGVfZ3JvdXBfZGVtYW5kX21vbnRobHkgclxuICAgSU5ORVIgSk9JTiBsciBPTiAoci5ydW5faWQgPSBsci5ydW5faWQpKVxuICAgR1JPVVAgQlkgci5ydW5faWQsIHIucm9sZV9ncm91cFxuKSBcbiwgdG90YWxzIEFTIChcbiAgIFNFTEVDVFxuICAgICBydW5faWRcbiAgICwgU1VNKGpvYl9jb3VudCkgdG90YWxfam9ic1xuICAgRlJPTVxuICAgICBhZ2dcbiAgIEdST1VQIEJZIHJ1bl9pZFxuKSBcblNFTEVDVFxuICBnLmluZ2VzdF9tb250aFxuLCBnLnJ1bl9pZFxuLCBnLnJvbGVfZ3JvdXBcbiwgZy5qb2JfY291bnRcbiwgUk9XX05VTUJFUigpIE9WRVIgKFBBUlRJVElPTiBCWSBnLnJ1bl9pZCBPUkRFUiBCWSBnLmpvYl9jb3VudCBERVNDLCBnLnJvbGVfZ3JvdXAgQVNDKSBwYXJldG9fcmFua1xuLCAoQ0FTRSBXSEVOICh0LnRvdGFsX2pvYnMgPiAwKSBUSEVOIChDQVNUKGcuam9iX2NvdW50IEFTIERPVUJMRSkgLyBDQVNUKHQudG90YWxfam9icyBBUyBET1VCTEUpKSBFTFNFIG51bGwgRU5EKSBzaGFyZV9vZl90b3RhbFxuLCAoQ0FTRSBXSEVOICh0LnRvdGFsX2pvYnMgPiAwKSBUSEVOICgoMUUyICogU1VNKGcuam9iX2NvdW50KSBPVkVSIChQQVJUSVRJT04gQlkgZy5ydW5faWQgT1JERVIgQlkgZy5qb2JfY291bnQgREVTQywgZy5yb2xlX2dyb3VwIEFTQyBST1dTIEJFVFdFRU4gVU5CT1VOREVEIFBSRUNFRElORyBBTkQgQ1VSUkVOVCBST1cpKSAvIENBU1QodC50b3RhbF9qb2JzIEFTIERPVUJMRSkpIEVMU0UgbnVsbCBFTkQpIGN1bXVsYXRpdmVfam9iX3BjdFxuRlJPTVxuICAoYWdnIGdcbklOTkVSIEpPSU4gdG90YWxzIHQgT04gKGcucnVuX2lkID0gdC5ydW5faWQpKVxuIiwiY2F0YWxvZyI6ImF3c2RhdGFjYXRhbG9nIiwic2NoZW1hIjoiam1pX2FuYWx5dGljcyIsImNvbHVtbnMiOlt7Im5hbWUiOiJpbmdlc3RfbW9udGgiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6InJ1bl9pZCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoicm9sZV9ncm91cCIsInR5cGUiOiJ2YXJjaGFyKDI5KSJ9LHsibmFtZSI6ImpvYl9jb3VudCIsInR5cGUiOiJiaWdpbnQifSx7Im5hbWUiOiJwYXJldG9fcmFuayIsInR5cGUiOiJiaWdpbnQifSx7Im5hbWUiOiJzaGFyZV9vZl90b3RhbCIsInR5cGUiOiJkb3VibGUifSx7Im5hbWUiOiJjdW11bGF0aXZlX2pvYl9wY3QiLCJ0eXBlIjoiZG91YmxlIn1dLCJvd25lciI6IjQ3MDQ0MTU3NzUwNiIsInJ1bkFzSW52b2tlciI6ZmFsc2UsInByb3BlcnRpZXMiOnt9LCJpc1Byb3RlY3RlZCI6ZmFsc2UsImlzTXVsdGlEaWFsZWN0IjpmYWxzZX0= */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "1",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "role_group_pareto_adzuna",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:11:05+05:30",
+            "UpdateTime": "2026-04-12T17:11:05+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "role_group",
+                        "Type": "varchar(29)"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "pareto_rank",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "share_of_total",
+                        "Type": "double"
+                    },
+                    {
+                        "Name": "cumulative_job_pct",
+                        "Type": "double"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4pIFxuLCBhZ2cgQVMgKFxuICAgU0VMRUNUXG4gICAgIHIucnVuX2lkXG4gICAsIHIucm9sZV9ncm91cFxuICAgLCBTVU0oci5qb2JfY291bnQpIGpvYl9jb3VudFxuICAgLCBNQVgoci5pbmdlc3RfbW9udGgpIGluZ2VzdF9tb250aFxuICAgRlJPTVxuICAgICAoam1pX2FuYWx5dGljcy5yb2xlX2dyb3VwX2RlbWFuZF9tb250aGx5X2FkenVuYSByXG4gICBJTk5FUiBKT0lOIGxyIE9OIChyLnJ1bl9pZCA9IGxyLnJ1bl9pZCkpXG4gICBHUk9VUCBCWSByLnJ1bl9pZCwgci5yb2xlX2dyb3VwXG4pIFxuLCB0b3RhbHMgQVMgKFxuICAgU0VMRUNUXG4gICAgIHJ1bl9pZFxuICAgLCBTVU0oam9iX2NvdW50KSB0b3RhbF9qb2JzXG4gICBGUk9NXG4gICAgIGFnZ1xuICAgR1JPVVAgQlkgcnVuX2lkXG4pIFxuU0VMRUNUXG4gIGcuaW5nZXN0X21vbnRoXG4sIGcucnVuX2lkXG4sIGcucm9sZV9ncm91cFxuLCBnLmpvYl9jb3VudFxuLCBST1dfTlVNQkVSKCkgT1ZFUiAoUEFSVElUSU9OIEJZIGcucnVuX2lkIE9SREVSIEJZIGcuam9iX2NvdW50IERFU0MsIGcucm9sZV9ncm91cCBBU0MpIHBhcmV0b19yYW5rXG4sIChDQVNFIFdIRU4gKHQudG90YWxfam9icyA+IDApIFRIRU4gKENBU1QoZy5qb2JfY291bnQgQVMgRE9VQkxFKSAvIENBU1QodC50b3RhbF9qb2JzIEFTIERPVUJMRSkpIEVMU0UgbnVsbCBFTkQpIHNoYXJlX29mX3RvdGFsXG4sIChDQVNFIFdIRU4gKHQudG90YWxfam9icyA+IDApIFRIRU4gKCgxRTIgKiBTVU0oZy5qb2JfY291bnQpIE9WRVIgKFBBUlRJVElPTiBCWSBnLnJ1bl9pZCBPUkRFUiBCWSBnLmpvYl9jb3VudCBERVNDLCBnLnJvbGVfZ3JvdXAgQVNDIFJPV1MgQkVUV0VFTiBVTkJPVU5ERUQgUFJFQ0VESU5HIEFORCBDVVJSRU5UIFJPVykpIC8gQ0FTVCh0LnRvdGFsX2pvYnMgQVMgRE9VQkxFKSkgRUxTRSBudWxsIEVORCkgY3VtdWxhdGl2ZV9qb2JfcGN0XG5GUk9NXG4gIChhZ2cgZ1xuSU5ORVIgSk9JTiB0b3RhbHMgdCBPTiAoZy5ydW5faWQgPSB0LnJ1bl9pZCkpXG4iLCJjYXRhbG9nIjoiYXdzZGF0YWNhdGFsb2ciLCJzY2hlbWEiOiJqbWlfYW5hbHl0aWNzIiwiY29sdW1ucyI6W3sibmFtZSI6ImluZ2VzdF9tb250aCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoicnVuX2lkIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJyb2xlX2dyb3VwIiwidHlwZSI6InZhcmNoYXIoMjkpIn0seyJuYW1lIjoiam9iX2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9LHsibmFtZSI6InBhcmV0b19yYW5rIiwidHlwZSI6ImJpZ2ludCJ9LHsibmFtZSI6InNoYXJlX29mX3RvdGFsIiwidHlwZSI6ImRvdWJsZSJ9LHsibmFtZSI6ImN1bXVsYXRpdmVfam9iX3BjdCIsInR5cGUiOiJkb3VibGUifV0sIm93bmVyIjoiNDcwNDQxNTc3NTA2IiwicnVuQXNJbnZva2VyIjpmYWxzZSwicHJvcGVydGllcyI6e30sImlzUHJvdGVjdGVkIjpmYWxzZSwiaXNNdWx0aURpYWxlY3QiOmZhbHNlfQ== */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "role_group_top20",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-04T18:10:36+05:30",
+            "UpdateTime": "2026-04-12T14:27:50+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "role_group",
+                        "Type": "varchar(29)"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "pareto_rank",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5cbikgXG4sIGFnZyBBUyAoXG4gICBTRUxFQ1RcbiAgICAgci5ydW5faWRcbiAgICwgci5yb2xlX2dyb3VwXG4gICAsIFNVTShyLmpvYl9jb3VudCkgam9iX2NvdW50XG4gICAsIE1BWChyLmluZ2VzdF9tb250aCkgaW5nZXN0X21vbnRoXG4gICBGUk9NXG4gICAgIChqbWlfYW5hbHl0aWNzLnJvbGVfZ3JvdXBfZGVtYW5kX21vbnRobHkgclxuICAgSU5ORVIgSk9JTiBsciBPTiAoci5ydW5faWQgPSBsci5ydW5faWQpKVxuICAgR1JPVVAgQlkgci5ydW5faWQsIHIucm9sZV9ncm91cFxuKSBcbiwgcmFua2VkIEFTIChcbiAgIFNFTEVDVFxuICAgICBpbmdlc3RfbW9udGhcbiAgICwgcnVuX2lkXG4gICAsIHJvbGVfZ3JvdXBcbiAgICwgam9iX2NvdW50XG4gICAsIFJPV19OVU1CRVIoKSBPVkVSIChQQVJUSVRJT04gQlkgcnVuX2lkIE9SREVSIEJZIGpvYl9jb3VudCBERVNDLCByb2xlX2dyb3VwIEFTQykgcGFyZXRvX3JhbmtcbiAgIEZST01cbiAgICAgYWdnXG4pIFxuU0VMRUNUXG4gIGluZ2VzdF9tb250aFxuLCBydW5faWRcbiwgcm9sZV9ncm91cFxuLCBqb2JfY291bnRcbiwgcGFyZXRvX3JhbmtcbkZST01cbiAgcmFua2VkXG5XSEVSRSAocGFyZXRvX3JhbmsgPD0gMjApXG4iLCJjYXRhbG9nIjoiYXdzZGF0YWNhdGFsb2ciLCJzY2hlbWEiOiJqbWlfYW5hbHl0aWNzIiwiY29sdW1ucyI6W3sibmFtZSI6ImluZ2VzdF9tb250aCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoicnVuX2lkIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJyb2xlX2dyb3VwIiwidHlwZSI6InZhcmNoYXIoMjkpIn0seyJuYW1lIjoiam9iX2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9LHsibmFtZSI6InBhcmV0b19yYW5rIiwidHlwZSI6ImJpZ2ludCJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "1",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "role_group_top20_adzuna",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:11:01+05:30",
+            "UpdateTime": "2026-04-12T17:11:01+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "role_group",
+                        "Type": "varchar(29)"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "pareto_rank",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4pIFxuLCBhZ2cgQVMgKFxuICAgU0VMRUNUXG4gICAgIHIucnVuX2lkXG4gICAsIHIucm9sZV9ncm91cFxuICAgLCBTVU0oci5qb2JfY291bnQpIGpvYl9jb3VudFxuICAgLCBNQVgoci5pbmdlc3RfbW9udGgpIGluZ2VzdF9tb250aFxuICAgRlJPTVxuICAgICAoam1pX2FuYWx5dGljcy5yb2xlX2dyb3VwX2RlbWFuZF9tb250aGx5X2FkenVuYSByXG4gICBJTk5FUiBKT0lOIGxyIE9OIChyLnJ1bl9pZCA9IGxyLnJ1bl9pZCkpXG4gICBHUk9VUCBCWSByLnJ1bl9pZCwgci5yb2xlX2dyb3VwXG4pIFxuLCByYW5rZWQgQVMgKFxuICAgU0VMRUNUXG4gICAgIGluZ2VzdF9tb250aFxuICAgLCBydW5faWRcbiAgICwgcm9sZV9ncm91cFxuICAgLCBqb2JfY291bnRcbiAgICwgUk9XX05VTUJFUigpIE9WRVIgKFBBUlRJVElPTiBCWSBydW5faWQgT1JERVIgQlkgam9iX2NvdW50IERFU0MsIHJvbGVfZ3JvdXAgQVNDKSBwYXJldG9fcmFua1xuICAgRlJPTVxuICAgICBhZ2dcbikgXG5TRUxFQ1RcbiAgaW5nZXN0X21vbnRoXG4sIHJ1bl9pZFxuLCByb2xlX2dyb3VwXG4sIGpvYl9jb3VudFxuLCBwYXJldG9fcmFua1xuRlJPTVxuICByYW5rZWRcbldIRVJFIChwYXJldG9fcmFuayA8PSAyMClcbiIsImNhdGFsb2ciOiJhd3NkYXRhY2F0YWxvZyIsInNjaGVtYSI6ImptaV9hbmFseXRpY3MiLCJjb2x1bW5zIjpbeyJuYW1lIjoiaW5nZXN0X21vbnRoIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6InJvbGVfZ3JvdXAiLCJ0eXBlIjoidmFyY2hhcigyOSkifSx7Im5hbWUiOiJqb2JfY291bnQiLCJ0eXBlIjoiYmlnaW50In0seyJuYW1lIjoicGFyZXRvX3JhbmsiLCJ0eXBlIjoiYmlnaW50In1dLCJvd25lciI6IjQ3MDQ0MTU3NzUwNiIsInJ1bkFzSW52b2tlciI6ZmFsc2UsInByb3BlcnRpZXMiOnt9LCJpc1Byb3RlY3RlZCI6ZmFsc2UsImlzTXVsdGlEaWFsZWN0IjpmYWxzZX0= */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "role_pareto",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-04T08:27:43+05:30",
+            "UpdateTime": "2026-04-12T12:11:33+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "role",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "cumulative_jobs",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "total_jobs",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "cumulative_share",
+                        "Type": "double"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgYmFzZSBBUyAoXG4gICBTRUxFQ1RcbiAgICAgcm9sZVxuICAgLCBqb2JfY291bnRcbiAgIEZST01cbiAgICAgam1pX2dvbGQucm9sZV9kZW1hbmRfbW9udGhseVxuICAgV0hFUkUgKChydW5faWQgPSAnMjAyNjA0MTJUMDI0NjMyWi1hOTUxMjYxYicpIEFORCAoaW5nZXN0X21vbnRoID0gJzIwMjYtMDQnKSlcbikgXG4sIG9yZGVyZWQgQVMgKFxuICAgU0VMRUNUXG4gICAgIHJvbGVcbiAgICwgam9iX2NvdW50XG4gICAsIFNVTShqb2JfY291bnQpIE9WRVIgKE9SREVSIEJZIGpvYl9jb3VudCBERVNDLCByb2xlIEFTQykgY3VtdWxhdGl2ZV9qb2JzXG4gICAsIFNVTShqb2JfY291bnQpIE9WRVIgKCkgdG90YWxfam9ic1xuICAgRlJPTVxuICAgICBiYXNlXG4pIFxuU0VMRUNUXG4gIHJvbGVcbiwgam9iX2NvdW50XG4sIGN1bXVsYXRpdmVfam9ic1xuLCB0b3RhbF9qb2JzXG4sIChDQVNFIFdIRU4gKHRvdGFsX2pvYnMgPSAwKSBUSEVOIDBFMCBFTFNFICgoY3VtdWxhdGl2ZV9qb2JzICogMUUwKSAvIHRvdGFsX2pvYnMpIEVORCkgY3VtdWxhdGl2ZV9zaGFyZVxuRlJPTVxuICBvcmRlcmVkXG4iLCJjYXRhbG9nIjoiYXdzZGF0YWNhdGFsb2ciLCJzY2hlbWEiOiJqbWlfYW5hbHl0aWNzIiwiY29sdW1ucyI6W3sibmFtZSI6InJvbGUiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6ImpvYl9jb3VudCIsInR5cGUiOiJiaWdpbnQifSx7Im5hbWUiOiJjdW11bGF0aXZlX2pvYnMiLCJ0eXBlIjoiYmlnaW50In0seyJuYW1lIjoidG90YWxfam9icyIsInR5cGUiOiJiaWdpbnQifSx7Im5hbWUiOiJjdW11bGF0aXZlX3NoYXJlIiwidHlwZSI6ImRvdWJsZSJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "2",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "role_title_classified",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-04T18:10:28+05:30",
+            "UpdateTime": "2026-04-04T18:10:28+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "raw_role",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "cleaned_role_title",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "normalized_role_group",
+                        "Type": "varchar(29)"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgYmFzZSBBUyAoXG4gICBTRUxFQ1RcbiAgICAgci5pbmdlc3RfbW9udGhcbiAgICwgci5ydW5faWRcbiAgICwgci5cInJvbGVcIiByYXdfcm9sZVxuICAgLCByLmpvYl9jb3VudFxuICAgLCB0cmltKEJPVEggRlJPTSByZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShsb3dlcih0cmltKEJPVEggRlJPTSByLlwicm9sZVwiKSksICcoP2kpKFxcXFwobS93L2RcXFxcKXxcXFxcKG0vZi94XFxcXCl8XFxcXCh3L20vZFxcXFwpfFxcXFwobS9mL2RcXFxcKXxcXFxcKGYvbS9kXFxcXCl8XFxcXChkL20vd1xcXFwpfFxcXFwoZC9mL21cXFxcKXxcXFxcKG0vdy94XFxcXCkpJywgJyAnKSwgJyg/aSkoYWxsIGdlbmRlcnN8YWxsZVxcXFxzK2dlc2NobGVjaHRlcnxnZXNjaGxlY2h0XFxcXHMqZWdhbCknLCAnICcpLCAnKD9pKXJlZlxcXFwuP1xcXFxzKm5yXFxcXC4/XFxcXHMqOj9cXFxccypbXFxcXHcuLyMtXSsnLCAnICcpLCAnKD9pKShqb2JcXFxccyppZFxcXFxzKls6I10/XFxcXHMqW1xcXFx3LV0rfHN0ZWxsZW5uclxcXFwuP1xcXFxzKjo/XFxcXHMqW1xcXFx3LV0rKScsICcgJyksICcoP2kpKFxcXFwocmVtb3RlXFxcXCl8XFxcXChoeWJyaWRcXFxcKXxcXFxcKG9uc2l0ZVxcXFwpfFxcXFwodm9yIG9ydFxcXFwpKScsICcgJyksICdbLDs6fC9cXFxcXFxcXC4tXXsyLH0nLCAnICcpLCAnXFxcXHMrJywgJyAnKSkgYzBcbiAgIEZST01cbiAgICAgam1pX2dvbGQucm9sZV9kZW1hbmRfbW9udGhseSByXG4pIFxuLCBzdHJpcHBlZCBBUyAoXG4gICBTRUxFQ1RcbiAgICAgaW5nZXN0X21vbnRoXG4gICAsIHJ1bl9pZFxuICAgLCByYXdfcm9sZVxuICAgLCBqb2JfY291bnRcbiAgICwgdHJpbShCT1RIIEZST00gcmVnZXhwX3JlcGxhY2UocmVnZXhwX3JlcGxhY2UoYzAsICdeWywgLjs6fFxcXFxcXFxcLy1dKycsICcnKSwgJ1ssIC47OnxcXFxcXFxcXC8tXSskJywgJycpKSBjbGVhbmVkX3JvbGVfdGl0bGVcbiAgIEZST01cbiAgICAgYmFzZVxuKSBcbiwgY2xhc3NpZmllZCBBUyAoXG4gICBTRUxFQ1RcbiAgICAgaW5nZXN0X21vbnRoXG4gICAsIHJ1bl9pZFxuICAgLCByYXdfcm9sZVxuICAgLCBqb2JfY291bnRcbiAgICwgKENBU0UgV0hFTiAoKGNsZWFuZWRfcm9sZV90aXRsZSA9ICcnKSBPUiAoY2xlYW5lZF9yb2xlX3RpdGxlIElTIE5VTEwpKSBUSEVOICcoZW1wdHkgdGl0bGUpJyBFTFNFIGNsZWFuZWRfcm9sZV90aXRsZSBFTkQpIGNsZWFuZWRfcm9sZV90aXRsZVxuICAgLCAoQ0FTRSBXSEVOICgoY2xlYW5lZF9yb2xlX3RpdGxlID0gJycpIE9SIChjbGVhbmVkX3JvbGVfdGl0bGUgSVMgTlVMTCkpIFRIRU4gJ3Vua25vd25fb3RoZXInIFdIRU4gcmVnZXhwX2xpa2UoY2xlYW5lZF9yb2xlX3RpdGxlLCAnKD9pKShjeWJlclxcXFxzKnNlY3VyaXR5fGN5YmVyc2VjdXJpdHl8aW5mb3JtYXRpb25zc2ljaGVyaGVpdHxpbmZvcm1hdGlvbiBzZWN1cml0eXxpdFtcXFxccy1dKnNlY3VyaXR5fHBlbnRlc3R8cGVuZXRyYXRpb258YXBwc2VjfHNvYyBhbmFseXN0fHNlY3VyaXR5IGVuZ2luZWVyfHNlY3VyaXR5IGFyY2hpdGVjdCknKSBUSEVOICdjeWJlcnNlY3VyaXR5JyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgJyg/aSkoZGF0YVxcXFxzKnNjaWVudGlzdHxkYXRhXFxcXHMqc2NpZW5jZXxkYXRhXFxcXHMqZW5naW5lZXJ8bWFjaGluZVxcXFxzKmxlYXJuaW5nfFxcXFxibWxcXFxccytlbmdpbmVlcnxhbmFseXRpY3NcXFxccyplbmdpbmVlcnxidXNpbmVzc1xcXFxzKmludGVsbGlnZW5jZXxcXFxcYmJpXFxcXHMrZGV2ZWxvcGVyfGRhdGVuYW5hbHlzdHxkYXRlbmFuYWx5c2V8ZGF0YVxcXFxzKmFuYWx5c3R8YnVzaW5lc3NcXFxccyphbmFseXN0LipcXFxcYihkYXRhfGFuYWx5dGljc3xiaSlcXFxcYnxyZXNlYXJjaFxcXFxzKnNjaWVudGlzdC4qXFxcXGIoZGF0YXxtbClcXFxcYnxldGx8ZGF0YVxcXFxzKndhcmVob3VzZXxkd2gpJykgVEhFTiAnZGF0YV9hbmFseXRpY3MnIFdIRU4gcmVnZXhwX2xpa2UoY2xlYW5lZF9yb2xlX3RpdGxlLCAnKD9pKShcXFxcYmRhXFxcXGJ8XFxcXGJkZVxcXFxiKVxcXFxzKihlbmdpbmVlcnxkZXZlbG9wZXJ8YW5hbHlzdCl8cG93ZXJcXFxccypiaXx0YWJsZWF1fGxvb2tlcicpIFRIRU4gJ2RhdGFfYW5hbHl0aWNzJyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgJyg/aSkoZGV2b3BzfGRldlxcXFxzKm9wc3xzaXRlXFxcXHMqcmVsaWFiaWxpdHl8XFxcXGJzcmVcXFxcYnxrdWJlcm5ldGVzfFxcXFxiazhzXFxcXGJ8Y2xvdWRcXFxccyplbmdpbmVlcnxwbGF0Zm9ybVxcXFxzKmVuZ2luZWVyfGluZnJhc3RydWN0dXJlfGNsb3VkXFxcXHMqYXJjaGl0ZWN0fHRlcnJhZm9ybXxhbnNpYmxlfGNpL2NkKScpIFRIRU4gJ2Rldm9wc19jbG91ZF9pbmZyYXN0cnVjdHVyZScgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKGN1c3RvbWVyXFxcXHMqc3VjY2Vzc3xjdXN0b21lclxcXFxzKnN1cHBvcnR8Y2xpZW50XFxcXHMqc3VjY2Vzc3xoZWxwXFxcXHMqZGVza3xoZWxwZGVza3xzZXJ2aWNlXFxcXHMqZGVza3xrdW5kZW5zZXJ2aWNlfGt1bmRlbmJldHJldXVuZ3x0ZWNobmljYWxcXFxccypzdXBwb3J0fGl0XFxcXHMqc3VwcG9ydHwybmRcXFxccypsaW5lfDFzdFxcXFxzKmxpbmV8c3VwcG9ydFxcXFxzKnNwZWNpYWxpc3R8c3VwcG9ydFxcXFxzKmVuZ2luZWVyKScpIFRIRU4gJ2N1c3RvbWVyX3N1Y2Nlc3Nfc3VwcG9ydCcgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKHNvZnR3YXJlfGVudHdpY2tsZXJ8ZW50d2lja2x1bmd8ZGV2ZWxvcGVyfHByb2dyYW1tZXJ8cHJvZ3JhbW1pZXJ8ZnVsbFtcXFxccy1dP3N0YWNrfGZyb250W1xcXFxzLV0/ZW5kfGJhY2tbXFxcXHMtXT9lbmR8d2ViW1xcXFxzLV0/ZW50d2lja2xlcnxzb2Z0d2FyZWluZ2VuaWV1cnxzb2Z0d2FyZVtcXFxccy1dP2luZ2VuaWV1cnxhcHBsaWNhdGlvblxcXFxzKmVuZ2luZWVyfGFwcGxpY2F0aW9uc1xcXFxzKmVuZ2luZWVyfHNvbHV0aW9uc1xcXFxzKmVuZ2luZWVyfFxcXFxiamF2YVxcXFxifFxcXFxicHl0aG9uXFxcXGJ8XFxcXGJcXFxcLm5ldFxcXFxifFxcXFxicGhwXFxcXGJ8cmVhY3R8YW5ndWxhcnxub2RlXFxcXC5qc3x0eXBlc2NyaXB0fG1vYmlsZVxcXFxzKmRldmVsb3BlcnxhcHBcXFxccypkZXZlbG9wZXJ8ZW1iZWRkZWRcXFxccypzb2Z0d2FyZSknKSBUSEVOICdzb2Z0d2FyZV9lbmdpbmVlcmluZycgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKHByb2R1Y3RcXFxccypvd25lcnxwcm9kdWN0XFxcXHMqbWFuYWdlcnxwcm9qZWt0bWFuYWdlcnxwcm9qZWN0XFxcXHMqbWFuYWdlcnxwcm9ncmFtXFxcXHMqbWFuYWdlcnxwcm9ncmFtbW1hbmFnZXJ8c2NydW1cXFxccyptYXN0ZXJ8YWdpbGVcXFxccypjb2FjaHxkZWxpdmVyeVxcXFxzKm1hbmFnZXJ8cmVsZWFzZVxcXFxzKnRyYWlufHRlY2huaWNhbFxcXFxzKnByb2plY3QpJykgVEhFTiAncHJvZHVjdF9wcm9ncmFtX3Byb2plY3QnIFdIRU4gcmVnZXhwX2xpa2UoY2xlYW5lZF9yb2xlX3RpdGxlLCAnKD9pKShtYXJrZXRpbmd8Z3Jvd3RofGNvbnRlbnRcXFxccyptYW5hZ2VyfGNvbnRlbnRcXFxccyptYXJrZXRpbmd8c2VvfHNlbXxzb2NpYWxcXFxccyptZWRpYXxicmFuZHxrb21tdW5pa2F0aW9ufGNvbW11bmljYXRpb25zfGNvcHl3cml0ZXIpJykgVEhFTiAnbWFya2V0aW5nX2NvbnRlbnRfZ3Jvd3RoJyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgJyg/aSkoc2FsZXN8dmVydHJpZWJ8YnVzaW5lc3NcXFxccypkZXZlbG9wbWVudHxcXFxcYmJkXFxcXGJ8YWNjb3VudFxcXFxzKmV4ZWN1dGl2ZXxhY2NvdW50XFxcXHMqbWFuYWdlcnxrZXlcXFxccyphY2NvdW50fGluc2lkZVxcXFxzKnNhbGVzfGF1c3NlbmRpZW5zdHxpbm5lbmRpZW5zdHx2ZXJrYXVmKScpIFRIRU4gJ3NhbGVzX2J1c2luZXNzX2RldmVsb3BtZW50JyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgJyg/aSkoZmluYW5jZXxmaW5hbmNpYWx8YWNjb3VudGFudHxhY2NvdW50aW5nfGJ1Y2hoYWx0dW5nfGNvbnRyb2xsaW5nfGNvbnRyb2xsZXJ8dHJlYXN1cnl8YXVkaXR8dGF4fGZpbmFueiknKSBUSEVOICdmaW5hbmNlX2FjY291bnRpbmcnIFdIRU4gcmVnZXhwX2xpa2UoY2xlYW5lZF9yb2xlX3RpdGxlLCAnKD9pKShcXFxcYmhyXFxcXGJ8aHVtYW5cXFxccypyZXNvdXJjZXN8cmVjcnVpdGVyfHJlY3J1aXRpbmd8dGFsZW50XFxcXHMqYWNxdWlzaXRpb258cGVvcGxlXFxcXHMqcGFydG5lcnxwZXJzb25hbHxwZXJzb25hbHJlZmVyZW50fHBlb3BsZVxcXFxzKm9wZXJhdGlvbnMpJykgVEhFTiAnaHJfcmVjcnVpdGluZycgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKHV4XFxcXHMqZGVzaWdufHVpXFxcXHMqZGVzaWdufHByb2R1Y3RcXFxccypkZXNpZ258Z3JhcGhpY1xcXFxzKmRlc2lnbnxkZXNpZ25lcnxjcmVhdGl2ZVxcXFxzKmRpcmVjdG9yfFxcXFxidXhcXFxcYnxcXFxcYnVpXFxcXGJ8bW90aW9uXFxcXHMqZGVzaWduKScpIFRIRU4gJ2Rlc2lnbl9jcmVhdGl2ZScgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKGxlZ2FsXFxcXHMqY291bnNlbHxjb3Jwb3JhdGVcXFxccypjb3Vuc2VsfGNvbXBsaWFuY2VcXFxccypvZmZpY2VyfFxcXFxianVyaXN0XFxcXGJ8cmVjaHRzYW53YWx0fHBhcmFsZWdhbHxsZWdhbFxcXFxzKmFkdmlzb3IpJykgVEhFTiAnbGVnYWxfY29tcGxpYW5jZScgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKGZpcm13YXJlfGhhcmR3YXJlXFxcXHMqZW5naW5lZXJ8ZWxla3Ryb25pa3xlbGVjdHJvbmljc1xcXFxzKmVuZ2luZWVyfHNlbWljb25kdWN0b3J8aGFsYmxlaXRlcnxwY2J8YXNpY3xmcGdhfFxcXFxiZW1iZWRkZWRcXFxccytzeXN0ZW1zXFxcXGJ8XFxcXGJlbWJlZGRlZFxcXFxzK2hhcmR3YXJlXFxcXGIpJykgVEhFTiAnaGFyZHdhcmVfZWxlY3Ryb25pY3NfZW1iZWRkZWQnIFdIRU4gcmVnZXhwX2xpa2UoY2xlYW5lZF9yb2xlX3RpdGxlLCAnKD9pKShjb25zdWx0YW50fGNvbnN1bHRpbmd8YmVyYXRlcnxiZXJhdHVuZ3xhZHZpc29yeXxwcm9mZXNzaW9uYWxcXFxccypzZXJ2aWNlcyknKSBUSEVOICdjb25zdWx0aW5nJyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgVSYnKD9pKShvcGVyYXRpb25zXFxcXFxcXFxzKm1hbmFnZXJ8b2ZmaWNlXFxcXFxcXFxzKm1hbmFnZXJ8ZXhlY3V0aXZlXFxcXFxcXFxzKmFzc2lzdGFudHxhZG1pbmlzdHJhdG9yfGFkbWluaXN0cmF0aW9ufHZlcndhbHR1bmd8c2VrcmV0XFwwMEU0cnxmYWNpbGl0eXxlaW5rYXVmfHByb2N1cmVtZW50fGxvZ2lzdGljc3xzdXBwbHlcXFxcXFxcXHMqY2hhaW4pJykgVEhFTiAnb3BlcmF0aW9uc19hZG1pbmlzdHJhdGlvbicgRUxTRSAndW5rbm93bl9vdGhlcicgRU5EKSBub3JtYWxpemVkX3JvbGVfZ3JvdXBcbiAgIEZST01cbiAgICAgc3RyaXBwZWRcbikgXG5TRUxFQ1RcbiAgaW5nZXN0X21vbnRoXG4sIHJ1bl9pZFxuLCByYXdfcm9sZVxuLCBjbGVhbmVkX3JvbGVfdGl0bGVcbiwgbm9ybWFsaXplZF9yb2xlX2dyb3VwXG4sIGpvYl9jb3VudFxuRlJPTVxuICBjbGFzc2lmaWVkXG4iLCJjYXRhbG9nIjoiYXdzZGF0YWNhdGFsb2ciLCJzY2hlbWEiOiJqbWlfYW5hbHl0aWNzIiwiY29sdW1ucyI6W3sibmFtZSI6ImluZ2VzdF9tb250aCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoicnVuX2lkIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJyYXdfcm9sZSIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiY2xlYW5lZF9yb2xlX3RpdGxlIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJub3JtYWxpemVkX3JvbGVfZ3JvdXAiLCJ0eXBlIjoidmFyY2hhcigyOSkifSx7Im5hbWUiOiJqb2JfY291bnQiLCJ0eXBlIjoiYmlnaW50In1dLCJvd25lciI6IjQ3MDQ0MTU3NzUwNiIsInJ1bkFzSW52b2tlciI6ZmFsc2UsInByb3BlcnRpZXMiOnt9LCJpc1Byb3RlY3RlZCI6ZmFsc2UsImlzTXVsdGlEaWFsZWN0IjpmYWxzZX0= */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "role_title_classified_adzuna",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:10:44+05:30",
+            "UpdateTime": "2026-04-12T17:10:44+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "raw_role",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "cleaned_role_title",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "normalized_role_group",
+                        "Type": "varchar(29)"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4pIFxuLCBiYXNlIEFTIChcbiAgIFNFTEVDVFxuICAgICByLmluZ2VzdF9tb250aFxuICAgLCByLnJ1bl9pZFxuICAgLCByLlwicm9sZVwiIHJhd19yb2xlXG4gICAsIHIuam9iX2NvdW50XG4gICAsIHRyaW0oQk9USCBGUk9NIHJlZ2V4cF9yZXBsYWNlKHJlZ2V4cF9yZXBsYWNlKHJlZ2V4cF9yZXBsYWNlKHJlZ2V4cF9yZXBsYWNlKHJlZ2V4cF9yZXBsYWNlKHJlZ2V4cF9yZXBsYWNlKHJlZ2V4cF9yZXBsYWNlKGxvd2VyKHRyaW0oQk9USCBGUk9NIHIuXCJyb2xlXCIpKSwgJyg/aSkoXFxcXChtL3cvZFxcXFwpfFxcXFwobS9mL3hcXFxcKXxcXFxcKHcvbS9kXFxcXCl8XFxcXChtL2YvZFxcXFwpfFxcXFwoZi9tL2RcXFxcKXxcXFxcKGQvbS93XFxcXCl8XFxcXChkL2YvbVxcXFwpfFxcXFwobS93L3hcXFxcKSknLCAnICcpLCAnKD9pKShhbGwgZ2VuZGVyc3xhbGxlXFxcXHMrZ2VzY2hsZWNodGVyfGdlc2NobGVjaHRcXFxccyplZ2FsKScsICcgJyksICcoP2kpcmVmXFxcXC4/XFxcXHMqbnJcXFxcLj9cXFxccyo6P1xcXFxzKltcXFxcdy4vIy1dKycsICcgJyksICcoP2kpKGpvYlxcXFxzKmlkXFxcXHMqWzojXT9cXFxccypbXFxcXHctXSt8c3RlbGxlbm5yXFxcXC4/XFxcXHMqOj9cXFxccypbXFxcXHctXSspJywgJyAnKSwgJyg/aSkoXFxcXChyZW1vdGVcXFxcKXxcXFxcKGh5YnJpZFxcXFwpfFxcXFwob25zaXRlXFxcXCl8XFxcXCh2b3Igb3J0XFxcXCkpJywgJyAnKSwgJ1ssOzp8L1xcXFxcXFxcLi1dezIsfScsICcgJyksICdcXFxccysnLCAnICcpKSBjMFxuICAgRlJPTVxuICAgICAoam1pX2dvbGQucm9sZV9kZW1hbmRfbW9udGhseSByXG4gICBJTk5FUiBKT0lOIGxyIE9OIChyLnJ1bl9pZCA9IGxyLnJ1bl9pZCkpXG4gICBXSEVSRSAoci5pbmdlc3RfbW9udGggQkVUV0VFTiAnMjAxOC0wMScgQU5EICcyMDM1LTEyJylcbikgXG4sIHN0cmlwcGVkIEFTIChcbiAgIFNFTEVDVFxuICAgICBpbmdlc3RfbW9udGhcbiAgICwgcnVuX2lkXG4gICAsIHJhd19yb2xlXG4gICAsIGpvYl9jb3VudFxuICAgLCB0cmltKEJPVEggRlJPTSByZWdleHBfcmVwbGFjZShyZWdleHBfcmVwbGFjZShjMCwgJ15bLCAuOzp8XFxcXFxcXFwvLV0rJywgJycpLCAnWywgLjs6fFxcXFxcXFxcLy1dKyQnLCAnJykpIGNsZWFuZWRfcm9sZV90aXRsZVxuICAgRlJPTVxuICAgICBiYXNlXG4pIFxuLCBjbGFzc2lmaWVkIEFTIChcbiAgIFNFTEVDVFxuICAgICBpbmdlc3RfbW9udGhcbiAgICwgcnVuX2lkXG4gICAsIHJhd19yb2xlXG4gICAsIGpvYl9jb3VudFxuICAgLCAoQ0FTRSBXSEVOICgoY2xlYW5lZF9yb2xlX3RpdGxlID0gJycpIE9SIChjbGVhbmVkX3JvbGVfdGl0bGUgSVMgTlVMTCkpIFRIRU4gJyhlbXB0eSB0aXRsZSknIEVMU0UgY2xlYW5lZF9yb2xlX3RpdGxlIEVORCkgY2xlYW5lZF9yb2xlX3RpdGxlXG4gICAsIChDQVNFIFdIRU4gKChjbGVhbmVkX3JvbGVfdGl0bGUgPSAnJykgT1IgKGNsZWFuZWRfcm9sZV90aXRsZSBJUyBOVUxMKSkgVEhFTiAndW5rbm93bl9vdGhlcicgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKGN5YmVyXFxcXHMqc2VjdXJpdHl8Y3liZXJzZWN1cml0eXxpbmZvcm1hdGlvbnNzaWNoZXJoZWl0fGluZm9ybWF0aW9uIHNlY3VyaXR5fGl0W1xcXFxzLV0qc2VjdXJpdHl8cGVudGVzdHxwZW5ldHJhdGlvbnxhcHBzZWN8c29jIGFuYWx5c3R8c2VjdXJpdHkgZW5naW5lZXJ8c2VjdXJpdHkgYXJjaGl0ZWN0KScpIFRIRU4gJ2N5YmVyc2VjdXJpdHknIFdIRU4gcmVnZXhwX2xpa2UoY2xlYW5lZF9yb2xlX3RpdGxlLCAnKD9pKShkYXRhXFxcXHMqc2NpZW50aXN0fGRhdGFcXFxccypzY2llbmNlfGRhdGFcXFxccyplbmdpbmVlcnxtYWNoaW5lXFxcXHMqbGVhcm5pbmd8XFxcXGJtbFxcXFxzK2VuZ2luZWVyfGFuYWx5dGljc1xcXFxzKmVuZ2luZWVyfGJ1c2luZXNzXFxcXHMqaW50ZWxsaWdlbmNlfFxcXFxiYmlcXFxccytkZXZlbG9wZXJ8ZGF0ZW5hbmFseXN0fGRhdGVuYW5hbHlzZXxkYXRhXFxcXHMqYW5hbHlzdHxidXNpbmVzc1xcXFxzKmFuYWx5c3QuKlxcXFxiKGRhdGF8YW5hbHl0aWNzfGJpKVxcXFxifHJlc2VhcmNoXFxcXHMqc2NpZW50aXN0LipcXFxcYihkYXRhfG1sKVxcXFxifGV0bHxkYXRhXFxcXHMqd2FyZWhvdXNlfGR3aCknKSBUSEVOICdkYXRhX2FuYWx5dGljcycgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKFxcXFxiZGFcXFxcYnxcXFxcYmRlXFxcXGIpXFxcXHMqKGVuZ2luZWVyfGRldmVsb3BlcnxhbmFseXN0KXxwb3dlclxcXFxzKmJpfHRhYmxlYXV8bG9va2VyJykgVEhFTiAnZGF0YV9hbmFseXRpY3MnIFdIRU4gcmVnZXhwX2xpa2UoY2xlYW5lZF9yb2xlX3RpdGxlLCAnKD9pKShkZXZvcHN8ZGV2XFxcXHMqb3BzfHNpdGVcXFxccypyZWxpYWJpbGl0eXxcXFxcYnNyZVxcXFxifGt1YmVybmV0ZXN8XFxcXGJrOHNcXFxcYnxjbG91ZFxcXFxzKmVuZ2luZWVyfHBsYXRmb3JtXFxcXHMqZW5naW5lZXJ8aW5mcmFzdHJ1Y3R1cmV8Y2xvdWRcXFxccyphcmNoaXRlY3R8dGVycmFmb3JtfGFuc2libGV8Y2kvY2QpJykgVEhFTiAnZGV2b3BzX2Nsb3VkX2luZnJhc3RydWN0dXJlJyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgJyg/aSkoY3VzdG9tZXJcXFxccypzdWNjZXNzfGN1c3RvbWVyXFxcXHMqc3VwcG9ydHxjbGllbnRcXFxccypzdWNjZXNzfGhlbHBcXFxccypkZXNrfGhlbHBkZXNrfHNlcnZpY2VcXFxccypkZXNrfGt1bmRlbnNlcnZpY2V8a3VuZGVuYmV0cmV1dW5nfHRlY2huaWNhbFxcXFxzKnN1cHBvcnR8aXRcXFxccypzdXBwb3J0fDJuZFxcXFxzKmxpbmV8MXN0XFxcXHMqbGluZXxzdXBwb3J0XFxcXHMqc3BlY2lhbGlzdHxzdXBwb3J0XFxcXHMqZW5naW5lZXIpJykgVEhFTiAnY3VzdG9tZXJfc3VjY2Vzc19zdXBwb3J0JyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgJyg/aSkoc29mdHdhcmV8ZW50d2lja2xlcnxlbnR3aWNrbHVuZ3xkZXZlbG9wZXJ8cHJvZ3JhbW1lcnxwcm9ncmFtbWllcnxmdWxsW1xcXFxzLV0/c3RhY2t8ZnJvbnRbXFxcXHMtXT9lbmR8YmFja1tcXFxccy1dP2VuZHx3ZWJbXFxcXHMtXT9lbnR3aWNrbGVyfHNvZnR3YXJlaW5nZW5pZXVyfHNvZnR3YXJlW1xcXFxzLV0/aW5nZW5pZXVyfGFwcGxpY2F0aW9uXFxcXHMqZW5naW5lZXJ8YXBwbGljYXRpb25zXFxcXHMqZW5naW5lZXJ8c29sdXRpb25zXFxcXHMqZW5naW5lZXJ8XFxcXGJqYXZhXFxcXGJ8XFxcXGJweXRob25cXFxcYnxcXFxcYlxcXFwubmV0XFxcXGJ8XFxcXGJwaHBcXFxcYnxyZWFjdHxhbmd1bGFyfG5vZGVcXFxcLmpzfHR5cGVzY3JpcHR8bW9iaWxlXFxcXHMqZGV2ZWxvcGVyfGFwcFxcXFxzKmRldmVsb3BlcnxlbWJlZGRlZFxcXFxzKnNvZnR3YXJlKScpIFRIRU4gJ3NvZnR3YXJlX2VuZ2luZWVyaW5nJyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgJyg/aSkocHJvZHVjdFxcXFxzKm93bmVyfHByb2R1Y3RcXFxccyptYW5hZ2VyfHByb2pla3RtYW5hZ2VyfHByb2plY3RcXFxccyptYW5hZ2VyfHByb2dyYW1cXFxccyptYW5hZ2VyfHByb2dyYW1tbWFuYWdlcnxzY3J1bVxcXFxzKm1hc3RlcnxhZ2lsZVxcXFxzKmNvYWNofGRlbGl2ZXJ5XFxcXHMqbWFuYWdlcnxyZWxlYXNlXFxcXHMqdHJhaW58dGVjaG5pY2FsXFxcXHMqcHJvamVjdCknKSBUSEVOICdwcm9kdWN0X3Byb2dyYW1fcHJvamVjdCcgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKG1hcmtldGluZ3xncm93dGh8Y29udGVudFxcXFxzKm1hbmFnZXJ8Y29udGVudFxcXFxzKm1hcmtldGluZ3xzZW98c2VtfHNvY2lhbFxcXFxzKm1lZGlhfGJyYW5kfGtvbW11bmlrYXRpb258Y29tbXVuaWNhdGlvbnN8Y29weXdyaXRlciknKSBUSEVOICdtYXJrZXRpbmdfY29udGVudF9ncm93dGgnIFdIRU4gcmVnZXhwX2xpa2UoY2xlYW5lZF9yb2xlX3RpdGxlLCAnKD9pKShzYWxlc3x2ZXJ0cmllYnxidXNpbmVzc1xcXFxzKmRldmVsb3BtZW50fFxcXFxiYmRcXFxcYnxhY2NvdW50XFxcXHMqZXhlY3V0aXZlfGFjY291bnRcXFxccyptYW5hZ2VyfGtleVxcXFxzKmFjY291bnR8aW5zaWRlXFxcXHMqc2FsZXN8YXVzc2VuZGllbnN0fGlubmVuZGllbnN0fHZlcmthdWYpJykgVEhFTiAnc2FsZXNfYnVzaW5lc3NfZGV2ZWxvcG1lbnQnIFdIRU4gcmVnZXhwX2xpa2UoY2xlYW5lZF9yb2xlX3RpdGxlLCAnKD9pKShmaW5hbmNlfGZpbmFuY2lhbHxhY2NvdW50YW50fGFjY291bnRpbmd8YnVjaGhhbHR1bmd8Y29udHJvbGxpbmd8Y29udHJvbGxlcnx0cmVhc3VyeXxhdWRpdHx0YXh8ZmluYW56KScpIFRIRU4gJ2ZpbmFuY2VfYWNjb3VudGluZycgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKFxcXFxiaHJcXFxcYnxodW1hblxcXFxzKnJlc291cmNlc3xyZWNydWl0ZXJ8cmVjcnVpdGluZ3x0YWxlbnRcXFxccyphY3F1aXNpdGlvbnxwZW9wbGVcXFxccypwYXJ0bmVyfHBlcnNvbmFsfHBlcnNvbmFscmVmZXJlbnR8cGVvcGxlXFxcXHMqb3BlcmF0aW9ucyknKSBUSEVOICdocl9yZWNydWl0aW5nJyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgJyg/aSkodXhcXFxccypkZXNpZ258dWlcXFxccypkZXNpZ258cHJvZHVjdFxcXFxzKmRlc2lnbnxncmFwaGljXFxcXHMqZGVzaWdufGRlc2lnbmVyfGNyZWF0aXZlXFxcXHMqZGlyZWN0b3J8XFxcXGJ1eFxcXFxifFxcXFxidWlcXFxcYnxtb3Rpb25cXFxccypkZXNpZ24pJykgVEhFTiAnZGVzaWduX2NyZWF0aXZlJyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgJyg/aSkobGVnYWxcXFxccypjb3Vuc2VsfGNvcnBvcmF0ZVxcXFxzKmNvdW5zZWx8Y29tcGxpYW5jZVxcXFxzKm9mZmljZXJ8XFxcXGJqdXJpc3RcXFxcYnxyZWNodHNhbndhbHR8cGFyYWxlZ2FsfGxlZ2FsXFxcXHMqYWR2aXNvciknKSBUSEVOICdsZWdhbF9jb21wbGlhbmNlJyBXSEVOIHJlZ2V4cF9saWtlKGNsZWFuZWRfcm9sZV90aXRsZSwgJyg/aSkoZmlybXdhcmV8aGFyZHdhcmVcXFxccyplbmdpbmVlcnxlbGVrdHJvbmlrfGVsZWN0cm9uaWNzXFxcXHMqZW5naW5lZXJ8c2VtaWNvbmR1Y3RvcnxoYWxibGVpdGVyfHBjYnxhc2ljfGZwZ2F8XFxcXGJlbWJlZGRlZFxcXFxzK3N5c3RlbXNcXFxcYnxcXFxcYmVtYmVkZGVkXFxcXHMraGFyZHdhcmVcXFxcYiknKSBUSEVOICdoYXJkd2FyZV9lbGVjdHJvbmljc19lbWJlZGRlZCcgV0hFTiByZWdleHBfbGlrZShjbGVhbmVkX3JvbGVfdGl0bGUsICcoP2kpKGNvbnN1bHRhbnR8Y29uc3VsdGluZ3xiZXJhdGVyfGJlcmF0dW5nfGFkdmlzb3J5fHByb2Zlc3Npb25hbFxcXFxzKnNlcnZpY2VzKScpIFRIRU4gJ2NvbnN1bHRpbmcnIFdIRU4gcmVnZXhwX2xpa2UoY2xlYW5lZF9yb2xlX3RpdGxlLCBVJicoP2kpKG9wZXJhdGlvbnNcXFxcXFxcXHMqbWFuYWdlcnxvZmZpY2VcXFxcXFxcXHMqbWFuYWdlcnxleGVjdXRpdmVcXFxcXFxcXHMqYXNzaXN0YW50fGFkbWluaXN0cmF0b3J8YWRtaW5pc3RyYXRpb258dmVyd2FsdHVuZ3xzZWtyZXRcXDAwRTRyfGZhY2lsaXR5fGVpbmthdWZ8cHJvY3VyZW1lbnR8bG9naXN0aWNzfHN1cHBseVxcXFxcXFxccypjaGFpbiknKSBUSEVOICdvcGVyYXRpb25zX2FkbWluaXN0cmF0aW9uJyBFTFNFICd1bmtub3duX290aGVyJyBFTkQpIG5vcm1hbGl6ZWRfcm9sZV9ncm91cFxuICAgRlJPTVxuICAgICBzdHJpcHBlZFxuKSBcblNFTEVDVFxuICBpbmdlc3RfbW9udGhcbiwgcnVuX2lkXG4sIHJhd19yb2xlXG4sIGNsZWFuZWRfcm9sZV90aXRsZVxuLCBub3JtYWxpemVkX3JvbGVfZ3JvdXBcbiwgam9iX2NvdW50XG5GUk9NXG4gIGNsYXNzaWZpZWRcbiIsImNhdGFsb2ciOiJhd3NkYXRhY2F0YWxvZyIsInNjaGVtYSI6ImptaV9hbmFseXRpY3MiLCJjb2x1bW5zIjpbeyJuYW1lIjoiaW5nZXN0X21vbnRoIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6InJhd19yb2xlIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJjbGVhbmVkX3JvbGVfdGl0bGUiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6Im5vcm1hbGl6ZWRfcm9sZV9ncm91cCIsInR5cGUiOiJ2YXJjaGFyKDI5KSJ9LHsibmFtZSI6ImpvYl9jb3VudCIsInR5cGUiOiJiaWdpbnQifV0sIm93bmVyIjoiNDcwNDQxNTc3NTA2IiwicnVuQXNJbnZva2VyIjpmYWxzZSwicHJvcGVydGllcyI6e30sImlzUHJvdGVjdGVkIjpmYWxzZSwiaXNNdWx0aURpYWxlY3QiOmZhbHNlfQ== */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "role_top20",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-04T08:27:46+05:30",
+            "UpdateTime": "2026-04-12T12:11:01+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "role",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgcmFua2VkIEFTIChcbiAgIFNFTEVDVFxuICAgICByb2xlXG4gICAsIGpvYl9jb3VudFxuICAgLCBST1dfTlVNQkVSKCkgT1ZFUiAoT1JERVIgQlkgam9iX2NvdW50IERFU0MsIHJvbGUgQVNDKSByblxuICAgRlJPTVxuICAgICBqbWlfZ29sZC5yb2xlX2RlbWFuZF9tb250aGx5XG4gICBXSEVSRSAoKHJ1bl9pZCA9ICcyMDI2MDQxMlQwMjQ2MzJaLWE5NTEyNjFiJykgQU5EIChpbmdlc3RfbW9udGggPSAnMjAyNi0wNCcpKVxuKSBcblNFTEVDVFxuICByb2xlXG4sIGpvYl9jb3VudFxuRlJPTVxuICByYW5rZWRcbldIRVJFIChybiA8PSAyMClcbiIsImNhdGFsb2ciOiJhd3NkYXRhY2F0YWxvZyIsInNjaGVtYSI6ImptaV9hbmFseXRpY3MiLCJjb2x1bW5zIjpbeyJuYW1lIjoicm9sZSIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiam9iX2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "2",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "sheet1_kpis",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-04T08:27:36+05:30",
+            "UpdateTime": "2026-04-12T12:08:27+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "ingest_month",
+                        "Type": "varchar(7)"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "varchar(25)"
+                    },
+                    {
+                        "Name": "total_postings",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "located_postings",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "top3_location_share",
+                        "Type": "double"
+                    },
+                    {
+                        "Name": "location_hhi",
+                        "Type": "double"
+                    },
+                    {
+                        "Name": "company_hhi",
+                        "Type": "double"
+                    },
+                    {
+                        "Name": "top1_role_share",
+                        "Type": "double"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgcm9sZV9iYXNlIEFTIChcbiAgIFNFTEVDVFxuICAgICByb2xlXG4gICAsIGpvYl9jb3VudFxuICAgRlJPTVxuICAgICBqbWlfZ29sZC5yb2xlX2RlbWFuZF9tb250aGx5XG4gICBXSEVSRSAoKHJ1bl9pZCA9ICcyMDI2MDQxMlQwMjQ2MzJaLWE5NTEyNjFiJykgQU5EIChpbmdlc3RfbW9udGggPSAnMjAyNi0wNCcpKVxuKSBcbiwgbG9jYXRpb25fYmFzZSBBUyAoXG4gICBTRUxFQ1RcbiAgICAgbG9jYXRpb25cbiAgICwgam9iX2NvdW50XG4gICBGUk9NXG4gICAgIGptaV9nb2xkLmxvY2F0aW9uX2RlbWFuZF9tb250aGx5XG4gICBXSEVSRSAoKHJ1bl9pZCA9ICcyMDI2MDQxMlQwMjQ2MzJaLWE5NTEyNjFiJykgQU5EIChpbmdlc3RfbW9udGggPSAnMjAyNi0wNCcpKVxuKSBcbiwgY29tcGFueV9iYXNlIEFTIChcbiAgIFNFTEVDVFxuICAgICBjb21wYW55X25hbWVcbiAgICwgam9iX2NvdW50XG4gICBGUk9NXG4gICAgIGptaV9nb2xkLmNvbXBhbnlfaGlyaW5nX21vbnRobHlcbiAgIFdIRVJFICgocnVuX2lkID0gJzIwMjYwNDEyVDAyNDYzMlotYTk1MTI2MWInKSBBTkQgKGluZ2VzdF9tb250aCA9ICcyMDI2LTA0JykpXG4pIFxuLCB0b3RhbF9wb3N0aW5nc19jdGUgQVMgKFxuICAgU0VMRUNUIENPQUxFU0NFKFNVTShqb2JfY291bnQpLCAwKSB0b3RhbF9wb3N0aW5nc1xuICAgRlJPTVxuICAgICByb2xlX2Jhc2VcbikgXG4sIGxvY2F0ZWRfcG9zdGluZ3NfY3RlIEFTIChcbiAgIFNFTEVDVCBDT0FMRVNDRShTVU0oam9iX2NvdW50KSwgMCkgbG9jYXRlZF9wb3N0aW5nc1xuICAgRlJPTVxuICAgICBsb2NhdGlvbl9iYXNlXG4pIFxuLCB0b3AzX2xvY2F0aW9uX2N0ZSBBUyAoXG4gICBTRUxFQ1QgQ09BTEVTQ0UoU1VNKGpvYl9jb3VudCksIDApIHRvcDNfbG9jYXRpb25fam9ic1xuICAgRlJPTVxuICAgICAoXG4gICAgICBTRUxFQ1Qgam9iX2NvdW50XG4gICAgICBGUk9NXG4gICAgICAgIGxvY2F0aW9uX2Jhc2VcbiAgICAgIE9SREVSIEJZIGpvYl9jb3VudCBERVNDXG4gICAgICBMSU1JVCAzXG4gICApIFxuKSBcbiwgbG9jYXRpb25faGhpX2N0ZSBBUyAoXG4gICBTRUxFQ1QgQ09BTEVTQ0UoU1VNKFBPV0VSKCgoam9iX2NvdW50ICogMUUwKSAvIE5VTExJRih0LnRvdGFsX2xvYywgMCkpLCAyKSksIDBFMCkgbG9jYXRpb25faGhpXG4gICBGUk9NXG4gICAgIChsb2NhdGlvbl9iYXNlXG4gICBDUk9TUyBKT0lOIChcbiAgICAgIFNFTEVDVCBTVU0oam9iX2NvdW50KSB0b3RhbF9sb2NcbiAgICAgIEZST01cbiAgICAgICAgbG9jYXRpb25fYmFzZVxuICAgKSAgdClcbikgXG4sIGNvbXBhbnlfaGhpX2N0ZSBBUyAoXG4gICBTRUxFQ1QgQ09BTEVTQ0UoU1VNKFBPV0VSKCgoam9iX2NvdW50ICogMUUwKSAvIE5VTExJRih0LnRvdGFsX2NvbXAsIDApKSwgMikpLCAwRTApIGNvbXBhbnlfaGhpXG4gICBGUk9NXG4gICAgIChjb21wYW55X2Jhc2VcbiAgIENST1NTIEpPSU4gKFxuICAgICAgU0VMRUNUIFNVTShqb2JfY291bnQpIHRvdGFsX2NvbXBcbiAgICAgIEZST01cbiAgICAgICAgY29tcGFueV9iYXNlXG4gICApICB0KVxuKSBcbiwgdG9wMV9yb2xlX2N0ZSBBUyAoXG4gICBTRUxFQ1QgQ09BTEVTQ0UoTUFYKGpvYl9jb3VudCksIDApIHRvcDFfcm9sZV9qb2JzXG4gICBGUk9NXG4gICAgIHJvbGVfYmFzZVxuKSBcblNFTEVDVFxuICAnMjAyNi0wNCcgaW5nZXN0X21vbnRoXG4sICcyMDI2MDQxMlQwMjQ2MzJaLWE5NTEyNjFiJyBydW5faWRcbiwgdC50b3RhbF9wb3N0aW5nc1xuLCBsLmxvY2F0ZWRfcG9zdGluZ3NcbiwgKENBU0UgV0hFTiAobC5sb2NhdGVkX3Bvc3RpbmdzID0gMCkgVEhFTiAwRTAgRUxTRSAoKHRvcDMudG9wM19sb2NhdGlvbl9qb2JzICogMUUwKSAvIGwubG9jYXRlZF9wb3N0aW5ncykgRU5EKSB0b3AzX2xvY2F0aW9uX3NoYXJlXG4sIGxoLmxvY2F0aW9uX2hoaVxuLCBjaC5jb21wYW55X2hoaVxuLCAoQ0FTRSBXSEVOICh0LnRvdGFsX3Bvc3RpbmdzID0gMCkgVEhFTiAwRTAgRUxTRSAoKHIudG9wMV9yb2xlX2pvYnMgKiAxRTApIC8gdC50b3RhbF9wb3N0aW5ncykgRU5EKSB0b3AxX3JvbGVfc2hhcmVcbkZST01cbiAgKCgoKCh0b3RhbF9wb3N0aW5nc19jdGUgdFxuQ1JPU1MgSk9JTiBsb2NhdGVkX3Bvc3RpbmdzX2N0ZSBsKVxuQ1JPU1MgSk9JTiB0b3AzX2xvY2F0aW9uX2N0ZSB0b3AzKVxuQ1JPU1MgSk9JTiBsb2NhdGlvbl9oaGlfY3RlIGxoKVxuQ1JPU1MgSk9JTiBjb21wYW55X2hoaV9jdGUgY2gpXG5DUk9TUyBKT0lOIHRvcDFfcm9sZV9jdGUgcilcbiIsImNhdGFsb2ciOiJhd3NkYXRhY2F0YWxvZyIsInNjaGVtYSI6ImptaV9hbmFseXRpY3MiLCJjb2x1bW5zIjpbeyJuYW1lIjoiaW5nZXN0X21vbnRoIiwidHlwZSI6InZhcmNoYXIoNykifSx7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhcigyNSkifSx7Im5hbWUiOiJ0b3RhbF9wb3N0aW5ncyIsInR5cGUiOiJiaWdpbnQifSx7Im5hbWUiOiJsb2NhdGVkX3Bvc3RpbmdzIiwidHlwZSI6ImJpZ2ludCJ9LHsibmFtZSI6InRvcDNfbG9jYXRpb25fc2hhcmUiLCJ0eXBlIjoiZG91YmxlIn0seyJuYW1lIjoibG9jYXRpb25faGhpIiwidHlwZSI6ImRvdWJsZSJ9LHsibmFtZSI6ImNvbXBhbnlfaGhpIiwidHlwZSI6ImRvdWJsZSJ9LHsibmFtZSI6InRvcDFfcm9sZV9zaGFyZSIsInR5cGUiOiJkb3VibGUifV0sIm93bmVyIjoiNDcwNDQxNTc3NTA2IiwicnVuQXNJbnZva2VyIjpmYWxzZSwicHJvcGVydGllcyI6e30sImlzUHJvdGVjdGVkIjpmYWxzZSwiaXNNdWx0aURpYWxlY3QiOmZhbHNlfQ== */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "2",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "skill_demand_monthly_adzuna_latest",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-12T17:10:34+05:30",
+            "UpdateTime": "2026-04-12T17:10:34+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "skill",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "source",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "bronze_ingest_date",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "bronze_run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5fYWR6dW5hXG4pIFxuU0VMRUNUXG4gIHMuc2tpbGxcbiwgcy5qb2JfY291bnRcbiwgcy5zb3VyY2Vcbiwgcy5icm9uemVfaW5nZXN0X2RhdGVcbiwgcy5icm9uemVfcnVuX2lkXG4sIHMuaW5nZXN0X21vbnRoXG4sIHMucnVuX2lkXG5GUk9NXG4gIChqbWlfZ29sZC5za2lsbF9kZW1hbmRfbW9udGhseSBzXG5JTk5FUiBKT0lOIGxyIE9OIChzLnJ1bl9pZCA9IGxyLnJ1bl9pZCkpXG5XSEVSRSAocy5pbmdlc3RfbW9udGggQkVUV0VFTiAnMjAxOC0wMScgQU5EICcyMDM1LTEyJylcbiIsImNhdGFsb2ciOiJhd3NkYXRhY2F0YWxvZyIsInNjaGVtYSI6ImptaV9hbmFseXRpY3MiLCJjb2x1bW5zIjpbeyJuYW1lIjoic2tpbGwiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6ImpvYl9jb3VudCIsInR5cGUiOiJiaWdpbnQifSx7Im5hbWUiOiJzb3VyY2UiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6ImJyb256ZV9pbmdlc3RfZGF0ZSIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiYnJvbnplX3J1bl9pZCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiaW5nZXN0X21vbnRoIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJydW5faWQiLCJ0eXBlIjoidmFyY2hhciJ9XSwib3duZXIiOiI0NzA0NDE1Nzc1MDYiLCJydW5Bc0ludm9rZXIiOmZhbHNlLCJwcm9wZXJ0aWVzIjp7fSwiaXNQcm90ZWN0ZWQiOmZhbHNlLCJpc011bHRpRGlhbGVjdCI6ZmFsc2V9 */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:user/daksh-cli",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "0",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        },
+        {
+            "Name": "skill_demand_monthly_latest",
+            "DatabaseName": "jmi_analytics",
+            "CreateTime": "2026-04-11T22:03:12+05:30",
+            "UpdateTime": "2026-04-12T09:57:12+05:30",
+            "Retention": 0,
+            "StorageDescriptor": {
+                "Columns": [
+                    {
+                        "Name": "skill",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "job_count",
+                        "Type": "bigint"
+                    },
+                    {
+                        "Name": "source",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "bronze_ingest_date",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "bronze_run_id",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "ingest_month",
+                        "Type": "string"
+                    },
+                    {
+                        "Name": "run_id",
+                        "Type": "string"
+                    }
+                ],
+                "Location": "",
+                "Compressed": false,
+                "NumberOfBuckets": 0,
+                "SerdeInfo": {},
+                "SortColumns": [],
+                "StoredAsSubDirectories": false
+            },
+            "ViewOriginalText": "/* Presto View: eyJvcmlnaW5hbFNxbCI6IldJVEhcbiAgbHIgQVMgKFxuICAgU0VMRUNUIHJ1bl9pZFxuICAgRlJPTVxuICAgICBqbWlfYW5hbHl0aWNzLmxhdGVzdF9waXBlbGluZV9ydW5cbikgXG5TRUxFQ1RcbiAgcy5za2lsbFxuLCBzLmpvYl9jb3VudFxuLCBzLnNvdXJjZVxuLCBzLmJyb256ZV9pbmdlc3RfZGF0ZVxuLCBzLmJyb256ZV9ydW5faWRcbiwgcy5pbmdlc3RfbW9udGhcbiwgcy5ydW5faWRcbkZST01cbiAgKGptaV9nb2xkLnNraWxsX2RlbWFuZF9tb250aGx5IHNcbklOTkVSIEpPSU4gbHIgT04gKHMucnVuX2lkID0gbHIucnVuX2lkKSlcbldIRVJFIChzLmluZ2VzdF9tb250aCBCRVRXRUVOICcyMDE4LTAxJyBBTkQgJzIwMzUtMTInKVxuIiwiY2F0YWxvZyI6ImF3c2RhdGFjYXRhbG9nIiwic2NoZW1hIjoiam1pX2FuYWx5dGljcyIsImNvbHVtbnMiOlt7Im5hbWUiOiJza2lsbCIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiam9iX2NvdW50IiwidHlwZSI6ImJpZ2ludCJ9LHsibmFtZSI6InNvdXJjZSIsInR5cGUiOiJ2YXJjaGFyIn0seyJuYW1lIjoiYnJvbnplX2luZ2VzdF9kYXRlIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJicm9uemVfcnVuX2lkIiwidHlwZSI6InZhcmNoYXIifSx7Im5hbWUiOiJpbmdlc3RfbW9udGgiLCJ0eXBlIjoidmFyY2hhciJ9LHsibmFtZSI6InJ1bl9pZCIsInR5cGUiOiJ2YXJjaGFyIn1dLCJvd25lciI6IjQ3MDQ0MTU3NzUwNiIsInJ1bkFzSW52b2tlciI6ZmFsc2UsInByb3BlcnRpZXMiOnt9LCJpc1Byb3RlY3RlZCI6ZmFsc2UsImlzTXVsdGlEaWFsZWN0IjpmYWxzZX0= */",
+            "ViewExpandedText": "/* Presto View */",
+            "TableType": "VIRTUAL_VIEW",
+            "Parameters": {
+                "presto_view": "true",
+                "comment": "Presto View"
+            },
+            "CreatedBy": "arn:aws:iam::470441577506:root",
+            "IsRegisteredWithLakeFormation": false,
+            "CatalogId": "470441577506",
+            "VersionId": "1",
+            "IsMultiDialectView": false,
+            "IsMaterializedView": false
+        }
+    ]
+}

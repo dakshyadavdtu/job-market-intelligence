@@ -1,0 +1,17 @@
+{
+    "Database": {
+        "Name": "jmi_gold",
+        "CreateTime": "2026-03-27T21:36:16+05:30",
+        "CreateTableDefaultPermissions": [
+            {
+                "Principal": {
+                    "DataLakePrincipalIdentifier": "IAM_ALLOWED_PRINCIPALS"
+                },
+                "Permissions": [
+                    "ALL"
+                ]
+            }
+        ],
+        "CatalogId": "470441577506"
+    }
+}

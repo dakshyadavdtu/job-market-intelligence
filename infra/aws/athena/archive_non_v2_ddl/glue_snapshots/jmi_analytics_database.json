@@ -1,0 +1,17 @@
+{
+    "Database": {
+        "Name": "jmi_analytics",
+        "CreateTime": "2026-04-04T08:27:33+05:30",
+        "CreateTableDefaultPermissions": [
+            {
+                "Principal": {
+                    "DataLakePrincipalIdentifier": "IAM_ALLOWED_PRINCIPALS"
+                },
+                "Permissions": [
+                    "ALL"
+                ]
+            }
+        ],
+        "CatalogId": "470441577506"
+    }
+}
