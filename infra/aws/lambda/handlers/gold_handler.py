@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import traceback
 from dataclasses import replace
 
 from src.jmi.config import AppConfig
+from src.jmi.aws.athena_projection import sync_gold_run_id_projection_from_s3
 from src.jmi.pipelines.transform_gold import run as gold_run
 
 
@@ -26,5 +28,12 @@ def handler(event, context):
         pipeline_run_id=ev.get("run_id"),
         cfg=cfg,
     )
+    # Partition projection must list every run_id present in S3 or Athena/Glue will not scan new Gold files.
+    try:
+        csv = sync_gold_run_id_projection_from_s3()
+        result["projection_run_id_count"] = len(csv.split(","))
+    except Exception:
+        traceback.print_exc()
+        raise
     return {"statusCode": 200, "body": json.dumps(result)}
 
