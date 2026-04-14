@@ -1,6 +1,6 @@
 -- Europe (Arbeitnow) KPI slice — jmi_analytics_v2 only.
 -- Gold facts: merged GROUP BYs + window-based HHI (fewer table scans than many parallel CTEs).
--- remote_classified_share is NULL here; use v2_eu_silver_remote_classified_monthly (SPICE or ad hoc).
+-- remote_classified_share is NULL here (DQ helper views removed from catalog prune).
 --
 -- Month/run selection: rolling **previous + current UTC calendar month** only (not full history).
 -- For each posted_month in that window, use the **latest Gold run_id** that materialized that month

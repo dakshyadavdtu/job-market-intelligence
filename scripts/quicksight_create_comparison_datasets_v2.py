@@ -24,12 +24,6 @@ DATA_SOURCE_ARN = (
 # Display name -> Glue view name (must match ATHENA_VIEWS_COMPARISON_V2.sql)
 # Convention: v2 - CMP - <view> — see docs/dashboard_implementation/QUICKSIGHT_V1_V2_NAMING.md
 DATASETS: list[tuple[str, str]] = [
-    ("v2 - CMP - comparison_source_month_totals", "comparison_source_month_totals"),
-    (
-        "v2 - CMP - comparison_strict_intersection_month_totals",
-        "comparison_strict_intersection_month_totals",
-    ),
-    ("v2 - CMP - comparison_time_window_policy", "comparison_time_window_policy"),
     (
         "v2 - CMP - comparison_source_skill_mix_aligned_top20",
         "comparison_source_skill_mix_aligned_top20",

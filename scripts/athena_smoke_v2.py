@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Athena smoke queries for jmi_gold_v2 / jmi_analytics_v2; print TSV results."""
+"""Run Athena smoke queries for jmi_gold_v2 / jmi_analytics_v2 (dea final 6 retained views)."""
 from __future__ import annotations
 
 import json
@@ -14,66 +14,25 @@ OUTPUT = "s3://jmi-dakshyadav-job-market-intelligence/athena-results/"
 QUERIES: list[tuple[str, str | None, str]] = [
     ("meta_eu", "jmi_gold_v2", "SELECT * FROM jmi_gold_v2.latest_run_metadata_arbeitnow"),
     ("meta_ad", "jmi_gold_v2", "SELECT * FROM jmi_gold_v2.latest_run_metadata_adzuna"),
-    (
-        "cnt_skill_an",
-        "jmi_gold_v2",
-        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'arbeitnow' AND posted_month BETWEEN '2018-01' AND '2035-12'",
-    ),
-    (
-        "cnt_skill_ad",
-        "jmi_gold_v2",
-        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'adzuna_in' AND posted_month BETWEEN '2018-01' AND '2035-12'",
-    ),
-    (
-        "cnt_skill_an_run",
-        "jmi_gold_v2",
-        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'arbeitnow' AND run_id = '20260411T170924Z-f61e46e1' AND posted_month BETWEEN '2018-01' AND '2035-12'",
-    ),
-    (
-        "cnt_skill_ad_run",
-        "jmi_gold_v2",
-        "SELECT COUNT(*) AS n FROM jmi_gold_v2.skill_demand_monthly WHERE source = 'adzuna_in' AND run_id = '20260412T104501Z-2225d40a' AND posted_month BETWEEN '2018-01' AND '2035-12'",
-    ),
-    (
-        "vw_v2_eu_roles",
-        "jmi_analytics_v2",
-        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_eu_role_titles_classified",
-    ),
-    (
-        "vw_v2_eu_employers",
-        "jmi_analytics_v2",
-        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_eu_employers_top_clean",
-    ),
-    (
-        "vw_v2_in_roles",
-        "jmi_analytics_v2",
-        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_role_titles_classified",
-    ),
-    (
-        "vw_v2_in_employers",
-        "jmi_analytics_v2",
-        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_employers_top_clean",
-    ),
-    (
-        "vw_cmp_skill_mix_aligned_top20",
-        "jmi_analytics_v2",
-        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_skill_mix_aligned_top20",
-    ),
-    (
-        "cmp_time_policy",
-        "jmi_analytics_v2",
-        "SELECT strict_intersection_latest_month, march_strict_comparable_both_sources, ten_year_window_claim_valid FROM jmi_analytics_v2.comparison_time_window_policy",
-    ),
-    (
-        "cmp_strict_month_totals",
-        "jmi_analytics_v2",
-        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_strict_intersection_month_totals",
-    ),
-    (
-        "cmp_strict_intersection_months",
-        "jmi_analytics_v2",
-        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_strict_intersection_months",
-    ),
+    ("vw_v2_eu_kpi", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_eu_kpi_slice_monthly"),
+    ("vw_v2_in_kpi", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_kpi_slice_monthly"),
+    ("vw_v2_eu_roles", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_eu_role_titles_classified"),
+    ("vw_v2_eu_employers", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_eu_employers_top_clean"),
+    ("vw_v2_in_roles", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_role_titles_classified"),
+    ("vw_v2_in_employers", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_employers_top_clean"),
+    ("vw_in_heatmap", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_heatmap_state_skill_monthly"),
+    ("vw_in_radar", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_radar_profile_monthly"),
+    ("vw_in_sankey", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_sankey_state_to_company_monthly"),
+    ("vw_in_geo_state", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_geo_state_monthly"),
+    ("vw_in_skills_long", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_in_silver_jobs_skills_long"),
+    ("vw_eu_scatter", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_eu_location_scatter_metrics"),
+    ("vw_eu_sankey", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_eu_sankey_location_to_company_monthly"),
+    ("vw_eu_skills_long", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_eu_silver_jobs_skills_long"),
+    ("vw_cmp_skill_mix_aligned_top20", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_skill_mix_aligned_top20"),
+    ("vw_cmp_benchmark", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_benchmark_aligned_month"),
+    ("vw_cmp_hhi_helper", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_month_skill_tag_hhi"),
+    ("vw_cmp_spj", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_cmp_skills_per_job_april_2026"),
+    ("vw_cmp_loc_hhi", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_cmp_location_hhi_monthly"),
 ]
 
 
@@ -95,7 +54,7 @@ def run(q: str, database: str | None) -> dict:
         cmd.extend(["--query-execution-context", f"Database={database}"])
     out = subprocess.check_output(cmd, text=True)
     qid = json.loads(out)["QueryExecutionId"]
-    for _ in range(90):
+    for _ in range(180):
         raw = subprocess.check_output(
             [
                 "aws",
@@ -129,7 +88,7 @@ def run(q: str, database: str | None) -> dict:
                 "StateChangeReason", ""
             )
             raise RuntimeError(f"{qid} {st}: {reason}")
-        time.sleep(0.5)
+        time.sleep(1.0)
     raise TimeoutError(qid)
 
 

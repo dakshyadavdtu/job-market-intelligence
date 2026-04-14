@@ -394,7 +394,7 @@ if analysis_mode == "comparison":
     st.markdown("### Cross-source comparison (local sample)")
     st.caption(
         f"Optional local file `{COMPARISON_TOTALS}` — legacy demo path; "
-        "authoritative comparison is `jmi_analytics_v2.comparison_source_month_totals` in Athena."
+        "authoritative comparison is `jmi_analytics_v2.comparison_*` / `v2_cmp_*` views in Athena."
     )
     if not COMPARISON_TOTALS.exists():
         st.warning(

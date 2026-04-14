@@ -1,6 +1,6 @@
 -- Compact Adzuna KPI slice — jmi_analytics_v2 only.
 -- Gold facts: merged GROUP BYs + window-based HHI (fewer scans than many parallel CTEs).
--- remote_classified_share is NULL here; use v2_in_silver_remote_classified_monthly (SPICE or ad hoc).
+-- remote_classified_share is NULL here (DQ helper views removed from catalog prune).
 -- Latest run: jmi_gold_v2.latest_run_metadata_adzuna.
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_in_kpi_slice_monthly AS

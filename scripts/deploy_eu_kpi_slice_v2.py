@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deploy jmi_analytics_v2 EU KPI slice + lightweight DQ helper views."""
+"""Deploy jmi_analytics_v2 EU KPI slice + Silver foundation + role/employer + scatter + sankey (no DQ helpers)."""
 from __future__ import annotations
 
 import json
@@ -86,7 +86,6 @@ def main() -> int:
     # Order: Silver foundation (base for sankey/skills/remote) → Gold role/employer → KPI/DQ/location/sankey
     deploy_file(athena / "analytics_v2_eu_silver_foundation.sql", "v2_eu_silver_jobs_base + skills_long")
     deploy_file(athena / "analytics_v2_eu_role_company_classified.sql", "v2_eu_role_titles + v2_eu_employers_top_clean")
-    deploy_file(athena / "analytics_v2_eu_dq_helpers.sql", "EU DQ helpers (remote + gold skill rows)")
     deploy_file(athena / "analytics_v2_eu_kpi_slice.sql", "v2_eu_kpi_slice_monthly")
     deploy_file(athena / "analytics_v2_eu_location_scatter.sql", "v2_eu_location_scatter_metrics")
     deploy_file(athena / "analytics_v2_eu_sankey_helper.sql", "v2_eu_sankey_location_to_company_monthly")

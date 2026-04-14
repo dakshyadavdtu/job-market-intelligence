@@ -129,10 +129,6 @@ def main() -> int:
     legacy = [
         "company_top15_other_clean",
         "company_top15_other_clean_adzuna",
-        "comparison_benchmark_aligned_month",
-        "comparison_source_month_skill_tag_hhi",
-        "comparison_source_month_totals",
-        "comparison_source_skill_mix_aligned_top20",
         "location_top15_other",
         "location_top15_other_adzuna",
         "role_group_demand_monthly",

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Deploy demo-pruned v2_strict_common_* wrappers (month totals + benchmark summary),
-v2_cmp_location_hhi_monthly (strict-common location HHI), then DROP obsolete jmi_gold_v2.derived_* external tables.
+Deploy v2_cmp_location_hhi_monthly, then DROP obsolete jmi_gold_v2.derived_* external tables.
 
 Requires: scripts/deploy_athena_comparison_views_v2.py already applied (comparison_* views).
 

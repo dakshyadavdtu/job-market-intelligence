@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deploy jmi_analytics_v2 India KPI slice + lightweight DQ helper views."""
+"""Deploy jmi_analytics_v2 India KPI slice (Gold-backed; no DQ helper views)."""
 from __future__ import annotations
 
 import json
@@ -75,7 +75,6 @@ def deploy_file(path: Path, label: str) -> None:
 
 def main() -> int:
     deploy_file(ROOT / "infra" / "aws" / "athena" / "analytics_v2_adzuna_kpi_slice.sql", "v2_in_kpi_slice_monthly")
-    deploy_file(ROOT / "infra" / "aws" / "athena" / "analytics_v2_adzuna_dq_helpers.sql", "IN DQ helpers")
     print("ALL_OK", file=sys.stderr)
     return 0
 

@@ -99,8 +99,20 @@ def main() -> int:
 
     sql_path = args.repo_root / "docs" / "dashboard_implementation" / "ATHENA_VIEWS_COMPARISON_V2.sql"
     raw = sql_path.read_text(encoding="utf-8")
-    # Drop demo-pruned views so they disappear from Glue when no longer in the SQL file.
+    # Drop views removed from SQL so Glue matches repo (order: dependents before bases where needed).
     drop_pruned: list[str] = [
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_strict_common_benchmark_summary",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_strict_common_month_totals",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_strict_intersection_month_totals",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_source_month_totals",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_time_window_policy",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_strict_intersection_months",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_in_geo_city_points_monthly",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_in_silver_remote_classified_monthly",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_in_gold_skill_rows_monthly",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_eu_silver_remote_classified_monthly",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_eu_gold_skill_rows_monthly",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_in_silver_data_coverage_funnel_monthly",
         "DROP VIEW IF EXISTS jmi_analytics_v2.v2_yearly_exploratory_manifest",
         "DROP VIEW IF EXISTS jmi_analytics_v2.v2_yearly_exploratory_source_year_totals",
         "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_exploratory_calendar_year_asymmetry_panel",
