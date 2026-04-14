@@ -53,6 +53,16 @@ def _resolve_silver_dataframe(
     """Prefer the broadest Silver snapshot by valid posted_month span (fixes truncated merged/latest)."""
     from src.jmi.pipelines.transform_silver import load_silver_jobs_history_union
 
+    # Explicit --silver-file (e.g. local path after aws s3 cp) wins before union merge, so S3 PyArrow
+    # dataset quirks do not block one-off Gold runs.
+    if silver_file and str(silver_file).strip():
+        try:
+            frame = pd.read_parquet(str(silver_file).strip())
+            if frame is not None and not frame.empty:
+                return frame, str(silver_file).strip()
+        except Exception:
+            pass
+
     seen: set[str] = set()
     for c in (merged_silver_file, os.environ.get("JMI_MERGED_SILVER_FILE")):
         if not c or c in seen:
