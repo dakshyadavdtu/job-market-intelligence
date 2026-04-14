@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from dataclasses import replace
 from pathlib import Path
 
@@ -102,6 +103,38 @@ def _resolve_silver_dataframe(
                 return frame, latest
 
     raise FileNotFoundError("No readable non-empty silver parquet found.")
+
+
+def _gold_incremental_posted_months() -> list[str] | None:
+    """If set, Gold writes only these posted_month partitions (live incremental).
+
+    Comma-separated ``YYYY-MM`` in ``JMI_GOLD_INCREMENTAL_POSTED_MONTHS``.
+    Disabled when ``JMI_GOLD_FULL_MONTHS`` is truthy (full rebuild of all months in Silver).
+    """
+    if os.environ.get("JMI_GOLD_FULL_MONTHS", "").strip().lower() in ("1", "true", "yes"):
+        return None
+    raw = os.environ.get("JMI_GOLD_INCREMENTAL_POSTED_MONTHS", "").strip()
+    if not raw:
+        return None
+    out: list[str] = []
+    for part in raw.split(","):
+        m = part.strip()
+        if not m:
+            continue
+        if not re.match(r"^\d{4}-\d{2}$", m):
+            raise ValueError(
+                f"Invalid month {m!r} in JMI_GOLD_INCREMENTAL_POSTED_MONTHS (expected YYYY-MM)"
+            )
+        out.append(m)
+    return sorted(set(out)) if out else None
+
+
+def _rep_date_for_month(df: pd.DataFrame, sub: pd.DataFrame) -> str:
+    if not sub.empty:
+        return str(sub["bronze_ingest_date"].max())
+    if not df.empty:
+        return str(df["bronze_ingest_date"].max())
+    return ""
 
 
 def _build_monthly_skill(sub: pd.DataFrame, rep_date: str, bronze_run_id: str) -> pd.DataFrame:
@@ -229,7 +262,15 @@ def run(
         ordered = df.sort_values(by=["bronze_ingest_date", "bronze_run_id", "ingested_at"])
         prid = str(ordered["bronze_run_id"].iloc[-1])
 
-    months = sorted(df["posted_month"].unique())
+    months_all = sorted(df["posted_month"].unique())
+    incremental = _gold_incremental_posted_months()
+    if incremental is None:
+        months = months_all
+        incremental_mode = "full"
+    else:
+        months = sorted(incremental)
+        incremental_mode = "incremental"
+
     skill_outputs: list[str] = []
     role_outputs: list[str] = []
     location_outputs: list[str] = []
@@ -239,7 +280,7 @@ def run(
 
     for posted_month in months:
         sub = df[df["posted_month"] == posted_month]
-        rep_date = str(sub["bronze_ingest_date"].max())
+        rep_date = _rep_date_for_month(df, sub)
 
         skill_agg = _build_monthly_skill(sub, rep_date, prid)
         role_agg = _build_monthly_role(sub, rep_date, prid)
@@ -278,7 +319,11 @@ def run(
                     "location_row_count": location_row_count,
                     "company_row_count": company_row_count,
                     "status": status,
-                    "time_axis": dominant_time_axis(sub["time_axis"]) if "time_axis" in sub.columns else "posted",
+                    "time_axis": (
+                        dominant_time_axis(sub["time_axis"])
+                        if "time_axis" in sub.columns and not sub.empty
+                        else "posted"
+                    ),
                 }
             ]
         )
@@ -310,6 +355,8 @@ def run(
         "stage": "gold",
         "pipeline_run_id": prid,
         "source": source,
+        "gold_incremental_mode": incremental_mode,
+        "posted_months_in_silver": months_all,
         "posted_months_rebuilt": months,
         "time_grain": "posted_month",
         "summary_by_posted_month": summary_rows,
@@ -336,7 +383,14 @@ if __name__ == "__main__":
     )
     parser.add_argument("--silver-file", default=None, metavar="PATH")
     parser.add_argument("--merged-silver-file", default=None, metavar="PATH")
+    parser.add_argument(
+        "--full-posted-months",
+        action="store_true",
+        help="Rebuild every posted_month present in Silver (unset incremental). Overrides JMI_GOLD_INCREMENTAL_POSTED_MONTHS.",
+    )
     args = parser.parse_args()
+    if args.full_posted_months:
+        os.environ["JMI_GOLD_FULL_MONTHS"] = "1"
     base_cfg = AppConfig()
     if args.source:
         base_cfg = replace(base_cfg, source_name=args.source)
