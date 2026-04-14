@@ -187,7 +187,7 @@ def _verify_athena_post_sync(
     """One SQL statement per round trip; retry briefly for S3/Glue propagation."""
     esc = prid.replace("'", "''")
     esc_src = src.replace("'", "''")
-    meta_table = "latest_run_metadata" if src == "arbeitnow" else "latest_run_metadata_adzuna"
+    meta_table = "latest_run_metadata_arbeitnow" if src == "arbeitnow" else "latest_run_metadata_adzuna"
     steps: list[tuple[str, str]] = [
         (
             "skill_demand_monthly",

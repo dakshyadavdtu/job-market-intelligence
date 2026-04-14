@@ -1,6 +1,6 @@
 -- comparison_v2_views.sql — Replace thin jmi_gold_v2.derived_* wrappers with view-first v2_* in jmi_analytics_v2.
 -- Prerequisites: deploy_athena_comparison_views_v2.py (comparison_* views) and jmi_gold_v2 facts.
--- v2_strict_common_* run_id_* columns use the Gold run_id for strict_intersection_latest_month (per-month MAX(run_id)), not the global latest_run_metadata pointer.
+-- v2_strict_common_* run_id_* columns use the Gold run_id for strict_intersection_latest_month (per-month MAX(run_id)), not the global latest_run_metadata_arbeitnow pointer.
 -- Run order: CREATE OR REPLACE VIEW statements first, then DROP TABLE for obsolete external tables.
 
 -- -----------------------------------------------------------------------------
@@ -102,7 +102,7 @@ FROM jmi_analytics_v2.comparison_strict_intersection_month_totals
 WHERE posted_month LIKE '%-03';
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_march_strict_benchmark_summary AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
+WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_arbeitnow LIMIT 1),
      lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1),
      inter AS (SELECT posted_month FROM jmi_analytics_v2.comparison_strict_intersection_months WHERE posted_month LIKE '%-03'),
      m AS (
@@ -123,7 +123,7 @@ CROSS JOIN lr_an
 CROSS JOIN lr_ad;
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_march_strict_manifest AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
+WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_arbeitnow LIMIT 1),
      lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1),
      inter AS (SELECT posted_month FROM jmi_analytics_v2.comparison_strict_intersection_months WHERE posted_month LIKE '%-03'),
      strict_all AS (SELECT posted_month FROM jmi_analytics_v2.comparison_strict_intersection_months),
@@ -183,7 +183,7 @@ WHERE posted_month LIKE '%-03';
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_yearly_exploratory_source_year_totals AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
+WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_arbeitnow LIMIT 1),
      lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1)
 SELECT
   y.source,

@@ -62,14 +62,14 @@ All objects live in **`jmi_gold_v2`** (tables) or **`jmi_analytics_v2`** (views)
 | `role_pareto` / `role_top20` | Raw **role** strings — optional drill-down if you also use families. |
 | `location_top15_other` | Pre-rolled top-N + “Other” for locations — **optional**; duplicates semantics you can approximate from Gold + Top-N in QS. |
 | `company_top15_other_clean` | Employer names after legal/suffix normalization + roll-up — **not** reproducible honestly from raw Gold without copying long SQL. |
-| `skill_demand_monthly_latest` | Thin filter on latest run — **drop**; use **`skill_demand_monthly`** + `run_id` / `latest_run_metadata`. |
+| `skill_demand_monthly_latest` | Thin filter on latest run — **drop**; use **`skill_demand_monthly`** + `run_id` / `latest_run_metadata_arbeitnow` (EU) or `latest_run_metadata_adzuna`. |
 | `pipeline_run_summary_latest` | Thin filter — **drop**; use **`pipeline_run_summary`** + filters. |
 | `role_demand_monthly` (Gold) | Raw role buckets: combo, histogram, table, scatter, Pareto **if** you stay on raw titles. |
 | `location_demand_monthly` (Gold) | Locations: maps, heat maps, histograms, treemap (with QS Top-N). |
 | `skill_demand_monthly` (Gold) | Skills: composition, histogram. |
 | `company_hiring_monthly` (Gold) | Raw employers — **usually skip** for EU if `company_top15_other_clean` is the canonical employer story. |
 | `pipeline_run_summary` (Gold) | Run proof / row counts. |
-| `latest_run_metadata` (Gold) | Single-row `run_id` for parameters (optional tiny dataset). |
+| `latest_run_metadata_arbeitnow` (Gold EU) | Single-row `run_id` for parameters (optional tiny dataset). |
 
 ### India / Adzuna
 
@@ -109,7 +109,7 @@ Display names are in §5. “**Gold**” = `jmi_gold_v2.<table>`.
 | **v2_eu_companies** | `company_top15_other_clean` | **Keep** | Normalized employer dimension; not honest to rebuild in QS. | **No** for cleaned semantics. |
 | **v2_eu_skills** | `skill_demand_monthly` | **Keep** | Skill demand grain. | **Yes** — Gold. |
 | **v2_eu_pipeline** | `pipeline_run_summary` | **Keep** (when sheet needs proof) | Run-quality row counts. | **Yes** — Gold; attach when you build that sheet. |
-| **v2_eu_run** | `latest_run_metadata` | **Optional** | One-row `run_id` for default parameters. | **Yes** — or set parameter manually / from first visual. |
+| **v2_eu_run** | `latest_run_metadata_arbeitnow` | **Optional** | One-row `run_id` for default parameters. | **Yes** — or set parameter manually / from first visual. |
 | **v2_in_role_groups** | `role_group_pareto_adzuna` | **Keep** | Same as EU families. | **No** for families. |
 | **v2_in_roles** | `role_demand_monthly` | **Keep** | Raw roles, `source = adzuna_in`. | **Yes** — Gold. |
 | **v2_in_locations** | `location_demand_monthly` | **Keep** | Maps / heat / histogram. | **Yes** — Gold. |
@@ -157,7 +157,7 @@ Display names are in §5. “**Gold**” = `jmi_gold_v2.<table>`.
 
 **Optional later (attach only when building that visual):**
 
-- `v2_eu_run` → `latest_run_metadata` (EU pointer)
+- `v2_eu_run` → `latest_run_metadata_arbeitnow` (EU pointer)
 - `v2_in_run` → `latest_run_metadata_adzuna`
 - `v2_in_kpis` → *no default view* — add only if you ship an India KPI SQL view or accept a blended QS recipe
 - `v2_in_classified` → `role_title_classified_adzuna`
@@ -223,7 +223,7 @@ Use **exactly** these display names for the **current** v2 analysis. **Do not** 
 
 | QS display name | When to use |
 |-----------------|-------------|
-| `v2_eu_run` / `v2_in_run` | Optional: `latest_run_metadata` / `latest_run_metadata_adzuna` for parameters. |
+| `v2_eu_run` / `v2_in_run` | Optional: `latest_run_metadata_arbeitnow` / `latest_run_metadata_adzuna` for parameters. |
 | `v2_in_classified` | `role_title_classified_adzuna` — audit / drill. |
 | `v2_in_families_month` | `role_group_demand_monthly_adzuna` — month × family matrix (clearer than `role_month` if you add it). |
 
@@ -314,7 +314,7 @@ The older doc used **`v2 - EU - <view_name>`**. This strategy **supersedes** dis
 | Class | Datasets |
 |-------|----------|
 | **A. Must keep** | `v2_eu_kpis`, `v2_eu_role_groups`, `v2_eu_roles`, `v2_eu_locations`, `v2_eu_companies`, `v2_eu_skills`, `v2_eu_pipeline` |
-| **B. Optional** | `v2_eu_run` → `latest_run_metadata` (parameter default for `run_id`) |
+| **B. Optional** | `v2_eu_run` → `latest_run_metadata_arbeitnow` (parameter default for `run_id`) |
 | **C. Do not attach** | v1-backed datasets; `skill_demand_monthly_latest`; `pipeline_run_summary_latest`; `role_group_top20`; `location_top15_other`; raw `company_top12_other` as primary; duplicate Gold-backed datasets with old names |
 
 #### India / Adzuna

@@ -165,7 +165,7 @@ def main() -> int:
     infra = args.repo_root / "infra" / "aws" / "athena"
 
     ddl_files = [
-        infra / "ddl_gold_latest_run_metadata.sql",
+        infra / "ddl_gold_latest_run_metadata_arbeitnow.sql",
         infra / "ddl_gold_latest_run_metadata_adzuna.sql",
         infra / "ddl_gold_skill_demand_monthly.sql",
         infra / "ddl_gold_role_demand_monthly.sql",
@@ -176,6 +176,8 @@ def main() -> int:
 
     steps: list[tuple[str, str | None]] = []
     steps.append(("CREATE DATABASE IF NOT EXISTS jmi_gold_v2;", None))
+    # Legacy generic name; replaced by latest_run_metadata_arbeitnow (same S3 LOCATION).
+    steps.append(("DROP TABLE IF EXISTS jmi_gold_v2.latest_run_metadata;", "jmi_gold_v2"))
 
     for f in ddl_files:
         raw = f.read_text(encoding="utf-8")

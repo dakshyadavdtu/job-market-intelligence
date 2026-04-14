@@ -12,7 +12,7 @@ Use this when **S3 Gold has data** but **Athena base tables or `jmi_analytics` l
 2. **`CREATE TABLE IF NOT EXISTS` does not update** existing tables. Re-running repo DDL in Athena **without** dropping or editing Glue leaves **old** `TBLPROPERTIES` in place.
 3. **Partition projection** still applies: with projection enabled, Athena **ignores** registered partitions in Glue for that table and uses **only** the projection config + query predicates. Wrong or obsolete `storage.location.template` can make projected paths **not** line up with real S3 prefixes.
 
-**Not affected:** `jmi_gold.latest_run_metadata` (not partitioned, single `LOCATION`). It can show the right `run_id` while partitioned fact tables still scan wrong paths.
+**Not affected:** `jmi_gold.latest_run_metadata` / `jmi_gold_v2.latest_run_metadata_arbeitnow` (not partitioned, single `LOCATION`). The pointer can show the right `run_id` while partitioned fact tables still scan wrong paths.
 
 ---
 

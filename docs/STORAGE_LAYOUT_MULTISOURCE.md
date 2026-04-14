@@ -35,7 +35,7 @@ Slugs: `arbeitnow`, `adzuna_in` (see `AppConfig.source_name` / connectors).
    - From: `gold/<table>/ingest_month=…/run_id=…/`
    - To: `gold/<table>/source=arbeitnow/ingest_month=…/run_id=…/`
    - Use `aws s3 sync` or batch copy; **verify** with a single-table dry run first.
-3. **Move** `gold/latest_run_metadata/part-00001.parquet` → `gold/source=arbeitnow/latest_run_metadata/part-00001.parquet` and point **`jmi_gold.latest_run_metadata`** LOCATION at the new prefix (see `ddl_gold_latest_run_metadata.sql`).
+3. **Move** `gold/latest_run_metadata/part-00001.parquet` → `gold/source=arbeitnow/latest_run_metadata/part-00001.parquet` and point **`jmi_gold.latest_run_metadata`** / **`jmi_gold_v2.latest_run_metadata_arbeitnow`** LOCATION at the new prefix (see `ddl_gold_latest_run_metadata_arbeitnow.sql` for v2).
 4. **Create** `jmi_gold.latest_run_metadata_adzuna` (see `ddl_gold_latest_run_metadata_adzuna.sql`) and run Adzuna Gold so `part-00001.parquet` exists under `gold/source=adzuna_in/latest_run_metadata/`.
 5. **Re-run** Athena view scripts (`ATHENA_VIEWS.sql`, `ATHENA_VIEWS_ROLE_AND_COMPANY_QUALITY.sql`, `ATHENA_VIEWS_ADZUNA.sql`, `ATHENA_VIEWS_QS_MULTILAYER.sql`).
 6. **Bronze Adzuna on S3:** run `ingest_adzuna` with `JMI_DATA_ROOT=s3://…` (or sync local bronze) so `bronze/source=adzuna_in/…` appears.

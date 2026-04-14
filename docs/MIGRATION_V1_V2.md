@@ -67,7 +67,7 @@ This document defines **v1** (current live Arbeitnow-first state) vs **v2** (mod
 ## 6. Cutover criteria
 
 - [ ] Athena: `SELECT COUNT(*)` on v2 Gold tables **> 0** for both `source=arbeitnow` and `source=adzuna_in` (when Adzuna is in scope).
-- [ ] `latest_run_metadata` / `latest_run_metadata_adzuna` files exist and views resolve.
+- [ ] `latest_run_metadata_arbeitnow` / `latest_run_metadata_adzuna` (Glue `jmi_gold_v2`) and pointer Parquet files exist; views resolve.
 - [ ] **jmi_analytics_v2** (or equivalent) views run **without** error.
 - [ ] QuickSight v2: **all** visuals show expected non-null data for a test run.
 - [ ] Stakeholder sign-off **or** parallel run period (v1 + v2 both available).

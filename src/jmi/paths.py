@@ -113,7 +113,7 @@ def gold_fact_partition(
 
 
 def gold_latest_run_metadata_file(cfg: AppConfig) -> DataPath:
-    """Single-row pointer Parquet for one pipeline source (Athena ``latest_run_metadata`` helpers).
+    """Single-row pointer Parquet for one pipeline source (Glue tables ``latest_run_metadata_arbeitnow`` / ``latest_run_metadata_adzuna`` over these paths).
 
     Always ``gold/source=<slug>/latest_run_metadata/part-00001.parquet``. Never a legacy top-level
     ``gold/latest_run_metadata/`` (no ``source=`` segment).

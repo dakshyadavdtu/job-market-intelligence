@@ -1,7 +1,7 @@
 -- =============================================================================
 -- ATHENA_VIEWS_COMPARISON_V2.sql — Honest benchmark helpers (jmi_analytics_v2 only)
 -- Prerequisites: jmi_gold_v2.role_demand_monthly, jmi_gold_v2.skill_demand_monthly (and
--- jmi_gold_v2.latest_run_metadata* only for comparison_march_strict_status / legacy v2_* march+yearly wrappers).
+-- jmi_gold_v2.latest_run_metadata_arbeitnow / latest_run_metadata_adzuna only for comparison_march_strict_status / legacy v2_* march+yearly wrappers).
 -- Engine: Athena engine 3 (Trino).
 --
 -- Time-window policy (read before using):
@@ -10,7 +10,7 @@
 --   - Strict source-to-source comparison uses calendar months in the INTERSECTION of
 --     posted_month sets where BOTH sources have Gold for that month in the rolling
 --     previous+current UTC month, using MAX(run_id) per posted_month per source (not
---     only the single latest_run_metadata pointer).
+--     only the single latest_run_metadata_arbeitnow pointer).
 --   - "Aligned" / benchmark views use MAX(intersection posted_month) = latest common
 --     calendar month — NOT March unless both sources actually have that March.
 --   - March-only strict comparability requires BOTH sources to have at least one
@@ -65,7 +65,7 @@ INNER JOIN month_latest_ad a ON e.posted_month = a.posted_month;
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_march_strict_status AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
+WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_arbeitnow LIMIT 1),
      lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1)
 SELECT
     CAST('arbeitnow' AS VARCHAR) AS source,

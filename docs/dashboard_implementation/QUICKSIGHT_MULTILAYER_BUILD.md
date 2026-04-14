@@ -89,4 +89,4 @@
 
 ## Empty-data note
 
-If `europe_company_hiring_latest_grain` returns **0** rows, `latest_run_metadata` may point at a `run_id` with no `company_hiring_monthly` partitions yet, or Glue projection enum may need the latest `run_id`. Fix **data/projection**, not the view definition.
+If `europe_company_hiring_latest_grain` returns **0** rows, `latest_run_metadata_arbeitnow` may point at a `run_id` with no `company_hiring_monthly` partitions yet, or Glue projection enum may need the latest `run_id`. Fix **data/projection**, not the view definition.

@@ -12,7 +12,7 @@ WORKGROUP = "primary"
 OUTPUT = "s3://jmi-dakshyadav-job-market-intelligence/athena-results/"
 
 QUERIES: list[tuple[str, str | None, str]] = [
-    ("meta_eu", "jmi_gold_v2", "SELECT * FROM jmi_gold_v2.latest_run_metadata"),
+    ("meta_eu", "jmi_gold_v2", "SELECT * FROM jmi_gold_v2.latest_run_metadata_arbeitnow"),
     ("meta_ad", "jmi_gold_v2", "SELECT * FROM jmi_gold_v2.latest_run_metadata_adzuna"),
     (
         "cnt_skill_an",

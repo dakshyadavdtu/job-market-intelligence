@@ -4,12 +4,12 @@
 
 ## `jmi_gold` (6 tables)
 
-All are **required**: base Gold external tables + `latest_run_metadata`. **No** analytics-layer removal.
+All are **required**: base Gold external tables + **`jmi_gold_v2.latest_run_metadata_arbeitnow`** (EU) / **`latest_run_metadata_adzuna`** as applicable. **No** analytics-layer removal.
 
 | Name | Role |
 |------|------|
 | `skill_demand_monthly`, `role_demand_monthly`, `location_demand_monthly`, `company_hiring_monthly`, `pipeline_run_summary` | Partition-projected facts |
-| `latest_run_metadata` | Single-row `run_id` for latest-run views |
+| `latest_run_metadata_arbeitnow` | Single-row `run_id` for latest EU (Arbeitnow) run views (`jmi_gold_v2`) |
 
 ## `jmi_analytics` (core + Adzuna + multilayer helpers)
 

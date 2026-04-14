@@ -5,7 +5,7 @@
 -- Month/run selection: rolling **previous + current UTC calendar month** only (not full history).
 -- For each posted_month in that window, use the **latest Gold run_id** that materialized that month
 -- (MAX(run_id) per month). This avoids losing the prior month when live incremental Gold writes only
--- the current month and updates latest_run_metadata to a run that has no partition for the prior month.
+-- the current month and updates latest_run_metadata_arbeitnow to a run that has no partition for the prior month.
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_eu_kpi_slice_monthly AS
 WITH month_bounds AS (

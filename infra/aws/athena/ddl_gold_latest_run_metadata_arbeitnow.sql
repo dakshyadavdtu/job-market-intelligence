@@ -1,6 +1,6 @@
--- Single-row pointer for latest Arbeitnow Gold run (jmi_analytics.latest_pipeline_run).
+-- Single-row pointer for latest Arbeitnow Gold run (EU).
 -- Path: gold/source=arbeitnow/latest_run_metadata/part-00001.parquet
-CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold.latest_run_metadata (
+CREATE EXTERNAL TABLE IF NOT EXISTS jmi_gold.latest_run_metadata_arbeitnow (
   run_id string
 )
 STORED AS PARQUET
