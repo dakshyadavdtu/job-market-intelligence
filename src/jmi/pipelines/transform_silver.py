@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath, split_s3_uri
-from src.jmi.paths import silver_jobs_batch_part, silver_jobs_merged_latest, silver_legacy_flat_jobs_root
+from src.jmi.paths import arbeitnow_slice_tag, silver_jobs_batch_part, silver_jobs_merged_latest, silver_legacy_flat_jobs_root
 from src.jmi.connectors.adzuna import ADZUNA_SOURCE_SLUG
 from src.jmi.connectors.skill_extract import adzuna_enrich_weak_skills, extract_silver_skills
 from src.jmi.pipelines.gold_time import assign_posted_month_and_time_axis
@@ -44,8 +44,13 @@ def _silver_month_span_metrics(df: pd.DataFrame | None) -> tuple[int, int]:
 def _latest_bronze_file(cfg: AppConfig) -> Path:
     if cfg.bronze_root.is_s3:
         raise FileNotFoundError("Pass bronze_file when JMI_DATA_ROOT is S3.")
+    slice_tag = arbeitnow_slice_tag()
+    if cfg.source_name == "arbeitnow" and slice_tag:
+        pat = f"source=arbeitnow/slice={slice_tag}/ingest_date=*/run_id=*/raw.jsonl.gz"
+    else:
+        pat = f"source={cfg.source_name}/ingest_date=*/run_id=*/raw.jsonl.gz"
     files = sorted(
-        cfg.bronze_root.as_path().glob(f"source={cfg.source_name}/ingest_date=*/run_id=*/raw.jsonl.gz"),
+        cfg.bronze_root.as_path().glob(pat),
         key=lambda p: p.stat().st_mtime,
     )
     if not files:
@@ -112,6 +117,7 @@ def load_silver_jobs_history_union(cfg: AppConfig) -> pd.DataFrame | None:
     """All per-run Silver batch Parquet files for this source (excludes merged/), deduped by job_id."""
     jobs_root = cfg.silver_root / "jobs"
     paths: list[str] = []
+    slice_tag = arbeitnow_slice_tag()
     if jobs_root.is_s3:
         import boto3  # type: ignore
 
@@ -134,7 +140,7 @@ def load_silver_jobs_history_union(cfg: AppConfig) -> pd.DataFrame | None:
         bucket, prefix = split_s3_uri(str(jobs_root).rstrip("/") + "/")
         collect_parts(bucket, prefix, require_source=cfg.source_name)
 
-        if cfg.source_name == "arbeitnow":
+        if cfg.source_name == "arbeitnow" and not slice_tag:
             leg = silver_legacy_flat_jobs_root(cfg)
             if leg.is_s3:
                 lb, lp = split_s3_uri(str(leg).rstrip("/") + "/")
@@ -147,14 +153,22 @@ def load_silver_jobs_history_union(cfg: AppConfig) -> pd.DataFrame | None:
                 ]
             else:
                 paths = [u for u in paths if "/source=arbeitnow/" in u]
+        elif cfg.source_name == "arbeitnow" and slice_tag:
+            paths = [u for u in paths if f"/slice={slice_tag}/" in u]
+        elif cfg.source_name == "arbeitnow" and not slice_tag:
+            paths = [u for u in paths if "/slice=" not in u]
     else:
         base = jobs_root.as_path()
-        sub = base / f"source={cfg.source_name}"
-        paths = sorted(str(p) for p in sub.glob("ingest_date=*/run_id=*/part-*.parquet"))
-        if cfg.source_name == "arbeitnow":
-            leg = silver_legacy_flat_jobs_root(cfg).as_path()
-            if leg.exists():
-                paths.extend(sorted(str(p) for p in leg.glob("ingest_date=*/run_id=*/part-*.parquet")))
+        if cfg.source_name == "arbeitnow" and slice_tag:
+            sub = base / f"source={cfg.source_name}" / f"slice={slice_tag}"
+            paths = sorted(str(p) for p in sub.glob("ingest_date=*/run_id=*/part-*.parquet"))
+        else:
+            sub = base / f"source={cfg.source_name}"
+            paths = sorted(str(p) for p in sub.glob("ingest_date=*/run_id=*/part-*.parquet"))
+            if cfg.source_name == "arbeitnow":
+                leg = silver_legacy_flat_jobs_root(cfg).as_path()
+                if leg.exists():
+                    paths.extend(sorted(str(p) for p in leg.glob("ingest_date=*/run_id=*/part-*.parquet")))
         paths = sorted(set(paths))
     if not paths:
         return None

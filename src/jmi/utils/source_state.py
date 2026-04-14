@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -53,6 +54,9 @@ class ConnectorState:
 
 
 def connector_state_path(cfg: AppConfig) -> DataPath:
+    slice_tag = os.getenv("JMI_ARBEITNOW_SLICE", "").strip()
+    if cfg.source_name == "arbeitnow" and slice_tag:
+        return cfg.state_root / f"source={cfg.source_name}" / f"slice={slice_tag}" / "connector_state.json"
     return cfg.state_root / f"source={cfg.source_name}" / "connector_state.json"
 
 

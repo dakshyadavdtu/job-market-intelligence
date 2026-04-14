@@ -20,7 +20,7 @@ from collections.abc import Callable
 
 from src.jmi.config import AppConfig
 from src.jmi.utils.io import ensure_dir
-from src.jmi.utils.source_state import ConnectorState, load_connector_state, save_connector_state
+from src.jmi.utils.source_state import ConnectorState, connector_state_path, load_connector_state, save_connector_state
 
 
 def _env_optional_int(name: str) -> int | None:
@@ -31,8 +31,8 @@ def _env_optional_int(name: str) -> int | None:
 
 
 def ensure_connector_state_prefix(cfg: AppConfig) -> None:
-    """Create `state/source=<cfg.source_name>/` before read/write (local or S3)."""
-    ensure_dir(cfg.state_root / f"source={cfg.source_name}")
+    """Create parent dir for connector state (includes Arbeitnow slice subdirs when set)."""
+    ensure_dir(connector_state_path(cfg).parent)
 
 
 def load_incremental_connector_state(cfg: AppConfig) -> ConnectorState:

@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+from src.jmi.arbeitnow_slice_defaults import ARBEITNOW_SLICE_DEFAULT_MIN_CREATED_AT_UTC
 from src.jmi.config import AppConfig, new_run_id
 from src.jmi.connectors.arbeitnow import fetch_all_jobs, job_created_at_ts, to_bronze_record
+from src.jmi.paths import arbeitnow_slice_tag, bronze_raw_gz
 from src.jmi.pipelines.bronze_incremental import (
     load_incremental_connector_state,
     next_fetch_watermark_epoch,
@@ -24,7 +26,11 @@ def run() -> dict:
     incremental_strategy = cfg.incremental_strategy_effective()
     if incremental_strategy == "true_api_filter":
         min_param = cfg.arbeitnow_min_created_at
-        if min_param is None and state.fetch_watermark_created_at is not None:
+        slice_tag = arbeitnow_slice_tag()
+        if cfg.source_name == "arbeitnow" and slice_tag:
+            if min_param is None:
+                min_param = ARBEITNOW_SLICE_DEFAULT_MIN_CREATED_AT_UTC
+        elif min_param is None and state.fetch_watermark_created_at is not None:
             min_param = max(0, state.fetch_watermark_created_at - cfg.incremental_lookback_hours * 3600)
         raw_jobs, fetch_meta = fetch_all_jobs(
             min_created_at=min_param,
@@ -45,13 +51,7 @@ def run() -> dict:
         record["batch_created_at"] = batch_created_at
         bronze_records.append(record)
 
-    out_path = (
-        cfg.bronze_root
-        / f"source={cfg.source_name}"
-        / f"ingest_date={ingest_date}"
-        / f"run_id={run_id}"
-        / "raw.jsonl.gz"
-    )
+    out_path = bronze_raw_gz(cfg, ingest_date, run_id)
     write_jsonl_gz(out_path, bronze_records)
 
     new_watermark = next_fetch_watermark_epoch(raw_jobs, job_created_at_ts)
@@ -72,7 +72,12 @@ def run() -> dict:
     manifest_path = out_path.parent / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
-    health_path = cfg.health_root / "latest_ingest.json"
+    slice_tag = arbeitnow_slice_tag()
+    if cfg.source_name == "arbeitnow" and slice_tag:
+        health_name = f"latest_ingest_arbeitnow_slice_{slice_tag}.json"
+    else:
+        health_name = "latest_ingest.json"
+    health_path = cfg.health_root / health_name
     ensure_dir(health_path.parent)
     health_path.write_text(
         json.dumps(
@@ -85,6 +90,7 @@ def run() -> dict:
                 "bronze_path": str(out_path),
                 "manifest_path": str(manifest_path),
                 "incremental_strategy": incremental_strategy,
+                "arbeitnow_slice": slice_tag,
             },
             indent=2,
         ),
