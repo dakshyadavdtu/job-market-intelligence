@@ -13,11 +13,24 @@ WHERE source = 'arbeitnow'
 GROUP BY posted_month;
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_eu_gold_skill_rows_monthly AS
+WITH month_bounds AS (
+  SELECT
+    date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+    date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest AS (
+  SELECT r.posted_month, MAX(r.run_id) AS run_id
+  FROM jmi_gold_v2.role_demand_monthly r
+  CROSS JOIN month_bounds b
+  WHERE r.source = 'arbeitnow'
+    AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+  GROUP BY r.posted_month
+)
 SELECT
   s.posted_month,
   s.run_id,
   s.skill,
   s.job_count
 FROM jmi_gold_v2.skill_demand_monthly s
-INNER JOIN (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1) lr ON s.run_id = lr.run_id
+INNER JOIN month_latest ml ON s.posted_month = ml.posted_month AND s.run_id = ml.run_id
 WHERE s.source = 'arbeitnow';

@@ -1,10 +1,20 @@
 -- Europe (Arbeitnow): location × month with volume + share for scatter / bubble charts.
 -- x = location_job_count, y = location_share_of_monthly_total (bubble size optional = same as x or job_count).
--- Mirrors jmi_analytics.india_city_scatter_metrics; uses jmi_gold_v2 + latest EU run.
+-- Uses MAX(run_id) per posted_month in rolling previous+current UTC month (same policy as v2_eu_kpi_slice_monthly).
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_eu_location_scatter_metrics AS
-WITH lr AS (
-  SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1
+WITH month_bounds AS (
+  SELECT
+    date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+    date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest AS (
+  SELECT r.posted_month, MAX(r.run_id) AS run_id
+  FROM jmi_gold_v2.role_demand_monthly r
+  CROSS JOIN month_bounds b
+  WHERE r.source = 'arbeitnow'
+    AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+  GROUP BY r.posted_month
 ),
 base AS (
   SELECT
@@ -13,9 +23,8 @@ base AS (
     l.job_count,
     l.run_id
   FROM jmi_gold_v2.location_demand_monthly l
-  INNER JOIN lr ON l.run_id = lr.run_id
+  INNER JOIN month_latest ml ON l.posted_month = ml.posted_month AND l.run_id = ml.run_id
   WHERE l.source = 'arbeitnow'
-    AND l.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 tot AS (
   SELECT run_id, posted_month, SUM(job_count) AS monthly_total

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import time
@@ -77,22 +78,17 @@ def main() -> int:
     adzuna_file = (DOCS / "ATHENA_VIEWS_ADZUNA.sql").read_text(encoding="utf-8")
     cmp_file = (DOCS / "ATHENA_VIEWS_COMPARISON_V2.sql").read_text(encoding="utf-8")
 
-    eu_role = cut_at_phrase(
-        between(
-            role_file,
-            "CREATE OR REPLACE VIEW jmi_analytics.role_title_classified AS\n",
-            "CREATE OR REPLACE VIEW jmi_analytics.role_group_demand_monthly AS",
-        ),
-        "FROM classified;",
+    eu_rc = (ROOT / "infra" / "aws" / "athena" / "analytics_v2_eu_role_company_classified.sql").read_text(
+        encoding="utf-8"
     )
-    eu_co = cut_at_phrase(
-        between(
-            role_file,
-            "CREATE OR REPLACE VIEW jmi_analytics.company_top15_other_clean AS\n",
-            "-- =============================================================================\n-- NOTES",
-        ),
-        "WHERE job_count > 0;",
-    )
+    eu_parts = re.split(r"(?=CREATE\s+OR\s+REPLACE\s+VIEW\s+jmi_analytics_v2\.v2_eu_)", eu_rc.strip())
+    eu_stmts = [p.strip() for p in eu_parts if re.match(r"^CREATE\s+OR\s+REPLACE", p.strip(), re.I)]
+    if len(eu_stmts) != 2:
+        raise RuntimeError(
+            f"expected 2 EU views in analytics_v2_eu_role_company_classified.sql, got {len(eu_stmts)}"
+        )
+    eu_role_stmt = eu_stmts[0].rstrip().rstrip(";") + ";"
+    eu_co_stmt = eu_stmts[1].rstrip().rstrip(";") + ";"
 
     in_role = cut_at_phrase(
         between(
@@ -121,8 +117,8 @@ def main() -> int:
     )
 
     statements: list[str] = [
-        f"CREATE OR REPLACE VIEW jmi_analytics_v2.v2_eu_role_titles_classified AS\n{patch_gold_v2(eu_role)}",
-        f"CREATE OR REPLACE VIEW jmi_analytics_v2.v2_eu_employers_top_clean AS\n{patch_gold_v2(eu_co)}",
+        eu_role_stmt,
+        eu_co_stmt,
         f"CREATE OR REPLACE VIEW jmi_analytics_v2.v2_in_role_titles_classified AS\n{patch_gold_v2(in_role)}",
         f"CREATE OR REPLACE VIEW jmi_analytics_v2.v2_in_employers_top_clean AS\n{patch_gold_v2(in_co)}",
         f"CREATE OR REPLACE VIEW jmi_analytics_v2.v2_cmp_skill_mix_aligned_top20 AS\n{cmp_mix}",

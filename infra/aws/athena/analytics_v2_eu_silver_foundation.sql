@@ -1,10 +1,25 @@
 -- jmi_analytics_v2: Europe (Arbeitnow) Silver-backed row foundation (v2 only).
--- Depends on: jmi_silver_v2.arbeitnow_jobs_merged, jmi_gold_v2.latest_run_metadata
--- Rows are restricted to posted_month values present in the latest EU Gold run so BI (QuickSight)
--- does not process the full merged Silver history on every query.
+-- Depends on: jmi_silver_v2.arbeitnow_jobs_merged, jmi_gold_v2.role_demand_monthly
+-- Rows are restricted to:
+--   (1) rolling previous + current UTC calendar month (live dashboard window), and
+--   (2) posted_month values that exist in EU Gold (any run_id) in that window — so March is included
+--   when historically materialized, not only when the single latest_run_metadata run has that month.
 -- Does not replace v2_eu_role_titles_classified / v2_eu_employers_top_clean (Gold-derived analytics).
+-- v2_eu_silver_jobs_skills_long: UNNEST expands one row per skill tag; prefer v2_eu_gold_skill_rows_monthly if too heavy.
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_eu_silver_jobs_base AS
+WITH month_bounds AS (
+  SELECT
+    date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+    date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+gold_months AS (
+  SELECT DISTINCT r.posted_month
+  FROM jmi_gold_v2.role_demand_monthly r
+  CROSS JOIN month_bounds b
+  WHERE r.source = 'arbeitnow'
+    AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+)
 SELECT
   job_id,
   source,
@@ -50,14 +65,8 @@ FROM (
   FROM jmi_silver_v2.arbeitnow_jobs_merged
   WHERE source = 'arbeitnow'
 ) b
-WHERE b.posted_month IN (
-  SELECT DISTINCT r.posted_month
-  FROM jmi_gold_v2.role_demand_monthly r
-  INNER JOIN (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1) lr ON r.run_id = lr.run_id
-  WHERE r.source = 'arbeitnow'
-);
+WHERE b.posted_month IN (SELECT g.posted_month FROM gold_months g);
 
--- UNNEST expands one row per skill tag; too heavy for most Direct Query dashboards — prefer v2_eu_gold_skill_rows_monthly.
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_eu_silver_jobs_skills_long AS
 SELECT
   b.job_id,

@@ -53,12 +53,20 @@ def wait(qid: str) -> None:
 
 
 def split_create_statements(sql_text: str) -> list[str]:
-    """Split file on ';' before CREATE OR REPLACE (multiple views per file)."""
+    """Split multi-view SQL files. Handles ';' before CREATE and comment blocks between views."""
     text = sql_text.strip()
     if not text:
         return []
-    parts = re.split(r";\s*(?=CREATE\s+OR\s+REPLACE\s+VIEW)", text, flags=re.IGNORECASE | re.DOTALL)
-    return [p.strip().rstrip(";").strip() + ";" for p in parts if p.strip()]
+    parts = re.split(r"(?=CREATE\s+OR\s+REPLACE\s+VIEW\s)", text, flags=re.IGNORECASE | re.DOTALL)
+    out: list[str] = []
+    for p in parts:
+        p = p.strip()
+        if not p:
+            continue
+        if not re.match(r"^CREATE\s+OR\s+REPLACE\s+VIEW\s", p, re.IGNORECASE):
+            continue
+        out.append(p.rstrip(";").strip() + ";")
+    return out if out else [text.rstrip(";").strip() + ";"]
 
 
 def deploy_file(path: Path, label: str) -> None:
@@ -74,8 +82,14 @@ def deploy_file(path: Path, label: str) -> None:
 
 
 def main() -> int:
-    deploy_file(ROOT / "infra" / "aws" / "athena" / "analytics_v2_eu_kpi_slice.sql", "v2_eu_kpi_slice_monthly")
-    deploy_file(ROOT / "infra" / "aws" / "athena" / "analytics_v2_eu_dq_helpers.sql", "EU DQ helpers")
+    athena = ROOT / "infra" / "aws" / "athena"
+    # Order: Silver foundation (base for sankey/skills/remote) → Gold role/employer → KPI/DQ/location/sankey
+    deploy_file(athena / "analytics_v2_eu_silver_foundation.sql", "v2_eu_silver_jobs_base + skills_long")
+    deploy_file(athena / "analytics_v2_eu_role_company_classified.sql", "v2_eu_role_titles + v2_eu_employers_top_clean")
+    deploy_file(athena / "analytics_v2_eu_dq_helpers.sql", "EU DQ helpers (remote + gold skill rows)")
+    deploy_file(athena / "analytics_v2_eu_kpi_slice.sql", "v2_eu_kpi_slice_monthly")
+    deploy_file(athena / "analytics_v2_eu_location_scatter.sql", "v2_eu_location_scatter_metrics")
+    deploy_file(athena / "analytics_v2_eu_sankey_helper.sql", "v2_eu_sankey_location_to_company_monthly")
     print("ALL_OK", file=sys.stderr)
     return 0
 
