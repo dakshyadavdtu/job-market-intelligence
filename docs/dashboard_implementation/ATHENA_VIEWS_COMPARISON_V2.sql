@@ -1,13 +1,16 @@
 -- =============================================================================
 -- ATHENA_VIEWS_COMPARISON_V2.sql — Honest benchmark helpers (jmi_analytics_v2 only)
--- Prerequisites: jmi_gold_v2.latest_run_metadata, jmi_gold_v2.latest_run_metadata_adzuna.
+-- Prerequisites: jmi_gold_v2.role_demand_monthly, jmi_gold_v2.skill_demand_monthly (and
+-- jmi_gold_v2.latest_run_metadata* only for comparison_march_strict_status / legacy v2_* march+yearly wrappers).
 -- Engine: Athena engine 3 (Trino).
 --
 -- Time-window policy (read before using):
 --   - Latest EU run (arbeitnow) and latest India run (adzuna_in) are INDEPENDENT.
 --     Month coverage differs by source; a UNION of monthly totals is EXPLORATORY only.
 --   - Strict source-to-source comparison uses calendar months in the INTERSECTION of
---     posted_month sets (same month present in BOTH sources’ latest Gold runs).
+--     posted_month sets where BOTH sources have Gold for that month in the rolling
+--     previous+current UTC month, using MAX(run_id) per posted_month per source (not
+--     only the single latest_run_metadata pointer).
 --   - "Aligned" / benchmark views use MAX(intersection posted_month) = latest common
 --     calendar month — NOT March unless both sources actually have that March.
 --   - March-only strict comparability requires BOTH sources to have at least one
@@ -28,29 +31,34 @@
 CREATE DATABASE IF NOT EXISTS jmi_analytics_v2;
 
 -- -----------------------------------------------------------------------------
--- 0) Distinct posted_month values in the strict intersection (latest runs per source)
+-- 0) Distinct posted_month values in the strict intersection (per-month MAX(run_id) in live window)
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_strict_intersection_months AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
-     lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1),
-     eu_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     ad_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     )
-SELECT eu_m.posted_month
-FROM eu_m
-INNER JOIN ad_m ON eu_m.posted_month = ad_m.posted_month;
+WITH month_bounds AS (
+    SELECT
+        date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+        date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest_eu AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'arbeitnow'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+month_latest_ad AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+)
+SELECT e.posted_month
+FROM month_latest_eu e
+INNER JOIN month_latest_ad a ON e.posted_month = a.posted_month;
 
 -- -----------------------------------------------------------------------------
 -- 0b) March feasibility: does each source have any March posted_month in its latest run?
@@ -86,54 +94,44 @@ GROUP BY r.run_id;
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_time_window_policy AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
-     lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1),
-     eu_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     ad_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     intersection AS (
-         SELECT eu_m.posted_month
-         FROM eu_m
-         INNER JOIN ad_m ON eu_m.posted_month = ad_m.posted_month
-     ),
-     an_march AS (
-         SELECT MAX(CASE WHEN r.posted_month LIKE '%-03' THEN 1 ELSE 0 END) >= 1 AS has_m
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     ad_march AS (
-         SELECT MAX(CASE WHEN r.posted_month LIKE '%-03' THEN 1 ELSE 0 END) >= 1 AS has_m
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     bounds AS (
-         SELECT MIN(u.posted_month) AS min_posted_month, MAX(u.posted_month) AS max_posted_month
-         FROM (
-             SELECT posted_month FROM eu_m
-             UNION ALL
-             SELECT posted_month FROM ad_m
-         ) u
-     )
+WITH month_bounds AS (
+    SELECT
+        date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+        date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest_eu AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'arbeitnow'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+month_latest_ad AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+eu_m AS (SELECT DISTINCT posted_month FROM month_latest_eu),
+ad_m AS (SELECT DISTINCT posted_month FROM month_latest_ad),
+intersection AS (
+    SELECT e.posted_month
+    FROM month_latest_eu e
+    INNER JOIN month_latest_ad a ON e.posted_month = a.posted_month
+),
+bounds AS (
+    SELECT b.pm_min AS min_posted_month, b.pm_max AS max_posted_month
+    FROM month_bounds b
+)
 SELECT
     (SELECT MAX(i.posted_month) FROM intersection i) AS strict_intersection_latest_month,
     CAST((SELECT COUNT(*) FROM intersection i) AS BIGINT) AS strict_intersection_month_count,
-    CAST((SELECT has_m FROM an_march) AND (SELECT has_m FROM ad_march) AS BOOLEAN)
-        AS march_strict_comparable_both_sources,
+    CAST(
+        EXISTS (SELECT 1 FROM intersection i WHERE i.posted_month LIKE '%-03') AS BOOLEAN
+    ) AS march_strict_comparable_both_sources,
     b.min_posted_month AS exploratory_union_min_posted_month,
     b.max_posted_month AS exploratory_union_max_posted_month,
     CAST(
@@ -154,57 +152,65 @@ SELECT
 FROM bounds b;
 
 -- -----------------------------------------------------------------------------
--- 1) Total postings by gold source and calendar month (latest run per source).
---     layer_scope = exploratory: uneven month counts per source; use month_in_strict_intersection
+-- 1) Total postings by gold source and calendar month (MAX(run_id) per posted_month
+--     per source within the rolling previous+current UTC month window).
+--     layer_scope = exploratory: union of months may differ by source; use month_in_strict_intersection
 --     to filter to apples-to-apples months only.
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_source_month_totals AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
-     lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1),
-     eu_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     ad_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     intersection AS (
-         SELECT eu_m.posted_month
-         FROM eu_m
-         INNER JOIN ad_m ON eu_m.posted_month = ad_m.posted_month
-     ),
-     ar AS (
-         SELECT
-             CAST('arbeitnow' AS VARCHAR) AS source,
-             r.posted_month,
-             r.run_id,
-             SUM(r.job_count) AS total_postings
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-         GROUP BY r.posted_month, r.run_id
-     ),
-     ad AS (
-         SELECT
-             CAST('adzuna_in' AS VARCHAR) AS source,
-             r.posted_month,
-             r.run_id,
-             SUM(r.job_count) AS total_postings
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-         GROUP BY r.posted_month, r.run_id
-     )
+WITH month_bounds AS (
+    SELECT
+        date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+        date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest_eu AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'arbeitnow'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+month_latest_ad AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+intersection AS (
+    SELECT e.posted_month
+    FROM month_latest_eu e
+    INNER JOIN month_latest_ad a ON e.posted_month = a.posted_month
+),
+ar AS (
+    SELECT
+        CAST('arbeitnow' AS VARCHAR) AS source,
+        r.posted_month,
+        r.run_id,
+        SUM(r.job_count) AS total_postings
+    FROM jmi_gold_v2.role_demand_monthly r
+    INNER JOIN month_latest_eu m ON r.posted_month = m.posted_month AND r.run_id = m.run_id
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'arbeitnow'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month, r.run_id
+),
+ad AS (
+    SELECT
+        CAST('adzuna_in' AS VARCHAR) AS source,
+        r.posted_month,
+        r.run_id,
+        SUM(r.job_count) AS total_postings
+    FROM jmi_gold_v2.role_demand_monthly r
+    INNER JOIN month_latest_ad m ON r.posted_month = m.posted_month AND r.run_id = m.run_id
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month, r.run_id
+)
 SELECT
     ar.source,
     ar.posted_month,
@@ -297,27 +303,32 @@ LEFT JOIN ad ON yr.calendar_year = ad.calendar_year;
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_strict_intersection_skill_demand AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
-     lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1),
-     eu_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     ad_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     intersection AS (
-         SELECT eu_m.posted_month
-         FROM eu_m
-         INNER JOIN ad_m ON eu_m.posted_month = ad_m.posted_month
-     )
+WITH month_bounds AS (
+    SELECT
+        date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+        date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest_eu AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'arbeitnow'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+month_latest_ad AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+intersection AS (
+    SELECT e.posted_month
+    FROM month_latest_eu e
+    INNER JOIN month_latest_ad a ON e.posted_month = a.posted_month
+)
 SELECT
     s.source,
     s.skill,
@@ -326,9 +337,10 @@ SELECT
     s.run_id,
     CAST('strict_intersection' AS VARCHAR) AS layer_scope
 FROM jmi_gold_v2.skill_demand_monthly s
-INNER JOIN lr_an ON s.run_id = lr_an.run_id
+INNER JOIN month_latest_eu m ON s.posted_month = m.posted_month AND s.run_id = m.run_id
+CROSS JOIN month_bounds b
 WHERE s.source = 'arbeitnow'
-  AND s.posted_month BETWEEN '2018-01' AND '2035-12'
+  AND s.posted_month BETWEEN b.pm_min AND b.pm_max
   AND s.posted_month IN (SELECT i.posted_month FROM intersection i)
 
 UNION ALL
@@ -341,9 +353,10 @@ SELECT
     s.run_id,
     CAST('strict_intersection' AS VARCHAR) AS layer_scope
 FROM jmi_gold_v2.skill_demand_monthly s
-INNER JOIN lr_ad ON s.run_id = lr_ad.run_id
+INNER JOIN month_latest_ad m ON s.posted_month = m.posted_month AND s.run_id = m.run_id
+CROSS JOIN month_bounds b
 WHERE s.source = 'adzuna_in'
-  AND s.posted_month BETWEEN '2018-01' AND '2035-12'
+  AND s.posted_month BETWEEN b.pm_min AND b.pm_max
   AND s.posted_month IN (SELECT i.posted_month FROM intersection i);
 
 -- -----------------------------------------------------------------------------
@@ -351,27 +364,32 @@ WHERE s.source = 'adzuna_in'
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_strict_intersection_role_demand AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
-     lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1),
-     eu_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     ad_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     intersection AS (
-         SELECT eu_m.posted_month
-         FROM eu_m
-         INNER JOIN ad_m ON eu_m.posted_month = ad_m.posted_month
-     )
+WITH month_bounds AS (
+    SELECT
+        date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+        date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest_eu AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'arbeitnow'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+month_latest_ad AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+intersection AS (
+    SELECT e.posted_month
+    FROM month_latest_eu e
+    INNER JOIN month_latest_ad a ON e.posted_month = a.posted_month
+)
 SELECT
     r.source,
     r."role" AS role_title,
@@ -380,9 +398,10 @@ SELECT
     r.run_id,
     CAST('strict_intersection' AS VARCHAR) AS layer_scope
 FROM jmi_gold_v2.role_demand_monthly r
-INNER JOIN lr_an ON r.run_id = lr_an.run_id
+INNER JOIN month_latest_eu m ON r.posted_month = m.posted_month AND r.run_id = m.run_id
+CROSS JOIN month_bounds b
 WHERE r.source = 'arbeitnow'
-  AND r.posted_month BETWEEN '2018-01' AND '2035-12'
+  AND r.posted_month BETWEEN b.pm_min AND b.pm_max
   AND r.posted_month IN (SELECT i.posted_month FROM intersection i)
 
 UNION ALL
@@ -395,9 +414,10 @@ SELECT
     r.run_id,
     CAST('strict_intersection' AS VARCHAR) AS layer_scope
 FROM jmi_gold_v2.role_demand_monthly r
-INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
+INNER JOIN month_latest_ad m ON r.posted_month = m.posted_month AND r.run_id = m.run_id
+CROSS JOIN month_bounds b
 WHERE r.source = 'adzuna_in'
-  AND r.posted_month BETWEEN '2018-01' AND '2035-12'
+  AND r.posted_month BETWEEN b.pm_min AND b.pm_max
   AND r.posted_month IN (SELECT i.posted_month FROM intersection i);
 
 -- -----------------------------------------------------------------------------
@@ -405,50 +425,57 @@ WHERE r.source = 'adzuna_in'
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_source_month_skill_tag_hhi AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
-     lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1),
-     eu_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     ad_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     intersection AS (
-         SELECT eu_m.posted_month
-         FROM eu_m
-         INNER JOIN ad_m ON eu_m.posted_month = ad_m.posted_month
-     ),
-     base AS (
-         SELECT
-             CAST('arbeitnow' AS VARCHAR) AS source,
-             s.skill,
-             s.job_count,
-             s.posted_month,
-             s.run_id
-         FROM jmi_gold_v2.skill_demand_monthly s
-         INNER JOIN lr_an ON s.run_id = lr_an.run_id
-         WHERE s.source = 'arbeitnow'
-           AND s.posted_month BETWEEN '2018-01' AND '2035-12'
-         UNION ALL
-         SELECT
-             CAST('adzuna_in' AS VARCHAR) AS source,
-             s.skill,
-             s.job_count,
-             s.posted_month,
-             s.run_id
-         FROM jmi_gold_v2.skill_demand_monthly s
-         INNER JOIN lr_ad ON s.run_id = lr_ad.run_id
-         WHERE s.source = 'adzuna_in'
-           AND s.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
+WITH month_bounds AS (
+    SELECT
+        date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+        date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest_eu AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'arbeitnow'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+month_latest_ad AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+intersection AS (
+    SELECT e.posted_month
+    FROM month_latest_eu e
+    INNER JOIN month_latest_ad a ON e.posted_month = a.posted_month
+),
+base AS (
+    SELECT
+        CAST('arbeitnow' AS VARCHAR) AS source,
+        s.skill,
+        s.job_count,
+        s.posted_month,
+        s.run_id
+    FROM jmi_gold_v2.skill_demand_monthly s
+    INNER JOIN month_latest_eu m ON s.posted_month = m.posted_month AND s.run_id = m.run_id
+    CROSS JOIN month_bounds b
+    WHERE s.source = 'arbeitnow'
+      AND s.posted_month BETWEEN b.pm_min AND b.pm_max
+    UNION ALL
+    SELECT
+        CAST('adzuna_in' AS VARCHAR) AS source,
+        s.skill,
+        s.job_count,
+        s.posted_month,
+        s.run_id
+    FROM jmi_gold_v2.skill_demand_monthly s
+    INNER JOIN month_latest_ad m ON s.posted_month = m.posted_month AND s.run_id = m.run_id
+    CROSS JOIN month_bounds b
+    WHERE s.source = 'adzuna_in'
+      AND s.posted_month BETWEEN b.pm_min AND b.pm_max
+),
      tot AS (
          SELECT source, posted_month, run_id, SUM(job_count) AS tag_sum
          FROM base
@@ -482,42 +509,48 @@ GROUP BY sh.source, sh.posted_month, sh.run_id;
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_source_skill_mix_aligned_top20 AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
-     lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1),
-     eu_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     ad_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     intersection AS (
-         SELECT eu_m.posted_month
-         FROM eu_m
-         INNER JOIN ad_m ON eu_m.posted_month = ad_m.posted_month
-     ),
-     strict_intersection_latest_month AS (
-         SELECT MAX(i.posted_month) AS posted_month FROM intersection i
-     ),
-     eu_skill_rows AS (
-         SELECT
-             s.skill,
-             s.job_count,
-             s.posted_month,
-             s.run_id
-         FROM jmi_gold_v2.skill_demand_monthly s
-         INNER JOIN lr_an ON s.run_id = lr_an.run_id
-         INNER JOIN strict_intersection_latest_month m ON s.posted_month = m.posted_month
-         WHERE s.source = 'arbeitnow'
-           AND s.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
+WITH month_bounds AS (
+    SELECT
+        date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+        date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest_eu AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'arbeitnow'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+month_latest_ad AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+intersection AS (
+    SELECT e.posted_month
+    FROM month_latest_eu e
+    INNER JOIN month_latest_ad a ON e.posted_month = a.posted_month
+),
+strict_intersection_latest_month AS (
+    SELECT MAX(i.posted_month) AS posted_month FROM intersection i
+),
+eu_skill_rows AS (
+    SELECT
+        s.skill,
+        s.job_count,
+        s.posted_month,
+        s.run_id
+    FROM jmi_gold_v2.skill_demand_monthly s
+    INNER JOIN month_latest_eu ml ON s.posted_month = ml.posted_month AND s.run_id = ml.run_id
+    INNER JOIN strict_intersection_latest_month m ON s.posted_month = m.posted_month
+    CROSS JOIN month_bounds b
+    WHERE s.source = 'arbeitnow'
+      AND s.posted_month BETWEEN b.pm_min AND b.pm_max
+),
      eu_skill_tot AS (
          SELECT posted_month, run_id, SUM(job_count) AS tag_sum
          FROM eu_skill_rows
@@ -541,10 +574,11 @@ WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
              s.posted_month,
              s.run_id
          FROM jmi_gold_v2.skill_demand_monthly s
-         INNER JOIN lr_ad ON s.run_id = lr_ad.run_id
+         INNER JOIN month_latest_ad ml ON s.posted_month = ml.posted_month AND s.run_id = ml.run_id
          INNER JOIN strict_intersection_latest_month m ON s.posted_month = m.posted_month
+         CROSS JOIN month_bounds b
          WHERE s.source = 'adzuna_in'
-           AND s.posted_month BETWEEN '2018-01' AND '2035-12'
+           AND s.posted_month BETWEEN b.pm_min AND b.pm_max
      ),
      adzuna_skill_tot AS (
          SELECT posted_month, run_id, SUM(job_count) AS tag_sum
@@ -599,56 +633,63 @@ FROM filt;
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_benchmark_aligned_month AS
-WITH lr_an AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1),
-     lr_ad AS (SELECT run_id FROM jmi_gold_v2.latest_run_metadata_adzuna LIMIT 1),
-     eu_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     ad_m AS (
-         SELECT DISTINCT r.posted_month
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-     ),
-     intersection AS (
-         SELECT eu_m.posted_month
-         FROM eu_m
-         INNER JOIN ad_m ON eu_m.posted_month = ad_m.posted_month
-     ),
-     strict_intersection_latest_month AS (
-         SELECT MAX(i.posted_month) AS posted_month FROM intersection i
-     ),
-     role_eu AS (
-         SELECT
-             CAST('arbeitnow' AS VARCHAR) AS source,
-             r.posted_month,
-             r.run_id,
-             SUM(r.job_count) AS total_role_postings
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_an ON r.run_id = lr_an.run_id
-         INNER JOIN strict_intersection_latest_month a ON r.posted_month = a.posted_month
-         WHERE r.source = 'arbeitnow'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-         GROUP BY r.posted_month, r.run_id
-     ),
-     role_in AS (
-         SELECT
-             CAST('adzuna_in' AS VARCHAR) AS source,
-             r.posted_month,
-             r.run_id,
-             SUM(r.job_count) AS total_role_postings
-         FROM jmi_gold_v2.role_demand_monthly r
-         INNER JOIN lr_ad ON r.run_id = lr_ad.run_id
-         INNER JOIN strict_intersection_latest_month a ON r.posted_month = a.posted_month
-         WHERE r.source = 'adzuna_in'
-           AND r.posted_month BETWEEN '2018-01' AND '2035-12'
-         GROUP BY r.posted_month, r.run_id
-     ),
+WITH month_bounds AS (
+    SELECT
+        date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+        date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest_eu AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'arbeitnow'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+month_latest_ad AS (
+    SELECT r.posted_month, MAX(r.run_id) AS run_id
+    FROM jmi_gold_v2.role_demand_monthly r
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month
+),
+intersection AS (
+    SELECT e.posted_month
+    FROM month_latest_eu e
+    INNER JOIN month_latest_ad a ON e.posted_month = a.posted_month
+),
+strict_intersection_latest_month AS (
+    SELECT MAX(i.posted_month) AS posted_month FROM intersection i
+),
+role_eu AS (
+    SELECT
+        CAST('arbeitnow' AS VARCHAR) AS source,
+        r.posted_month,
+        r.run_id,
+        SUM(r.job_count) AS total_role_postings
+    FROM jmi_gold_v2.role_demand_monthly r
+    INNER JOIN month_latest_eu ml ON r.posted_month = ml.posted_month AND r.run_id = ml.run_id
+    INNER JOIN strict_intersection_latest_month a ON r.posted_month = a.posted_month
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'arbeitnow'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month, r.run_id
+),
+role_in AS (
+    SELECT
+        CAST('adzuna_in' AS VARCHAR) AS source,
+        r.posted_month,
+        r.run_id,
+        SUM(r.job_count) AS total_role_postings
+    FROM jmi_gold_v2.role_demand_monthly r
+    INNER JOIN month_latest_ad ml ON r.posted_month = ml.posted_month AND r.run_id = ml.run_id
+    INNER JOIN strict_intersection_latest_month a ON r.posted_month = a.posted_month
+    CROSS JOIN month_bounds b
+    WHERE r.source = 'adzuna_in'
+      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+    GROUP BY r.posted_month, r.run_id
+),
      roles AS (
          SELECT * FROM role_eu
          UNION ALL
