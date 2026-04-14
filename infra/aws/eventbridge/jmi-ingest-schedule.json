@@ -1,7 +1,7 @@
 {
   "Name": "jmi-ingest-10min",
   "GroupName": "default",
-  "ScheduleExpression": "rate(10 minutes)",
+  "ScheduleExpression": "rate(12 hours)",
   "FlexibleTimeWindow": {
     "Mode": "OFF"
   },
@@ -11,5 +11,5 @@
     "Input": "{\"trigger\":\"eventbridge\",\"source\":\"schedule\"}"
   },
   "State": "ENABLED",
-  "Description": "JMI pipeline (ingest→silver→gold) every 10 minutes via EventBridge Scheduler"
+  "Description": "JMI pipeline (ingest→silver→gold) every 12 hours via EventBridge Scheduler"
 }
