@@ -192,7 +192,7 @@ JMI therefore separates concerns:
 |---------|-------------|
 | **Amazon S3** | **System of record** for Bronze, Silver, Gold, quality JSON, health files, and (typically) Athena query results. |
 | **AWS Lambda** | Runs **ingest**, **Silver transform**, and **Gold transform** without servers; same Python modules as local. |
-| **Amazon EventBridge** | **Scheduler** (e.g. `rate(4 hours)` in `infra/aws/eventbridge/jmi-ingest-schedule.json`) to trigger ingest; should stay **disabled** until validated. |
+| **Amazon EventBridge** | **Scheduler** (`rate(24 hours)` in `infra/aws/eventbridge/jmi-ingest-schedule.json`) to trigger ingest. Apply live with `infra/aws/eventbridge/apply-ingest-schedule.sh`. |
 | **AWS Glue Data Catalog** | **Metadata** (databases, tables, columns, partitions) so Athena knows **where** data lives in S3. |
 | **Amazon Athena** | **SQL** over S3 via Glue; use **partition filters** and prefer **Gold** tables for routine reporting. |
 | **Amazon QuickSight** (later) | **Shared dashboards** over Athena datasets / SPICE; enterprise consumption path. |
@@ -384,7 +384,7 @@ job-market-intelligence-main/
 3. **S3 bucket** and prefixes for Bronze/Silver/Gold/quality/health.  
 4. **IAM** least-privilege roles for Lambda and EventBridge.  
 5. Deploy **Lambda** functions (packaging scripts under `infra/aws/lambda/`).  
-6. Configure **EventBridge** schedule—example rule is **DISABLED** in `infra/aws/eventbridge/jmi-ingest-schedule.json` until validated.  
+6. Configure **EventBridge** schedule—`infra/aws/eventbridge/jmi-ingest-schedule.json` uses **`rate(24 hours)`**; `State` may be `ENABLED` when production-ready. Apply with `infra/aws/eventbridge/apply-ingest-schedule.sh`.  
 7. **Glue + Athena** DDL for external tables.  
 8. **Manual validation** batch (compare S3 outputs, quality JSON, Athena counts).  
 9. **Dashboard** verification (QuickSight or exported data).

@@ -6,4 +6,4 @@
 -> Glue Catalog metadata + Athena SQL
 -> Streamlit dashboard`
 
-Processing mode: micro-batch (target every 4 hours in AWS deployment for the primary Arbeitnow path). **Adzuna** uses the same medallion contracts locally; see `docs/adzuna_india_runbook.md`.
+Processing mode: micro-batch (scheduled ingest in AWS uses **24-hour** cadence via `infra/aws/eventbridge/jmi-ingest-schedule.json`). **Adzuna** uses the same medallion contracts locally; see `docs/adzuna_india_runbook.md`.

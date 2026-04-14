@@ -1,0 +1,5 @@
+{
+  "Arn": "arn:aws:lambda:ap-south-1:470441577506:function:jmi-ingest-live",
+  "RoleArn": "arn:aws:iam::470441577506:role/jmi-eventbridge-invoke-lambda-role",
+  "Input": "{\"trigger\":\"eventbridge\",\"source\":\"schedule\"}"
+}
