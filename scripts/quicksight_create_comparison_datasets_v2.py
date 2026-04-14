@@ -30,7 +30,6 @@ DATASETS: list[tuple[str, str]] = [
         "comparison_strict_intersection_month_totals",
     ),
     ("v2 - CMP - comparison_time_window_policy", "comparison_time_window_policy"),
-    ("v2 - CMP - comparison_march_strict_status", "comparison_march_strict_status"),
     (
         "v2 - CMP - comparison_source_skill_mix_aligned_top20",
         "comparison_source_skill_mix_aligned_top20",

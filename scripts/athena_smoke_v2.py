@@ -70,9 +70,9 @@ QUERIES: list[tuple[str, str | None, str]] = [
         "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_strict_intersection_month_totals",
     ),
     (
-        "cmp_march_status",
+        "cmp_strict_intersection_months",
         "jmi_analytics_v2",
-        "SELECT source, has_march_posted_month_in_latest_run FROM jmi_analytics_v2.comparison_march_strict_status",
+        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_strict_intersection_months",
     ),
 ]
 

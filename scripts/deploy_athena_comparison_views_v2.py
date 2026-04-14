@@ -99,6 +99,25 @@ def main() -> int:
 
     sql_path = args.repo_root / "docs" / "dashboard_implementation" / "ATHENA_VIEWS_COMPARISON_V2.sql"
     raw = sql_path.read_text(encoding="utf-8")
+    # Drop demo-pruned views so they disappear from Glue when no longer in the SQL file.
+    drop_pruned: list[str] = [
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_yearly_exploratory_manifest",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_yearly_exploratory_source_year_totals",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_exploratory_calendar_year_asymmetry_panel",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_exploratory_calendar_year_totals",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_observed_time_span",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_march_strict_role_mix",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_march_strict_skill_mix",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_march_strict_manifest",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_march_strict_benchmark_summary",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_march_strict_month_totals",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_strict_common_role_mix",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_strict_common_skill_mix",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.v2_strict_common_manifest",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_strict_intersection_role_demand",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_strict_intersection_skill_demand",
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_march_strict_status",
+    ]
     steps: list[tuple[str, str | None]] = []
     for stmt in split_sql_statements(raw):
         if "CREATE DATABASE" in stmt:
@@ -108,9 +127,17 @@ def main() -> int:
 
     print(f"Statements: {len(steps)}", file=sys.stderr)
     if args.dry_run:
+        for i, stmt in enumerate(drop_pruned):
+            print(f"--- drop {i+1} ---\n{stmt}\n")
         for i, (sql, db) in enumerate(steps):
             print(f"--- {i+1} db={db} ---\n{sql[:300]}...\n")
         return 0
+
+    for i, stmt in enumerate(drop_pruned):
+        print(f"Running drop_pruned {i+1}/{len(drop_pruned)}...", file=sys.stderr)
+        qid = run_athena_sql(stmt, region=args.region, workgroup=args.workgroup, database="jmi_analytics_v2")
+        wait_done(qid, args.region)
+        print(f"  OK {qid}", file=sys.stderr)
 
     for i, (sql, db) in enumerate(steps):
         print(f"Running {i+1}/{len(steps)} db={db}...", file=sys.stderr)

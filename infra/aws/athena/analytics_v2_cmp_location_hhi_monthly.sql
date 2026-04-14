@@ -1,6 +1,6 @@
 -- Month-wise location concentration (HHI) for strict-common comparison months only.
 -- Semantics: same rolling window + per-month MAX(run_id) + intersection as
---   jmi_analytics_v2.comparison_strict_intersection_skill_demand / role_demand.
+--   jmi_analytics_v2.comparison_strict_intersection_month_totals (strict months only).
 -- HHI = sum_i (share_i^2) where share_i = location job_count / sum(job_count) within (source, posted_month).
 -- Sources: arbeitnow | adzuna_in (Gold location_demand_monthly only).
 
