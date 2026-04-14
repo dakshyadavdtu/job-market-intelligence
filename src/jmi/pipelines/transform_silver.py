@@ -156,7 +156,7 @@ def load_silver_jobs_history_union(cfg: AppConfig) -> pd.DataFrame | None:
                 paths = [
                     u
                     for u in paths
-                    if "/source=arbeitnow/" in u
+                    if ("/source=arbeitnow/" in u and "/slice=" not in u)
                     or ("/silver_legacy/jobs/" in u and "/ingest_date=" in u and "/source=" not in u)
                 ]
             else:
@@ -253,6 +253,16 @@ def run(bronze_file: str | None = None, *, cfg: AppConfig | None = None) -> dict
     if not bronze_rows:
         raise RuntimeError("Bronze file is empty.")
 
+    src_from_bronze = str(bronze_rows[0].get("source") or "").strip()
+    if src_from_bronze:
+        cfg = replace(cfg, source_name=src_from_bronze)
+        for row in bronze_rows[1:]:
+            s = str(row.get("source") or "").strip()
+            if s and s != src_from_bronze:
+                raise RuntimeError(
+                    f"Mixed source in bronze batch: expected {src_from_bronze!r}, got {s!r}"
+                )
+
     flattened: list[dict] = []
     for row in bronze_rows:
         payload = row.get("raw_payload", {})
@@ -341,6 +351,7 @@ def run(bronze_file: str | None = None, *, cfg: AppConfig | None = None) -> dict
         "duplicate_job_id": report.duplicate_job_id,
         "duplicate_source_key": report.duplicate_source_key,
         "source_bronze_file": bronze_file_str,
+        "source_name": cfg.source_name,
         "output_file": str(out_path),
         "merged_silver_file": str(merged_path),
     }
