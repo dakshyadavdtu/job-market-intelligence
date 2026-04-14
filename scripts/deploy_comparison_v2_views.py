@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Deploy v2_strict_common_*, v2_march_strict_*, v2_yearly_exploratory_* as views in jmi_analytics_v2,
-then DROP obsolete jmi_gold_v2.derived_* external tables.
+v2_cmp_location_hhi_monthly (strict-common location HHI), then DROP obsolete jmi_gold_v2.derived_* external tables.
 
 Requires: scripts/deploy_athena_comparison_views_v2.py already applied (comparison_* views).
 
@@ -113,14 +113,18 @@ def main() -> int:
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
 
-    sql_path = args.repo_root / "infra" / "aws" / "athena" / "comparison_v2_views.sql"
-    raw = sql_path.read_text(encoding="utf-8")
+    sql_paths = [
+        args.repo_root / "infra" / "aws" / "athena" / "comparison_v2_views.sql",
+        args.repo_root / "infra" / "aws" / "athena" / "analytics_v2_cmp_location_hhi_monthly.sql",
+    ]
     steps: list[tuple[str, str | None]] = []
-    for stmt in split_sql_statements(raw):
-        if stmt.strip().upper().startswith("DROP TABLE"):
-            steps.append((stmt, "jmi_gold_v2"))
-        else:
-            steps.append((stmt, "jmi_analytics_v2"))
+    for sql_path in sql_paths:
+        raw = sql_path.read_text(encoding="utf-8")
+        for stmt in split_sql_statements(raw):
+            if stmt.strip().upper().startswith("DROP TABLE"):
+                steps.append((stmt, "jmi_gold_v2"))
+            else:
+                steps.append((stmt, "jmi_analytics_v2"))
 
     print(f"Statements: {len(steps)}", file=sys.stderr)
     if args.dry_run:
