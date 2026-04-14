@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import time
+
+
 def athena_output_uri() -> str:
     bucket = os.environ.get("JMI_BUCKET", "jmi-dakshyadav-job-market-intelligence").strip()
     return f"s3://{bucket}/athena-results/"
@@ -54,6 +56,36 @@ GOLD_V2_RUN_PROJECTION_TABLES = (
 )
 
 
+def update_gold_run_id_projection(
+    run_id_csv: str,
+    *,
+    database: str,
+    region: str,
+    workgroup: str,
+    table_names: tuple[str, ...] = GOLD_V2_RUN_PROJECTION_TABLES,
+) -> None:
+    """Set Glue projection.run_id.values on Gold fact tables (comma-separated run_ids)."""
+    if "'" in run_id_csv:
+        raise ValueError("run_id CSV must not contain single quotes")
+    import boto3  # type: ignore
+
+    client = boto3.client("athena", region_name=region)
+    out = athena_output_uri()
+    for name in table_names:
+        sql = (
+            f"ALTER TABLE {database}.{name} SET TBLPROPERTIES "
+            f"('projection.run_id.values'='{run_id_csv}')"
+        )
+        r = client.start_query_execution(
+            QueryString=sql,
+            QueryExecutionContext={"Database": database},
+            ResultConfiguration={"OutputLocation": out},
+            WorkGroup=workgroup,
+        )
+        qid = r["QueryExecutionId"]
+        _wait_athena_query(client, qid, region)
+
+
 def update_gold_v2_run_id_projection(
     run_id_csv: str,
     *,
@@ -61,25 +93,9 @@ def update_gold_v2_run_id_projection(
     workgroup: str,
 ) -> None:
     """Set Glue projection.run_id.values on all jmi_gold_v2 fact tables (comma-separated run_ids)."""
-    if "'" in run_id_csv:
-        raise ValueError("run_id CSV must not contain single quotes")
-    import boto3  # type: ignore
-
-    client = boto3.client("athena", region_name=region)
-    out = athena_output_uri()
-    for name in GOLD_V2_RUN_PROJECTION_TABLES:
-        sql = (
-            f"ALTER TABLE jmi_gold_v2.{name} SET TBLPROPERTIES "
-            f"('projection.run_id.values'='{run_id_csv}')"
-        )
-        r = client.start_query_execution(
-            QueryString=sql,
-            QueryExecutionContext={"Database": "jmi_gold_v2"},
-            ResultConfiguration={"OutputLocation": out},
-            WorkGroup=workgroup,
-        )
-        qid = r["QueryExecutionId"]
-        _wait_athena_query(client, qid, region)
+    update_gold_run_id_projection(
+        run_id_csv, region=region, workgroup=workgroup, database="jmi_gold_v2"
+    )
 
 
 def sync_gold_run_id_projection_from_s3(
@@ -96,4 +112,33 @@ def sync_gold_run_id_projection_from_s3(
         raise RuntimeError(f"No run_id= segments found under s3://{b}/gold/role_demand_monthly/")
     csv = ",".join(ids)
     update_gold_v2_run_id_projection(csv, region=reg, workgroup=workgroup)
+    return csv
+
+
+# Arbeitnow slice isolation prefix (see paths.gold_root_effective); same layout as jmi_gold_v2 facts.
+ARBEITNOW_SLICE_ROLE_PREFIX = "gold/slice=arbeitnow_2026_q1_focus/role_demand_monthly/"
+ARBEITNOW_SLICE_GOLD_DATABASE = "jmi_gold_arbeitnow_slice"
+
+
+def sync_arbeitnow_slice_gold_projection_from_s3(
+    *,
+    bucket: str | None = None,
+    region: str | None = None,
+    workgroup: str = "primary",
+) -> str:
+    """Enumerate run_ids under the Arbeitnow slice Gold prefix; update jmi_gold_arbeitnow_slice projection."""
+    b = (bucket or os.environ.get("JMI_BUCKET", "").strip()) or "jmi-dakshyadav-job-market-intelligence"
+    reg = region or os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "ap-south-1"
+    ids = collect_run_ids_from_s3_gold(b, prefix=ARBEITNOW_SLICE_ROLE_PREFIX, region=reg)
+    if not ids:
+        raise RuntimeError(
+            f"No run_id= segments found under s3://{b}/{ARBEITNOW_SLICE_ROLE_PREFIX}"
+        )
+    csv = ",".join(ids)
+    update_gold_run_id_projection(
+        csv,
+        database=ARBEITNOW_SLICE_GOLD_DATABASE,
+        region=reg,
+        workgroup=workgroup,
+    )
     return csv
