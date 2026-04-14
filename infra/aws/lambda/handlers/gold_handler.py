@@ -7,6 +7,7 @@ from dataclasses import replace
 
 from src.jmi.config import AppConfig
 from src.jmi.aws.athena_projection import sync_gold_run_id_projection_from_s3
+from src.jmi.pipelines.transform_gold import default_incremental_posted_months_live_window
 from src.jmi.pipelines.transform_gold import run as gold_run
 
 
@@ -17,7 +18,10 @@ def handler(event, context):
     elif "incremental_posted_months" in ev and ev.get("incremental_posted_months") is not None:
         os.environ["JMI_GOLD_INCREMENTAL_POSTED_MONTHS"] = str(ev["incremental_posted_months"]).strip()
     else:
-        os.environ.setdefault("JMI_GOLD_INCREMENTAL_POSTED_MONTHS", "2026-04")
+        os.environ.setdefault(
+            "JMI_GOLD_INCREMENTAL_POSTED_MONTHS",
+            default_incremental_posted_months_live_window(),
+        )
         os.environ.pop("JMI_GOLD_FULL_MONTHS", None)
 
     source = str(ev.get("source_name") or os.environ.get("JMI_SOURCE_NAME") or "arbeitnow").strip()

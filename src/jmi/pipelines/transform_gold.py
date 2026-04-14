@@ -115,6 +115,17 @@ def _resolve_silver_dataframe(
     raise FileNotFoundError("No readable non-empty silver parquet found.")
 
 
+def default_incremental_posted_months_live_window() -> str:
+    """Comma-separated ``YYYY-MM`` for previous + current UTC calendar month (live KPI window)."""
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    first_this = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_prev = first_this - timedelta(days=1)
+    first_prev = last_prev.replace(day=1)
+    return f"{first_prev:%Y-%m},{first_this:%Y-%m}"
+
+
 def _gold_incremental_posted_months() -> list[str] | None:
     """If set, Gold writes only these posted_month partitions (live incremental).
 

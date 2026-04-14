@@ -1,39 +1,49 @@
 -- Europe (Arbeitnow) KPI slice — jmi_analytics_v2 only.
 -- Gold facts: merged GROUP BYs + window-based HHI (fewer table scans than many parallel CTEs).
 -- remote_classified_share is NULL here; use v2_eu_silver_remote_classified_monthly (SPICE or ad hoc).
--- Latest EU run: jmi_gold_v2.latest_run_metadata.
+--
+-- Month/run selection: rolling **previous + current UTC calendar month** only (not full history).
+-- For each posted_month in that window, use the **latest Gold run_id** that materialized that month
+-- (MAX(run_id) per month). This avoids losing the prior month when live incremental Gold writes only
+-- the current month and updates latest_run_metadata to a run that has no partition for the prior month.
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_eu_kpi_slice_monthly AS
-WITH lr AS (
-  SELECT run_id FROM jmi_gold_v2.latest_run_metadata LIMIT 1
+WITH month_bounds AS (
+  SELECT
+    date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
+    date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
+),
+month_latest AS (
+  SELECT r.posted_month, MAX(r.run_id) AS run_id
+  FROM jmi_gold_v2.role_demand_monthly r
+  CROSS JOIN month_bounds b
+  WHERE r.source = 'arbeitnow'
+    AND r.posted_month BETWEEN b.pm_min AND b.pm_max
+  GROUP BY r.posted_month
 ),
 role_f AS (
   SELECT r.posted_month, r.run_id, r."role", r.job_count
   FROM jmi_gold_v2.role_demand_monthly r
-  INNER JOIN lr ON r.run_id = lr.run_id
+  INNER JOIN month_latest ml ON r.posted_month = ml.posted_month AND r.run_id = ml.run_id
   WHERE r.source = 'arbeitnow'
-    AND r.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 loc_f AS (
   SELECT l.posted_month, l.run_id, l.location, l.job_count
   FROM jmi_gold_v2.location_demand_monthly l
-  INNER JOIN lr ON l.run_id = lr.run_id
+  INNER JOIN month_latest ml ON l.posted_month = ml.posted_month AND l.run_id = ml.run_id
   WHERE l.source = 'arbeitnow'
-    AND l.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 skill_f AS (
   SELECT s.posted_month, s.run_id, s.skill, s.job_count
   FROM jmi_gold_v2.skill_demand_monthly s
-  INNER JOIN lr ON s.run_id = lr.run_id
+  INNER JOIN month_latest ml ON s.posted_month = ml.posted_month AND s.run_id = ml.run_id
   WHERE s.source = 'arbeitnow'
-    AND s.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 comp_f AS (
   SELECT c.posted_month, c.run_id, c.company_name, c.job_count
   FROM jmi_gold_v2.company_hiring_monthly c
-  INNER JOIN lr ON c.run_id = lr.run_id
+  INNER JOIN month_latest ml ON c.posted_month = ml.posted_month AND c.run_id = ml.run_id
   WHERE c.source = 'arbeitnow'
-    AND c.posted_month BETWEEN '2018-01' AND '2035-12'
 ),
 run_months AS (
   SELECT

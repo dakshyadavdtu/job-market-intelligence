@@ -71,15 +71,17 @@ def _pipeline_subprocess_env(data_root: Path) -> dict:
     If the shell has `JMI_DATA_ROOT=s3://...`, subprocesses would write directly to S3 while this
     script syncs `data/bronze|silver|gold` — new run_ids would never appear under the synced prefixes.
 
-    Live sync defaults Gold to incremental **one posted month** (``JMI_GOLD_INCREMENTAL_POSTED_MONTHS``,
-    default ``2026-04``) so each run does not rewrite every historical ``posted_month=`` folder.
+    Live sync defaults Gold to incremental **previous + current UTC month** (``JMI_GOLD_INCREMENTAL_POSTED_MONTHS``,
+    from ``default_incremental_posted_months_live_window()``) so each run does not rewrite full history.
     Set ``JMI_GOLD_FULL_MONTHS=1`` or export a different ``JMI_GOLD_INCREMENTAL_POSTED_MONTHS`` to override.
     """
     env = os.environ.copy()
     env["JMI_DATA_ROOT"] = str(data_root.resolve())
     if "JMI_GOLD_INCREMENTAL_POSTED_MONTHS" not in env:
         if os.environ.get("JMI_GOLD_FULL_MONTHS", "").strip().lower() not in ("1", "true", "yes"):
-            env["JMI_GOLD_INCREMENTAL_POSTED_MONTHS"] = "2026-04"
+            from src.jmi.pipelines.transform_gold import default_incremental_posted_months_live_window
+
+            env["JMI_GOLD_INCREMENTAL_POSTED_MONTHS"] = default_incremental_posted_months_live_window()
     return env
 
 
