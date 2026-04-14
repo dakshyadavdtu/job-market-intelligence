@@ -1,4 +1,5 @@
 -- Europe (Arbeitnow) Sankey helper — jmi_analytics_v2 only.
+-- Row-level Silver + window ranks: expensive for QuickSight Direct Query — prefer SPICE or pre-aggregate.
 -- Flow: primary location bucket (top 10 per posted_month + Other) -> company bucket (top 10 + Other).
 -- Mirrors v2_in_sankey_state_to_company_monthly: row-level Silver, controlled bucketing, no Gold role-title classifier duplication.
 -- Location key: first segment before comma (trim, lower) to reduce "City, Country" fragmentation.

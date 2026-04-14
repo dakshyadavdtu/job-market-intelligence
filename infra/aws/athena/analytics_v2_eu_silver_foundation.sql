@@ -57,6 +57,7 @@ WHERE b.posted_month IN (
   WHERE r.source = 'arbeitnow'
 );
 
+-- UNNEST expands one row per skill tag; too heavy for most Direct Query dashboards — prefer v2_eu_gold_skill_rows_monthly.
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_eu_silver_jobs_skills_long AS
 SELECT
   b.job_id,
