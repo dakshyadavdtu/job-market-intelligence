@@ -113,6 +113,14 @@ def _flat_payload_fields(source: str, payload: dict) -> tuple[str, str, str, obj
     return title, company, location, payload.get("tags")
 
 
+def _read_parquet_silver_batch(path: str) -> pd.DataFrame:
+    """Read a single Silver batch file without PyArrow dataset merge (avoids mixed dict/string ``source`` in row groups)."""
+    import pyarrow.parquet as pq
+
+    with pq.ParquetFile(path) as pf:
+        return pf.read().to_pandas()
+
+
 def load_silver_jobs_history_union(cfg: AppConfig) -> pd.DataFrame | None:
     """All per-run Silver batch Parquet files for this source (excludes merged/), deduped by job_id."""
     jobs_root = cfg.silver_root / "jobs"
@@ -154,14 +162,33 @@ def load_silver_jobs_history_union(cfg: AppConfig) -> pd.DataFrame | None:
             else:
                 paths = [u for u in paths if "/source=arbeitnow/" in u]
         elif cfg.source_name == "arbeitnow" and slice_tag:
-            paths = [u for u in paths if f"/slice={slice_tag}/" in u]
-        elif cfg.source_name == "arbeitnow" and not slice_tag:
-            paths = [u for u in paths if "/slice=" not in u]
+            # Slice runs: union retained legacy Silver (pre-slice modular + silver_legacy) with
+            # silver/jobs/source=arbeitnow/slice=<tag>/ batches so Gold can see e.g. March in legacy + April in slice.
+            leg = silver_legacy_flat_jobs_root(cfg)
+            if leg.is_s3:
+                lb, lp = split_s3_uri(str(leg).rstrip("/") + "/")
+                collect_parts(lb, lp, require_source=None)
+            paths = [
+                u
+                for u in paths
+                if f"/slice={slice_tag}/" in u
+                or ("/source=arbeitnow/" in u and "/slice=" not in u)
+                or (
+                    "/silver_legacy/jobs/" in u
+                    and "/ingest_date=" in u
+                    and "/source=" not in u
+                )
+            ]
     else:
         base = jobs_root.as_path()
         if cfg.source_name == "arbeitnow" and slice_tag:
-            sub = base / f"source={cfg.source_name}" / f"slice={slice_tag}"
-            paths = sorted(str(p) for p in sub.glob("ingest_date=*/run_id=*/part-*.parquet"))
+            sub_slice = base / f"source={cfg.source_name}" / f"slice={slice_tag}"
+            paths_slice = sorted(str(p) for p in sub_slice.glob("ingest_date=*/run_id=*/part-*.parquet"))
+            sub_mod = base / f"source={cfg.source_name}"
+            paths_mod = sorted(str(p) for p in sub_mod.glob("ingest_date=*/run_id=*/part-*.parquet"))
+            leg = silver_legacy_flat_jobs_root(cfg).as_path()
+            paths_leg = sorted(str(p) for p in leg.glob("ingest_date=*/run_id=*/part-*.parquet")) if leg.exists() else []
+            paths = sorted(set(paths_slice + paths_mod + paths_leg))
         else:
             sub = base / f"source={cfg.source_name}"
             paths = sorted(str(p) for p in sub.glob("ingest_date=*/run_id=*/part-*.parquet"))
@@ -172,7 +199,7 @@ def load_silver_jobs_history_union(cfg: AppConfig) -> pd.DataFrame | None:
         paths = sorted(set(paths))
     if not paths:
         return None
-    frames = [align_silver_dataframe_to_canonical(pd.read_parquet(p)) for p in paths]
+    frames = [align_silver_dataframe_to_canonical(_read_parquet_silver_batch(p)) for p in paths]
     combined = pd.concat(frames, ignore_index=True)
     combined["_sd"] = combined["bronze_ingest_date"].astype(str)
     combined["_sr"] = combined["bronze_run_id"].astype(str)
@@ -193,7 +220,7 @@ def _merge_with_prior_silver(cfg: AppConfig, df_batch: pd.DataFrame) -> pd.DataF
     path_str = str(merged_path)
     df_old: pd.DataFrame | None = None
     try:
-        df_old = align_silver_dataframe_to_canonical(pd.read_parquet(path_str))
+        df_old = align_silver_dataframe_to_canonical(_read_parquet_silver_batch(path_str))
         if df_old.empty:
             df_old = None
     except Exception:
