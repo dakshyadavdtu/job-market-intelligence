@@ -3,8 +3,7 @@
 -- Prerequisites: jmi_gold_v2.role_demand_monthly, jmi_gold_v2.skill_demand_monthly.
 -- Engine: Athena engine 3 (Trino).
 --
--- Retained for dashboards: skill-tag HHI, aligned top-20 skill mix, benchmark row.
--- Policy/exploratory month-total views were removed; semantics stay in these three.
+-- Retained for dashboards: aligned top-20 skill mix; benchmark row (skill-tag HHI inlined).
 --
 -- Honest scope:
 --   - Posting volume in benchmark: SUM(job_count) from role_demand_monthly.
@@ -14,89 +13,6 @@
 -- =============================================================================
 
 CREATE DATABASE IF NOT EXISTS jmi_analytics_v2;
-
--- -----------------------------------------------------------------------------
--- Skill-tag concentration (HHI) per source × month (on tag-demand distribution)
--- Required by comparison_benchmark_aligned_month.
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_source_month_skill_tag_hhi AS
-WITH month_bounds AS (
-    SELECT
-        date_format(date_add('month', -1, date_trunc('month', current_timestamp)), '%Y-%m') AS pm_min,
-        date_format(date_trunc('month', current_timestamp), '%Y-%m') AS pm_max
-),
-month_latest_eu AS (
-    SELECT r.posted_month, MAX(r.run_id) AS run_id
-    FROM jmi_gold_v2.role_demand_monthly r
-    CROSS JOIN month_bounds b
-    WHERE r.source = 'arbeitnow'
-      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
-    GROUP BY r.posted_month
-),
-month_latest_ad AS (
-    SELECT r.posted_month, MAX(r.run_id) AS run_id
-    FROM jmi_gold_v2.role_demand_monthly r
-    CROSS JOIN month_bounds b
-    WHERE r.source = 'adzuna_in'
-      AND r.posted_month BETWEEN b.pm_min AND b.pm_max
-    GROUP BY r.posted_month
-),
-intersection AS (
-    SELECT e.posted_month
-    FROM month_latest_eu e
-    INNER JOIN month_latest_ad a ON e.posted_month = a.posted_month
-),
-base AS (
-    SELECT
-        CAST('arbeitnow' AS VARCHAR) AS source,
-        s.skill,
-        s.job_count,
-        s.posted_month,
-        s.run_id
-    FROM jmi_gold_v2.skill_demand_monthly s
-    INNER JOIN month_latest_eu m ON s.posted_month = m.posted_month AND s.run_id = m.run_id
-    CROSS JOIN month_bounds b
-    WHERE s.source = 'arbeitnow'
-      AND s.posted_month BETWEEN b.pm_min AND b.pm_max
-    UNION ALL
-    SELECT
-        CAST('adzuna_in' AS VARCHAR) AS source,
-        s.skill,
-        s.job_count,
-        s.posted_month,
-        s.run_id
-    FROM jmi_gold_v2.skill_demand_monthly s
-    INNER JOIN month_latest_ad m ON s.posted_month = m.posted_month AND s.run_id = m.run_id
-    CROSS JOIN month_bounds b
-    WHERE s.source = 'adzuna_in'
-      AND s.posted_month BETWEEN b.pm_min AND b.pm_max
-),
-     tot AS (
-         SELECT source, posted_month, run_id, SUM(job_count) AS tag_sum
-         FROM base
-         GROUP BY source, posted_month, run_id
-     ),
-     sh AS (
-         SELECT
-             b.source,
-             b.posted_month,
-             b.run_id,
-             CAST(b.job_count AS DOUBLE) / CAST(NULLIF(t.tag_sum, 0) AS DOUBLE) AS p
-         FROM base b
-         INNER JOIN tot t
-             ON b.source = t.source
-             AND b.posted_month = t.posted_month
-             AND b.run_id = t.run_id
-     )
-SELECT
-    sh.source,
-    sh.posted_month,
-    sh.run_id,
-    SUM(sh.p * sh.p) AS skill_tag_hhi,
-    CAST(sh.posted_month IN (SELECT i.posted_month FROM intersection i) AS BOOLEAN) AS month_in_strict_intersection
-FROM sh
-GROUP BY sh.source, sh.posted_month, sh.run_id;
 
 -- -----------------------------------------------------------------------------
 -- Aligned month + top-20 skills by combined tag mass; shares renormalized
@@ -225,6 +141,7 @@ FROM filt;
 
 -- -----------------------------------------------------------------------------
 -- Benchmark: strict intersection latest month — role postings and skill-tag HHI
+-- (Skill-tag HHI CTEs inlined; no separate comparison_source_month_skill_tag_hhi view.)
 -- -----------------------------------------------------------------------------
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.comparison_benchmark_aligned_month AS
@@ -256,6 +173,58 @@ intersection AS (
 ),
 strict_intersection_latest_month AS (
     SELECT MAX(i.posted_month) AS posted_month FROM intersection i
+),
+skill_tag_hhi_base AS (
+    SELECT
+        CAST('arbeitnow' AS VARCHAR) AS source,
+        s.skill,
+        s.job_count,
+        s.posted_month,
+        s.run_id
+    FROM jmi_gold_v2.skill_demand_monthly s
+    INNER JOIN month_latest_eu m ON s.posted_month = m.posted_month AND s.run_id = m.run_id
+    CROSS JOIN month_bounds b
+    WHERE s.source = 'arbeitnow'
+      AND s.posted_month BETWEEN b.pm_min AND b.pm_max
+    UNION ALL
+    SELECT
+        CAST('adzuna_in' AS VARCHAR) AS source,
+        s.skill,
+        s.job_count,
+        s.posted_month,
+        s.run_id
+    FROM jmi_gold_v2.skill_demand_monthly s
+    INNER JOIN month_latest_ad m ON s.posted_month = m.posted_month AND s.run_id = m.run_id
+    CROSS JOIN month_bounds b
+    WHERE s.source = 'adzuna_in'
+      AND s.posted_month BETWEEN b.pm_min AND b.pm_max
+),
+skill_tag_hhi_tot AS (
+    SELECT source, posted_month, run_id, SUM(job_count) AS tag_sum
+    FROM skill_tag_hhi_base
+    GROUP BY source, posted_month, run_id
+),
+skill_tag_hhi_sh AS (
+    SELECT
+        b.source,
+        b.posted_month,
+        b.run_id,
+        CAST(b.job_count AS DOUBLE) / CAST(NULLIF(t.tag_sum, 0) AS DOUBLE) AS p
+    FROM skill_tag_hhi_base b
+    INNER JOIN skill_tag_hhi_tot t
+        ON b.source = t.source
+        AND b.posted_month = t.posted_month
+        AND b.run_id = t.run_id
+),
+skill_tag_hhi AS (
+    SELECT
+        sh.source,
+        sh.posted_month,
+        sh.run_id,
+        SUM(sh.p * sh.p) AS skill_tag_hhi,
+        CAST(sh.posted_month IN (SELECT i.posted_month FROM intersection i) AS BOOLEAN) AS month_in_strict_intersection
+    FROM skill_tag_hhi_sh sh
+    GROUP BY sh.source, sh.posted_month, sh.run_id
 ),
 role_eu AS (
     SELECT
@@ -298,7 +267,7 @@ SELECT
     h.skill_tag_hhi,
     CAST('strict_intersection_latest_month' AS VARCHAR) AS alignment_kind
 FROM roles r
-LEFT JOIN jmi_analytics_v2.comparison_source_month_skill_tag_hhi h
+LEFT JOIN skill_tag_hhi h
     ON r.source = h.source
     AND r.posted_month = h.posted_month
     AND r.run_id = h.run_id

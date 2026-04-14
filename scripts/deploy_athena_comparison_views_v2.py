@@ -101,6 +101,7 @@ def main() -> int:
     raw = sql_path.read_text(encoding="utf-8")
     # Drop views removed from SQL so Glue matches repo (order: dependents before bases where needed).
     drop_pruned: list[str] = [
+        "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_source_month_skill_tag_hhi",
         "DROP VIEW IF EXISTS jmi_analytics_v2.v2_strict_common_benchmark_summary",
         "DROP VIEW IF EXISTS jmi_analytics_v2.v2_strict_common_month_totals",
         "DROP VIEW IF EXISTS jmi_analytics_v2.comparison_strict_intersection_month_totals",

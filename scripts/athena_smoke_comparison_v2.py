@@ -19,7 +19,10 @@ QUERIES: list[tuple[str, str]] = [
         "SELECT source, skill, posted_month, skill_tag_count FROM jmi_analytics_v2.comparison_source_skill_mix_aligned_top20 ORDER BY source, skill LIMIT 8",
     ),
     ("cmp_benchmark_ct", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_benchmark_aligned_month"),
-    ("cmp_hhi_ct", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_month_skill_tag_hhi WHERE month_in_strict_intersection = TRUE"),
+    (
+        "cmp_benchmark_hhi_nonnull",
+        "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_benchmark_aligned_month WHERE skill_tag_hhi IS NOT NULL",
+    ),
     (
         "cmp_spj_april_group",
         "SELECT posted_month, source, COUNT(*) AS n FROM jmi_analytics_v2.v2_cmp_skills_per_job_april_2026 GROUP BY 1,2 ORDER BY 1,2",

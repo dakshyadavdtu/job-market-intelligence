@@ -30,7 +30,6 @@ QUERIES: list[tuple[str, str | None, str]] = [
     ("vw_eu_skills_long", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_eu_silver_jobs_skills_long"),
     ("vw_cmp_skill_mix_aligned_top20", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_skill_mix_aligned_top20"),
     ("vw_cmp_benchmark", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_benchmark_aligned_month"),
-    ("vw_cmp_hhi_helper", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.comparison_source_month_skill_tag_hhi"),
     ("vw_cmp_spj", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_cmp_skills_per_job_april_2026"),
     ("vw_cmp_loc_hhi", "jmi_analytics_v2", "SELECT COUNT(*) AS n FROM jmi_analytics_v2.v2_cmp_location_hhi_monthly"),
 ]

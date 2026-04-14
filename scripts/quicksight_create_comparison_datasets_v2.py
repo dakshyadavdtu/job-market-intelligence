@@ -32,7 +32,6 @@ DATASETS: list[tuple[str, str]] = [
         "v2 - CMP - comparison_benchmark_aligned_month",
         "comparison_benchmark_aligned_month",
     ),
-    ("v2_cmp_hhi_timeseries", "comparison_source_month_skill_tag_hhi"),
 ]
 
 
