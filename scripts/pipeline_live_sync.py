@@ -269,6 +269,11 @@ def main() -> int:
         action="store_true",
         help="After sync, do not delete remote gold/ orphans (ingest_month=, gold/latest_run_metadata/).",
     )
+    p.add_argument(
+        "--skip-purge-s3-silver-flat",
+        action="store_true",
+        help="After sync, do not delete remote silver/jobs/ingest_date=* (flat legacy; active layout is silver/jobs/source=*/...).",
+    )
     p.add_argument("--region", default=os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "ap-south-1")
     p.add_argument("--workgroup", default="primary")
     args = p.parse_args()
@@ -335,6 +340,16 @@ def main() -> int:
         if state_dir.is_dir():
             _aws_s3_sync(deploy, state_dir, "state", args.region)
         print("S3 sync: OK", flush=True)
+
+        if not args.skip_purge_s3_silver_flat:
+            print("\n--- S3 legacy silver flat purge (silver/jobs/ingest_date=* only) ---", flush=True)
+            subprocess.check_call(
+                [sys.executable, str(REPO_ROOT / "scripts" / "s3_purge_legacy_silver_flat_jobs.py"), "--bucket", deploy.athena_bucket()],
+                cwd=REPO_ROOT,
+                env=os.environ,
+            )
+        else:
+            print("\n--- S3 legacy silver flat purge: skipped ---", flush=True)
 
         if not args.skip_purge_s3_legacy:
             print("\n--- S3 legacy gold purge (remote orphans) ---", flush=True)

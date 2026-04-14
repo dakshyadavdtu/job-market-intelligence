@@ -1,3 +1,8 @@
+-- DEPRECATED: flat partition layout (ingest_date, run_id) directly under silver/jobs/.
+-- Do not recreate for new environments. Use jmi_silver_v2.arbeitnow_jobs_merged / adzuna_jobs_merged
+-- and per-batch paths under silver/jobs/source=<slug>/ingest_date=.../run_id=.../part-00001.parquet.
+-- Drop legacy registration: infra/aws/athena/drop_legacy_jmi_silver_flat_table.sql
+--
 CREATE DATABASE IF NOT EXISTS jmi_silver;
 CREATE DATABASE IF NOT EXISTS jmi_gold;
 

@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.jmi.config import AppConfig, DataPath
-from src.jmi.paths import gold_fact_partition, gold_latest_run_metadata_file
+from src.jmi.paths import gold_fact_partition, gold_latest_run_metadata_file, silver_legacy_flat_jobs_root
 from src.jmi.pipelines.gold_time import assign_posted_month_and_time_axis, dominant_time_axis
 from src.jmi.pipelines.silver_schema import normalize_location_raw, skills_json_to_list
 from src.jmi.utils.io import write_parquet
@@ -29,7 +29,9 @@ def _latest_silver_file(cfg: AppConfig) -> Path:
     sub = base / f"source={cfg.source_name}"
     files = sorted(sub.glob("ingest_date=*/run_id=*/part-*.parquet"), key=lambda p: p.stat().st_mtime)
     if not files and cfg.source_name == "arbeitnow":
-        files = sorted(base.glob("ingest_date=*/run_id=*/part-*.parquet"), key=lambda p: p.stat().st_mtime)
+        leg = silver_legacy_flat_jobs_root(cfg).as_path()
+        if leg.exists():
+            files = sorted(leg.glob("ingest_date=*/run_id=*/part-*.parquet"), key=lambda p: p.stat().st_mtime)
     if not files:
         raise FileNotFoundError("No silver files found. Run silver transform first.")
     return files[-1]
