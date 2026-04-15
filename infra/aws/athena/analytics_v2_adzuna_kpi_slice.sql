@@ -1,6 +1,6 @@
 -- Compact Adzuna KPI slice — jmi_analytics_v2 only.
 -- Gold facts: merged GROUP BYs + window-based HHI (fewer scans than many parallel CTEs).
--- remote_classified_share is NULL here (DQ helper views removed from catalog prune).
+-- remote_classified_share is computed from v2_in_silver_jobs_base (no DQ helper dependency).
 -- Latest run: jmi_gold_v2.latest_run_metadata_adzuna.
 
 CREATE OR REPLACE VIEW jmi_analytics_v2.v2_in_kpi_slice_monthly AS
@@ -152,6 +152,15 @@ skill_hhi_calc AS (
     FROM skill_f s
   ) x
   GROUP BY posted_month, run_id
+),
+remote_core AS (
+  SELECT
+    b.posted_month,
+    CAST(SUM(CASE WHEN lower(trim(b.remote_type)) <> 'unknown' THEN 1 ELSE 0 END) AS double)
+      / CAST(NULLIF(COUNT(*), 0) AS double) AS remote_classified_share
+  FROM jmi_analytics_v2.v2_in_silver_jobs_base b
+  WHERE b.source = 'adzuna_in'
+  GROUP BY b.posted_month
 )
 SELECT
   CAST('adzuna_in' AS varchar) AS source,
@@ -181,7 +190,7 @@ SELECT
   sc.distinct_skill_tags,
   lc.distinct_location_buckets,
   r.distinct_role_title_buckets,
-  CAST(NULL AS double) AS remote_classified_share
+  rc.remote_classified_share
 FROM role_totals r
 INNER JOIN run_months rm ON r.run_id = rm.run_id
 LEFT JOIN loc_core lc ON r.posted_month = lc.posted_month AND r.run_id = lc.run_id
@@ -189,4 +198,5 @@ LEFT JOIN loc_top3 t3 ON r.posted_month = t3.posted_month AND r.run_id = t3.run_
 LEFT JOIN loc_hhi_calc lh ON r.posted_month = lh.posted_month AND r.run_id = lh.run_id
 LEFT JOIN comp_agg ca ON r.posted_month = ca.posted_month AND r.run_id = ca.run_id
 LEFT JOIN skill_core sc ON r.posted_month = sc.posted_month AND r.run_id = sc.run_id
-LEFT JOIN skill_hhi_calc sh ON r.posted_month = sh.posted_month AND r.run_id = sh.run_id;
+LEFT JOIN skill_hhi_calc sh ON r.posted_month = sh.posted_month AND r.run_id = sh.run_id
+LEFT JOIN remote_core rc ON r.posted_month = rc.posted_month;
