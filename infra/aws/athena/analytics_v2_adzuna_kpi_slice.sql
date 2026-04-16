@@ -155,12 +155,15 @@ skill_hhi_calc AS (
 ),
 remote_core AS (
   SELECT
-    b.posted_month,
-    CAST(SUM(CASE WHEN lower(trim(b.remote_type)) <> 'unknown' THEN 1 ELSE 0 END) AS double)
-      / CAST(NULLIF(COUNT(*), 0) AS double) AS remote_classified_share
-  FROM jmi_analytics_v2.v2_in_silver_jobs_base b
-  WHERE b.source = 'adzuna_in'
-  GROUP BY b.posted_month
+    m.posted_month,
+    CAST(SUM(CASE WHEN lower(trim(a.remote_type)) <> 'unknown' THEN 1 ELSE 0 END) AS double)
+      / CAST(NULLIF(COUNT(a.job_id), 0) AS double) AS remote_classified_share
+  FROM role_totals m
+  LEFT JOIN jmi_silver_v2.adzuna_jobs_merged a
+    ON a.source = 'adzuna_in'
+    AND regexp_like(substr(trim(a.posted_at), 1, 7), '^[0-9]{4}-[0-9]{2}$')
+    AND substr(trim(a.posted_at), 1, 7) = m.posted_month
+  GROUP BY m.posted_month
 )
 SELECT
   CAST('adzuna_in' AS varchar) AS source,
@@ -200,3 +203,6 @@ LEFT JOIN comp_agg ca ON r.posted_month = ca.posted_month AND r.run_id = ca.run_
 LEFT JOIN skill_core sc ON r.posted_month = sc.posted_month AND r.run_id = sc.run_id
 LEFT JOIN skill_hhi_calc sh ON r.posted_month = sh.posted_month AND r.run_id = sh.run_id
 LEFT JOIN remote_core rc ON r.posted_month = rc.posted_month;
+CREATE OR REPLACE VIEW jmi_analytics_v2.v2_kpi_slice_monthly AS
+SELECT *
+FROM jmi_analytics_v2.v2_in_kpi_slice_monthly;
